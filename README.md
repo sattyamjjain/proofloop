@@ -9,7 +9,7 @@
 - **Dual-Mode Operation** -- Runs automatically via hooks after every skill/agent execution, or on-demand with the `/judge` command.
 - **Dual-Platform** -- Works on both Claude Code and Claude Cowork.
 - **7-Dimension Scoring** -- Every execution is scored across correctness, completeness, adherence, actionability, efficiency, safety, and consistency.
-- **Configurable Rubrics** -- Ship with sensible defaults; override per-skill or per-team with custom rubric YAML files.
+- **Configurable Rubrics** -- Ship with sensible defaults; override per-skill or per-team with custom rubric files.
 - **Persistent Scorecards** -- All scores are saved to `skills/judge/scores/` as JSON for historical tracking and benchmarking.
 - **Blocking on Critical Failures** -- Optionally block workflow when a score falls below the configured threshold.
 
@@ -18,7 +18,9 @@
 ### Install
 
 ```bash
-npx claude-plugins install verdict
+# Add the marketplace, then install
+/plugin marketplace add sattyamjjain/verdict
+/plugin install verdict@verdict
 ```
 
 ### Configure
@@ -43,24 +45,29 @@ Edit `judge-config.json` at the project root to control auto-judge behavior, sco
 
 ```
 .claude-plugin/
-  plugin.json           # Plugin manifest
-  marketplace.json      # Marketplace listing metadata
+  plugin.json             # Plugin manifest
+  marketplace.json        # Marketplace listing metadata
 skills/judge/
-  SKILL.md              # Core skill definition
-  scripts/              # Python scoring engine and utilities
-  rubrics/              # YAML rubric definitions
-  scores/               # Persisted score JSON files
-  references/           # Reference materials
+  SKILL.md                # Core skill definition
+  scripts/                # Python scoring engine and utilities
+  rubrics/                # Rubric definitions (default, code-review, security, etc.)
+  scores/                 # Persisted score JSON files
+  references/             # Benchmark standards and scoring methodology
 agents/
-  judge-agent.md        # Autonomous judge agent definition
+  judge-agent.md          # Autonomous judge agent definition
 hooks/
-  hooks.json            # Hook definitions for auto-judge
+  hooks.json              # Hook definitions for auto-judge
+  judge-on-stop.sh        # Stop hook script
+  judge-on-subagent-stop.sh # SubagentStop hook script
+  common.sh               # Shared hook utilities
 commands/
-  judge.md              # /judge command
-  scorecard.md          # /scorecard command
-  benchmark.md          # /benchmark command
-  judge-config.md       # /judge-config command
-judge-config.json       # Root configuration file
+  judge.md                # /judge command
+  scorecard.md            # /scorecard command
+  benchmark.md            # /benchmark command
+  judge-config.md         # /judge-config command
+judge-config.json         # Root configuration file
+LICENSE                   # MIT license
+CHANGELOG.md              # Version history
 ```
 
 ## Scoring System
@@ -81,13 +88,19 @@ The **weighted composite score** is computed as the dot product of dimension sco
 
 ### Verdict Grades
 
-| Score Range | Grade       |
-|-------------|-------------|
-| 9.0 -- 10.0 | Excellent   |
-| 7.0 -- 8.9  | Good        |
-| 5.0 -- 6.9  | Acceptable  |
-| 3.0 -- 4.9  | Poor        |
-| 0.0 -- 2.9  | Critical    |
+| Score Range  | Grade |
+|--------------|-------|
+| 9.5 -- 10.0  | A+    |
+| 9.0 -- 9.4   | A     |
+| 8.5 -- 8.9   | A-    |
+| 8.0 -- 8.4   | B+    |
+| 7.5 -- 7.9   | B     |
+| 7.0 -- 7.4   | B-    |
+| 6.5 -- 6.9   | C+    |
+| 6.0 -- 6.4   | C     |
+| 5.5 -- 5.9   | C-    |
+| 4.0 -- 5.4   | D     |
+| 0.0 -- 3.9   | F     |
 
 ## Configuration Reference
 

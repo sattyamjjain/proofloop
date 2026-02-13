@@ -1,12 +1,23 @@
 {
-  "category": "quality-assurance",
-  "tags": ["judge", "evaluation", "quality", "scoring", "LLM-as-judge"],
-  "featured": true,
-  "installCommand": "npx claude-plugins install verdict",
-  "compatibility": {
-    "claude-code": ">=1.0.0",
-    "claude-cowork": ">=1.0.0"
+  "name": "verdict",
+  "owner": {
+    "name": "Sattyam Jain",
+    "email": "sattyamjain96@gmail.com"
   },
-  "screenshots": [],
-  "demo": null
+  "metadata": {
+    "description": "Universal quality judge for Claude Code and Cowork skill/agent executions"
+  },
+  "plugins": [
+    {
+      "name": "verdict",
+      "source": "./",
+      "description": "Auto-evaluates skill and agent execution quality with 7-dimension scoring, configurable rubrics, and dual-mode operation.",
+      "version": "1.0.0",
+      "category": "quality-assurance",
+      "tags": ["judge", "evaluation", "quality", "scoring", "LLM-as-judge"],
+      "license": "MIT",
+      "homepage": "https://github.com/sattyamjjain/verdict",
+      "repository": "https://github.com/sattyamjjain/verdict"
+    }
+  ]
 }
