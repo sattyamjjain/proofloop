@@ -1,0 +1,32 @@
+{
+  "auto_judge": {
+    "enabled": true,
+    "always": [
+      "code-review", "security-scan", "feature-dev",
+      "debugging", "codebase-analyzer", "webapp-testing"
+    ],
+    "never": [
+      "format", "commit", "fix-imports", "undo",
+      "fix-todos", "remove-comments", "docs",
+      "session-start", "session-end"
+    ],
+    "threshold": 5.0,
+    "block_on_critical": true
+  },
+  "manual_judge": {
+    "default_rubric": "default",
+    "verbose": true,
+    "save_scores": true
+  },
+  "scoring": {
+    "dimensions": {
+      "correctness": 0.25,
+      "completeness": 0.20,
+      "adherence": 0.15,
+      "actionability": 0.15,
+      "efficiency": 0.10,
+      "safety": 0.10,
+      "consistency": 0.05
+    }
+  }
+}

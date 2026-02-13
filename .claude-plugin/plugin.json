@@ -1,0 +1,23 @@
+{
+  "name": "skilljudge",
+  "version": "1.0.0",
+  "displayName": "SkillJudge — Universal Skill & Agent Quality Judge",
+  "description": "The first universal judge for Claude Code & Cowork. Auto-evaluates skill and agent execution quality with 7-dimension scoring, configurable rubrics, and dual-mode operation (auto hooks + manual /judge command).",
+  "author": "Sattyam Jain",
+  "license": "MIT",
+  "platforms": ["claude-code", "claude-cowork"],
+  "components": {
+    "skills": ["skills/judge/SKILL.md"],
+    "agents": ["agents/judge-agent.md"],
+    "commands": [
+      "commands/judge.md",
+      "commands/scorecard.md",
+      "commands/benchmark.md",
+      "commands/judge-config.md"
+    ],
+    "hooks": "hooks/hooks.json"
+  },
+  "config": "judge-config.json",
+  "repository": "https://github.com/sattyamjain/verdict",
+  "keywords": ["judge", "quality", "evaluation", "scoring", "skills", "agents", "rubrics"]
+}
