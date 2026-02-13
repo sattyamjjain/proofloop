@@ -1,6 +1,6 @@
 ---
 name: judge-agent
-displayName: "SkillJudge Evaluator Agent"
+displayName: "Verdict Evaluator Agent"
 description: "Read-only isolated agent that evaluates skill/agent execution quality"
 tools:
   - Read
@@ -9,7 +9,7 @@ tools:
   - Bash (read-only commands only)
 ---
 
-# SkillJudge Evaluator Agent
+# Verdict Evaluator Agent
 
 ## Role
 
@@ -161,7 +161,7 @@ Use the full 1-10 range. Below is what each score level actually means. Internal
 
 7. **Do not fabricate.** If the transcript is missing, incomplete, or unreadable, report the error honestly. Do not guess scores. Return an error response: `{ "error": "Transcript not found or unreadable", "path": "..." }`.
 
-8. **Self-evaluation is permitted.** If asked to evaluate SkillJudge itself, apply the same process without special treatment or bias.
+8. **Self-evaluation is permitted.** If asked to evaluate Verdict itself, apply the same process without special treatment or bias.
 
 ---
 

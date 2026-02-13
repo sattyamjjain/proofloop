@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SkillJudge Score Reporter.
+"""Verdict Score Reporter.
 
 Reads persisted score JSON files and produces visual scorecards with
 Unicode bar charts, trend indicators, and historical averages.
@@ -156,7 +156,7 @@ def render_text_scorecard(record: Dict[str, Any], history: List[Dict[str, Any]])
     lines.append(_horizontal_rule(BOX_TL, BOX_TR))
 
     # Header
-    header = f"SKILLJUDGE SCORECARD -- {skill}"
+    header = f"VERDICT SCORECARD -- {skill}"
     lines.append(_pad_line(header))
     lines.append(_pad_line(f"Grade: {grade} ({grade_label})  |  Composite: {composite}/10.0  |  {timestamp}"))
     lines.append(_horizontal_rule(BOX_ML, BOX_MR))
@@ -300,7 +300,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         prog="report",
-        description="SkillJudge Score Reporter -- view scorecards, trends, and averages.",
+        description="Verdict Score Reporter -- view scorecards, trends, and averages.",
     )
     parser.add_argument(
         "--scores-dir",

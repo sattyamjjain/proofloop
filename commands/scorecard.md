@@ -6,7 +6,7 @@ usage: "/scorecard [skill-name] [--last N] [--all]"
 
 # /scorecard — Score History & Trends
 
-Display historical scores for skills that have been evaluated by SkillJudge.
+Display historical scores for skills that have been evaluated by Verdict.
 
 ## Arguments
 
@@ -25,7 +25,7 @@ Display historical scores for skills that have been evaluated by SkillJudge.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  SKILLJUDGE SCORE HISTORY                                   │
+│  VERDICT SCORE HISTORY                                   │
 ├──────────────┬───────┬───────┬────────────┬────────────────┤
 │ Skill        │ Score │ Grade │ Date       │ Trend          │
 ├──────────────┼───────┼───────┼────────────┼────────────────┤

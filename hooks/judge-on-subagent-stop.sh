@@ -26,7 +26,7 @@ SCORECARD=$(python3 "$PLUGIN_ROOT/skills/judge/scripts/score.py" \
   --rubric-dir "$PLUGIN_ROOT/skills/judge/rubrics" \
   --scores-dir "$PLUGIN_ROOT/skills/judge/scores" \
   --config "$CONFIG_PATH" 2>&1) || {
-    echo "SkillJudge: Scoring failed for agent $AGENT_TYPE" >&2
+    echo "Verdict: Scoring failed for agent $AGENT_TYPE" >&2
     exit 0
   }
 
@@ -42,7 +42,7 @@ if [ -n "$SCORE" ] && [ -n "$THRESHOLD" ]; then
   if [ "$BELOW" = "1" ]; then
     SUMMARY=$(echo "$SCORECARD" | jq -r '.summary // "Quality below threshold"' 2>/dev/null)
     ISSUES=$(echo "$SCORECARD" | jq -r '.critical_issues // [] | join("; ")' 2>/dev/null)
-    echo "SkillJudge BLOCKED: Agent $AGENT_TYPE scored $SCORE/10 ($GRADE) — below threshold of $THRESHOLD" >&2
+    echo "Verdict BLOCKED: Agent $AGENT_TYPE scored $SCORE/10 ($GRADE) — below threshold of $THRESHOLD" >&2
     echo "Issues: $ISSUES" >&2
     echo "Summary: $SUMMARY" >&2
     exit 2
@@ -54,7 +54,7 @@ cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "SubagentStop",
-    "additionalContext": "SkillJudge: Agent $AGENT_TYPE → $SCORE/10 ($GRADE). $ONE_LINER"
+    "additionalContext": "Verdict: Agent $AGENT_TYPE → $SCORE/10 ($GRADE). $ONE_LINER"
   }
 }
 EOF

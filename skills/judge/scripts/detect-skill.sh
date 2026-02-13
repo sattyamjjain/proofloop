@@ -1,5 +1,5 @@
 #!/bin/bash
-# SkillJudge — Detect which skill was used from a transcript
+# Verdict — Detect which skill was used from a transcript
 set -euo pipefail
 
 TRANSCRIPT_PATH="${1:-}"

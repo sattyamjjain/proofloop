@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SkillJudge Scoring Engine.
+"""Verdict Scoring Engine.
 
 Evaluates Claude Code / Cowork skill and agent executions across 7 weighted
 dimensions, producing a composite score and letter grade.  Designed to run
@@ -810,7 +810,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         prog="score",
-        description="SkillJudge Scoring Engine -- evaluate skill/agent executions across 7 dimensions.",
+        description="Verdict Scoring Engine -- evaluate skill/agent executions across 7 dimensions.",
     )
     parser.add_argument(
         "--skill",

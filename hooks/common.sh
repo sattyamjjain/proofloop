@@ -1,5 +1,5 @@
 #!/bin/bash
-# SkillJudge — Common hook utilities
+# Verdict — Common hook utilities
 
 # Get the plugin root directory
 get_plugin_root() {

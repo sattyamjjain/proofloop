@@ -21,7 +21,7 @@ Compare a skill's historical performance against defined benchmark standards.
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│  SKILLJUDGE BENCHMARK — {skill-name}                          │
+│  VERDICT BENCHMARK — {skill-name}                          │
 ├────────────────┬──────────┬───────────┬───────────────────────┤
 │ Dimension      │ Your Avg │ Benchmark │ Delta                 │
 ├────────────────┼──────────┼───────────┼───────────────────────┤

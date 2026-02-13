@@ -2,7 +2,7 @@
   "category": "quality-assurance",
   "tags": ["judge", "evaluation", "quality", "scoring", "LLM-as-judge"],
   "featured": true,
-  "installCommand": "npx claude-plugins install skilljudge",
+  "installCommand": "npx claude-plugins install verdict",
   "compatibility": {
     "claude-code": ">=1.0.0",
     "claude-cowork": ">=1.0.0"

@@ -1,12 +1,12 @@
 {
-  "description": "SkillJudge — Auto-evaluate skill and agent execution quality",
+  "description": "Verdict — Auto-evaluate skill and agent execution quality",
   "hooks": {
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/judge-on-stop.sh",
+            "command": "bash hooks/judge-on-stop.sh",
             "timeout": 120
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/judge-on-subagent-stop.sh",
+            "command": "bash hooks/judge-on-subagent-stop.sh",
             "timeout": 120
           }
         ]

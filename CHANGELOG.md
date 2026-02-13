@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial release of SkillJudge plugin for Claude Code and Claude Cowork.
+- Initial release of Verdict plugin for Claude Code and Claude Cowork.
 - Dual-mode operation: automatic hooks and manual `/judge` command.
 - 7-dimension weighted scoring system (correctness, completeness, adherence, actionability, efficiency, safety, consistency).
 - Configurable rubrics in YAML format with default, strict, and lenient presets.

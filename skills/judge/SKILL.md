@@ -1,6 +1,6 @@
 ---
 name: judge
-displayName: "SkillJudge — Universal Quality Evaluator"
+displayName: "Verdict — Universal Quality Evaluator"
 description: "Evaluates the execution quality of any skill or agent using 7-dimension scoring with configurable rubrics"
 version: "1.0.0"
 author: "Sattyam Jain"
@@ -12,17 +12,17 @@ hooks:
   Stop:
     - hooks:
         - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/hooks/judge-on-stop.sh"
+          command: "hooks/judge-on-stop.sh"
           timeout: 120
 ---
 
-# SkillJudge — Universal Quality Evaluator
+# Verdict — Universal Quality Evaluator
 
 ## Overview
 
-SkillJudge is a universal quality evaluator for Claude Code skills and agents. It measures execution quality across 7 weighted dimensions, producing an evidence-based scorecard with letter grades, justifications, and actionable recommendations.
+Verdict is a universal quality evaluator for Claude Code skills and agents. It measures execution quality across 7 weighted dimensions, producing an evidence-based scorecard with letter grades, justifications, and actionable recommendations.
 
-SkillJudge operates in two modes:
+Verdict operates in two modes:
 
 - **Auto Mode**: Hooks into skill/agent lifecycle events (e.g. `Stop`) and automatically evaluates every execution. No user intervention required. Scores are persisted to `skills/judge/scores/` for trend analysis.
 - **Manual Mode**: Triggered explicitly via the `/judge` command. The user specifies a skill name and optionally a transcript path. Useful for on-demand evaluation, re-scoring, or benchmarking.
@@ -33,7 +33,7 @@ Both modes produce the same structured scorecard output.
 
 ## Scoring Dimensions
 
-SkillJudge evaluates across 7 dimensions. Each dimension receives a score from 1.0 to 10.0. The weighted composite determines the final grade.
+Verdict evaluates across 7 dimensions. Each dimension receives a score from 1.0 to 10.0. The weighted composite determines the final grade.
 
 | #  | Dimension        | Weight | What It Measures                                                                 |
 |----|------------------|--------|----------------------------------------------------------------------------------|
@@ -133,7 +133,7 @@ Every evaluation produces a visual scorecard rendered in the terminal:
 
 ```
 ╔═══════════════════════════════════════════════════════════╗
-║  SKILLJUDGE SCORECARD — {skill-name}                      ║
+║  VERDICT SCORECARD — {skill-name}                      ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Correctness    ████████░░  8.0/10  {justification}       ║
 ║  Completeness   ██████░░░░  6.0/10  {justification}       ║
@@ -157,7 +157,7 @@ The progress bars use filled blocks (█) and empty blocks (░) proportional to
 
 ### Auto Mode
 
-When auto mode is enabled, SkillJudge hooks into the `Stop` lifecycle event. After any skill or agent finishes execution, the hook script:
+When auto mode is enabled, Verdict hooks into the `Stop` lifecycle event. After any skill or agent finishes execution, the hook script:
 
 1. Captures the session transcript
 2. Invokes the judge-agent as an isolated subagent
@@ -198,7 +198,7 @@ To add a custom rubric, create a new `rubric-{domain}.md` file in the `rubrics/`
 
 ## Instructions for Claude — How to Perform an Evaluation
 
-When you are activated as the SkillJudge evaluator (either via auto hook or `/judge` command), follow these instructions precisely:
+When you are activated as the Verdict evaluator (either via auto hook or `/judge` command), follow these instructions precisely:
 
 ### 1. Gather Context
 
@@ -287,4 +287,4 @@ Write the JSON scorecard to `skills/judge/scores/{skill-name}-{YYYYMMDD-HHMMSS}.
 - **No transcript available**: Report an error. Do not fabricate scores.
 - **Skill not recognized**: Use `rubric-default.md` and note it in the output.
 - **No previous scores for consistency**: Score consistency as 7.0 (neutral baseline) and note "No prior executions for comparison."
-- **Evaluation of SkillJudge itself**: This is allowed. Apply the same process without bias.
+- **Evaluation of Verdict itself**: This is allowed. Apply the same process without bias.

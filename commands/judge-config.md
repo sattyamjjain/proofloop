@@ -1,12 +1,12 @@
 ---
 name: judge-config
-description: "View and manage SkillJudge auto-judge configuration"
+description: "View and manage Verdict auto-judge configuration"
 usage: "/judge-config [subcommand] [args]"
 ---
 
 # /judge-config — Manage Auto-Judge Settings
 
-View and modify the SkillJudge configuration.
+View and modify the Verdict configuration.
 
 ## Subcommands
 
@@ -24,7 +24,7 @@ View and modify the SkillJudge configuration.
 2. If no subcommand: display the full config in a readable format:
 
 ```
-SkillJudge Configuration
+Verdict Configuration
 ========================
 Auto-Judge: ENABLED
 Threshold: 5.0 (skills scoring below this are BLOCKED)

@@ -27,7 +27,7 @@ SCORECARD=$(python3 "$PLUGIN_ROOT/skills/judge/scripts/score.py" \
   --rubric-dir "$PLUGIN_ROOT/skills/judge/rubrics" \
   --scores-dir "$PLUGIN_ROOT/skills/judge/scores" \
   --config "$CONFIG_PATH" 2>&1) || {
-    echo "SkillJudge: Scoring failed for $SKILL_NAME" >&2
+    echo "Verdict: Scoring failed for $SKILL_NAME" >&2
     exit 0  # Don't block on scoring errors
   }
 
@@ -44,7 +44,7 @@ if [ -n "$SCORE" ] && [ -n "$THRESHOLD" ]; then
     # BLOCK: Score below threshold
     SUMMARY=$(echo "$SCORECARD" | jq -r '.summary // "Quality below threshold"' 2>/dev/null)
     ISSUES=$(echo "$SCORECARD" | jq -r '.critical_issues // [] | join("; ")' 2>/dev/null)
-    echo "SkillJudge BLOCKED: $SKILL_NAME scored $SCORE/10 ($GRADE) — below threshold of $THRESHOLD" >&2
+    echo "Verdict BLOCKED: $SKILL_NAME scored $SCORE/10 ($GRADE) — below threshold of $THRESHOLD" >&2
     echo "Issues: $ISSUES" >&2
     echo "Summary: $SUMMARY" >&2
     exit 2
@@ -56,7 +56,7 @@ cat <<EOF
 {
   "hookSpecificOutput": {
     "hookEventName": "Stop",
-    "additionalContext": "SkillJudge: $SKILL_NAME → $SCORE/10 ($GRADE). $ONE_LINER"
+    "additionalContext": "Verdict: $SKILL_NAME → $SCORE/10 ($GRADE). $ONE_LINER"
   }
 }
 EOF

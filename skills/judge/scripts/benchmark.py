@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SkillJudge Benchmark Comparator.
+"""Verdict Benchmark Comparator.
 
 Compares a skill's historical scores against benchmark standards and identifies
 strengths, weaknesses, and specific improvement suggestions.
@@ -423,7 +423,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         prog="benchmark",
-        description="SkillJudge Benchmark Comparator -- compare scores against benchmark standards.",
+        description="Verdict Benchmark Comparator -- compare scores against benchmark standards.",
     )
     parser.add_argument(
         "--skill",

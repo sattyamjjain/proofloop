@@ -1,4 +1,4 @@
-# Verdict / SkillJudge
+# Verdict
 
 **The first universal judge for Claude Code & Cowork.** Auto-evaluates skill and agent execution quality with 7-dimension scoring, configurable rubrics, and dual-mode operation.
 
@@ -18,7 +18,7 @@
 ### Install
 
 ```bash
-npx claude-plugins install skilljudge
+npx claude-plugins install verdict
 ```
 
 ### Configure
