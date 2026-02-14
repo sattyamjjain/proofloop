@@ -20,5 +20,5 @@ Thumbs.db
 # Claude Code local settings
 .claude/
 
-# Score history (optional — uncomment to track scores in git)
-# skills/judge/scores/*.json
+# Score history (per-environment artifacts)
+skills/judge/scores/*.json
