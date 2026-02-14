@@ -21,7 +21,7 @@ This project has no build step or package manager. Python scripts use stdlib onl
 - **Run scoring engine**: `python3 skills/judge/scripts/score.py --skill SKILL --transcript PATH --rubric-dir skills/judge/rubrics --scores-dir skills/judge/scores --config judge-config.json`
 - **Run report viewer**: `python3 skills/judge/scripts/report.py --scores-dir skills/judge/scores [--skill NAME] [--last N] [--format text|json]`
 - **Run benchmark comparator**: `python3 skills/judge/scripts/benchmark.py --skill NAME --scores-dir skills/judge/scores --references-dir skills/judge/references`
-- **No tests**: No test suite is currently configured.
+- **Run tests**: `python3 -m unittest discover tests/ -v`
 - **No linter**: No linting or formatting tools are configured.
 
 <!-- END AUTO-MANAGED -->
@@ -39,7 +39,8 @@ Verdict/
 │   ├── scripts/
 │   │   ├── score.py             # Scoring engine — heuristic transcript analysis
 │   │   ├── report.py            # Score reporter — Unicode scorecards & trends
-│   │   └── benchmark.py         # Benchmark comparator — delta analysis vs standards
+│   │   ├── benchmark.py         # Benchmark comparator — delta analysis vs standards
+│   │   └── detect-skill.sh      # Skill name detection from transcripts
 │   ├── rubrics/
 │   │   ├── default.md           # Universal fallback rubric
 │   │   ├── code-review.md       # Code review domain rubric
@@ -49,16 +50,20 @@ Verdict/
 │   │   ├── security.md          # Security domain rubric
 │   │   ├── content-writing.md   # Content writing domain rubric
 │   │   ├── data-analysis.md     # Data analysis domain rubric
+│   │   ├── research.md          # Research & exploration domain rubric
+│   │   ├── devops.md            # DevOps & infrastructure domain rubric
 │   │   └── custom-template.md   # Template for creating new rubrics
 │   ├── scores/                  # Persisted score JSON files (gitignored by default)
 │   └── references/
 │       ├── scoring-methodology.md
 │       └── benchmark-standards.md
+├── tests/
+│   └── test_score.py            # 132 unit tests for scoring engine
 ├── agents/
 │   └── judge-agent.md           # Read-only evaluator agent definition
 ├── hooks/
 │   ├── hooks.json               # Hook definitions (Stop, SubagentStop events)
-│   ├── common.sh                # Shared shell utilities (skill detection, config)
+│   ├── common.sh                # Shared shell utilities (skill detection, config, deps)
 │   ├── judge-on-stop.sh         # Auto-judge hook for Stop events
 │   └── judge-on-subagent-stop.sh
 ├── commands/
@@ -114,11 +119,14 @@ Verdict/
 ## Detected Patterns
 
 - **Heuristic scoring**: `score.py` uses regex pattern matching against transcripts rather than LLM evaluation. Patterns detect errors, incompleteness, safety issues, hallucinations, and tool call density.
+- **Auto-deductions and bonuses**: Red flags (hallucinations, placeholders, destructive commands) deduct up to 2.0 from composite; bonuses (edge cases, trade-off analysis) add up to 1.0. Applied after weighted composite.
+- **Context-aware safety**: Safety regex excludes discussion context (review comments, comparisons) to avoid false positives on transcripts that discuss credentials without defining them.
 - **Graceful degradation**: All scripts handle missing files, bad JSON, and empty inputs by falling back to defaults rather than crashing. Hooks exit 0 on non-critical failures.
 - **Rubric resolution chain**: Exact match → category prefix match → `default.md` fallback.
 - **Consistent scorecard structure**: All three scripts (score, report, benchmark) produce Unicode box-drawing output with the same visual style.
 - **Config-driven behavior**: `judge-config.json` controls which skills are auto-judged, scoring weights, thresholds, and output preferences. All scripts accept config as optional parameter with sensible defaults.
 - **History-aware scoring**: Consistency dimension and trend indicators use historical score files for comparison.
+- **Dependency checking**: Hook scripts verify `jq`, `bc`, and `python3` are available before executing, with install hints on failure.
 
 <!-- END AUTO-MANAGED -->
 

@@ -8,12 +8,6 @@ autoActivate:
   - "when the user asks to judge, evaluate, score, or rate a skill's output"
   - "when the user asks about skill quality or execution quality"
   - "when referenced by /judge command"
-hooks:
-  Stop:
-    - hooks:
-        - type: command
-          command: "hooks/judge-on-stop.sh"
-          timeout: 120
 ---
 
 # Verdict — Universal Quality Evaluator
@@ -74,14 +68,22 @@ Load the full execution transcript. This includes:
 
 ### Step 3 — Load the Appropriate Rubric
 
-Look for a domain-specific rubric in `skills/judge/rubrics/`:
-- `rubric-code.md` — for coding/engineering skills
-- `rubric-research.md` — for research/exploration skills
-- `rubric-writing.md` — for writing/documentation skills
-- `rubric-ops.md` — for DevOps/infrastructure skills
-- `rubric-default.md` — fallback for unmatched domains
+Look for a domain-specific rubric in `skills/judge/rubrics/`. The scoring engine resolves rubrics in this order:
+1. Exact match: `{skill-name}.md` (e.g., `code-review.md` for the `code-review` skill)
+2. Category prefix: progressive prefix match (e.g., `code-review-v2` tries `code-review.md`)
+3. Fallback: `default.md`
 
-If no domain-specific rubric matches, use `rubric-default.md`.
+Available rubrics:
+- `code-review.md` — for code review and engineering skills
+- `frontend-design.md` — for frontend and UI design skills
+- `documentation.md` — for writing and documentation skills
+- `testing.md` — for testing and QA skills
+- `security.md` — for security audit and hardening skills
+- `content-writing.md` — for content creation and copywriting
+- `data-analysis.md` — for data analysis and visualization
+- `research.md` — for research and exploration skills
+- `devops.md` — for DevOps and infrastructure skills
+- `default.md` — universal fallback for unmatched domains
 
 ### Step 4 — Score Each Dimension
 
@@ -184,15 +186,21 @@ Manual mode is always available regardless of the `autoJudge` setting.
 
 Rubrics are domain-specific scoring guidelines stored in `skills/judge/rubrics/`. Each rubric refines the 7 base dimensions with domain-appropriate criteria.
 
-| Rubric File          | Domain               | When Used                                      |
-|----------------------|----------------------|------------------------------------------------|
-| `rubric-default.md`  | General              | Fallback for any unmatched skill/agent         |
-| `rubric-code.md`     | Code & Engineering   | Skills that write, modify, or review code      |
-| `rubric-research.md` | Research & Exploration | Skills that search, explore, or analyze       |
-| `rubric-writing.md`  | Writing & Documentation | Skills that produce prose, docs, or reports |
-| `rubric-ops.md`      | DevOps & Infrastructure | Skills that manage infra, deploy, or configure |
+| Rubric File            | Domain                   | When Used                                        |
+|------------------------|--------------------------|--------------------------------------------------|
+| `default.md`           | General                  | Fallback for any unmatched skill/agent           |
+| `code-review.md`       | Code & Engineering       | Skills that write, modify, or review code        |
+| `frontend-design.md`   | Frontend & UI            | Skills that build or design user interfaces      |
+| `documentation.md`     | Writing & Documentation  | Skills that produce prose, docs, or reports      |
+| `testing.md`           | Testing & QA             | Skills that write or run tests                   |
+| `security.md`          | Security                 | Skills that audit, scan, or harden security      |
+| `content-writing.md`   | Content Creation         | Skills that create marketing or editorial content|
+| `data-analysis.md`     | Data & Analytics         | Skills that analyze data or create visualizations|
+| `research.md`          | Research & Exploration   | Skills that search, explore, or investigate      |
+| `devops.md`            | DevOps & Infrastructure  | Skills that manage infra, deploy, or configure   |
+| `custom-template.md`   | Template                 | Copy this to create a new domain-specific rubric |
 
-To add a custom rubric, create a new `rubric-{domain}.md` file in the `rubrics/` directory following the same structure as `rubric-default.md`.
+To add a custom rubric, copy `custom-template.md` and rename it to match your skill name or domain.
 
 ---
 
@@ -204,7 +212,7 @@ When you are activated as the Verdict evaluator (either via auto hook or `/judge
 
 - Identify the skill or agent that was executed. Use the command argument or infer from the most recent transcript.
 - Locate the execution transcript. In auto mode, it is passed via the hook. In manual mode, check the argument or use the most recent session.
-- Load the matching rubric from `skills/judge/rubrics/`. Match the skill's domain to the rubric filename. If unsure, use `rubric-default.md`.
+- Load the matching rubric from `skills/judge/rubrics/`. The scoring engine tries exact match first (`{skill-name}.md`), then category prefix, then `default.md`.
 
 ### 2. Analyze the Transcript Thoroughly
 
@@ -285,6 +293,6 @@ Write the JSON scorecard to `skills/judge/scores/{skill-name}-{YYYYMMDD-HHMMSS}.
 ### 8. Handle Edge Cases
 
 - **No transcript available**: Report an error. Do not fabricate scores.
-- **Skill not recognized**: Use `rubric-default.md` and note it in the output.
+- **Skill not recognized**: Use `default.md` and note it in the output.
 - **No previous scores for consistency**: Score consistency as 7.0 (neutral baseline) and note "No prior executions for comparison."
 - **Evaluation of Verdict itself**: This is allowed. Apply the same process without bias.

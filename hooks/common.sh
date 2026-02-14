@@ -1,6 +1,24 @@
 #!/bin/bash
 # Verdict — Common hook utilities
 
+# Check required dependencies
+_check_dependency() {
+  local cmd="$1"
+  local install_hint="$2"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "Verdict: requires '$cmd' but it is not installed. $install_hint" >&2
+    return 1
+  fi
+  return 0
+}
+
+check_dependencies() {
+  _check_dependency "jq" "Install: brew install jq / apt-get install jq" || return 1
+  _check_dependency "bc" "Install: brew install bc / apt-get install bc" || return 1
+  _check_dependency "python3" "Install: brew install python3 / apt-get install python3" || return 1
+  return 0
+}
+
 # Get the plugin root directory
 get_plugin_root() {
   cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd
@@ -35,6 +53,14 @@ detect_skill_from_transcript() {
 
   # Pattern 3: Look for skill: "name" in Skill tool calls
   skill_name=$(grep -oP '(?<="skill":\s?")[a-zA-Z0-9_-]+' "$transcript_path" 2>/dev/null | tail -1)
+
+  if [ -n "$skill_name" ]; then
+    echo "$skill_name"
+    return
+  fi
+
+  # Pattern 4: Look for /skill-name command invocations
+  skill_name=$(grep -oP '(?<=^/)[a-zA-Z0-9_-]+' "$transcript_path" 2>/dev/null | head -1)
 
   if [ -n "$skill_name" ]; then
     echo "$skill_name"

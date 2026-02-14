@@ -13,12 +13,23 @@
 - **Persistent Scorecards** -- All scores are saved to `skills/judge/scores/` as JSON for historical tracking and benchmarking.
 - **Blocking on Critical Failures** -- Optionally block workflow when a score falls below the configured threshold.
 
+## Requirements
+
+- **Python 3.9+** -- Used by the scoring engine (stdlib only, no pip packages needed)
+- **jq** -- JSON parsing in hook scripts (`brew install jq` / `apt-get install jq`)
+- **bc** -- Float comparison in hook scripts (`brew install bc` / `apt-get install bc`)
+
 ## Quick Start
 
 ### Install
 
+**Option A: From the official Claude Plugin Directory** (once listed)
 ```bash
-# Add the marketplace, then install
+/plugin install verdict
+```
+
+**Option B: Direct from GitHub**
+```bash
 /plugin marketplace add sattyamjjain/verdict
 /plugin install verdict@verdict
 ```

@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release of Verdict plugin for Claude Code and Claude Cowork.
 - Dual-mode operation: automatic hooks and manual `/judge` command.
 - 7-dimension weighted scoring system (correctness, completeness, adherence, actionability, efficiency, safety, consistency).
-- Configurable rubrics in YAML format with default, strict, and lenient presets.
+- 10 domain-specific rubrics in Markdown format (code-review, frontend-design, documentation, testing, security, content-writing, data-analysis, research, devops) plus a custom template.
 - Persistent score storage as JSON in `skills/judge/scores/`.
 - Slash commands: `/judge`, `/scorecard`, `/benchmark`, `/judge-config`.
 - Python scoring engine with composite score calculation.

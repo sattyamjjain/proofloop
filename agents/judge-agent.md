@@ -32,17 +32,24 @@ You receive two inputs:
 
 ### Step 1 — Load the Rubric
 
-Search for a domain-specific rubric in `skills/judge/rubrics/`:
+Search for a domain-specific rubric in `skills/judge/rubrics/`. The scoring engine resolves rubrics in this order:
+1. Exact match: `{skill-name}.md` (e.g., `code-review.md` for the `code-review` skill)
+2. Category prefix: progressive prefix match (e.g., `code-review-v2` tries `code-review.md`)
+3. Fallback: `default.md`
 
+Available rubrics:
 ```
-skills/judge/rubrics/rubric-code.md       — for code/engineering skills
-skills/judge/rubrics/rubric-research.md   — for research/exploration skills
-skills/judge/rubrics/rubric-writing.md    — for writing/documentation skills
-skills/judge/rubrics/rubric-ops.md        — for DevOps/infrastructure skills
-skills/judge/rubrics/rubric-default.md    — fallback
+skills/judge/rubrics/code-review.md       — code review and engineering
+skills/judge/rubrics/frontend-design.md   — frontend and UI design
+skills/judge/rubrics/documentation.md     — writing and documentation
+skills/judge/rubrics/testing.md           — testing and QA
+skills/judge/rubrics/security.md          — security audit and hardening
+skills/judge/rubrics/content-writing.md   — content creation
+skills/judge/rubrics/data-analysis.md     — data analysis and visualization
+skills/judge/rubrics/research.md          — research and exploration
+skills/judge/rubrics/devops.md            — DevOps and infrastructure
+skills/judge/rubrics/default.md           — universal fallback
 ```
-
-Match based on the skill's domain. When uncertain, default to `rubric-default.md`.
 
 ### Step 2 — Read the Transcript
 

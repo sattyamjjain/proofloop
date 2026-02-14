@@ -4,6 +4,9 @@ set -euo pipefail
 PLUGIN_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 source "$PLUGIN_ROOT/hooks/common.sh"
 
+# Check dependencies before proceeding
+check_dependencies || exit 0
+
 # Read hook input from stdin
 INPUT=$(cat)
 

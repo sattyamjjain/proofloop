@@ -1,5 +1,6 @@
 #!/bin/bash
 # Verdict — Detect which skill was used from a transcript
+# Delegates to the shared detect_skill_from_transcript() in common.sh
 set -euo pipefail
 
 TRANSCRIPT_PATH="${1:-}"
@@ -9,22 +10,11 @@ if [ -z "$TRANSCRIPT_PATH" ] || [ ! -f "$TRANSCRIPT_PATH" ]; then
   exit 1
 fi
 
-# Try multiple detection patterns
-# Pattern 1: skills/*/SKILL.md
-SKILL=$(grep -oP '(?<=skills/)[^/]+(?=/SKILL\.md)' "$TRANSCRIPT_PATH" 2>/dev/null | tail -1)
-[ -n "$SKILL" ] && echo "$SKILL" && exit 0
+# Source shared detection logic from hooks/common.sh
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+source "$PLUGIN_ROOT/hooks/common.sh"
 
-# Pattern 2: Skill tool invocation
-SKILL=$(grep -oP '(?<=Skill tool invoked: )[a-zA-Z0-9_-]+' "$TRANSCRIPT_PATH" 2>/dev/null | tail -1)
-[ -n "$SKILL" ] && echo "$SKILL" && exit 0
-
-# Pattern 3: "skill": "name" in JSON
-SKILL=$(grep -oP '(?<="skill":\s?")[a-zA-Z0-9_-]+' "$TRANSCRIPT_PATH" 2>/dev/null | tail -1)
-[ -n "$SKILL" ] && echo "$SKILL" && exit 0
-
-# Pattern 4: /skill-name command
-SKILL=$(grep -oP '(?<=^/)[a-zA-Z0-9_-]+' "$TRANSCRIPT_PATH" 2>/dev/null | head -1)
-[ -n "$SKILL" ] && echo "$SKILL" && exit 0
-
-echo ""
+SKILL=$(detect_skill_from_transcript "$TRANSCRIPT_PATH")
+echo "$SKILL"
 exit 0
