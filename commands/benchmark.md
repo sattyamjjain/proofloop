@@ -46,3 +46,19 @@ Recommendations:
 ```
 
 If no scores exist for the skill, inform the user to run `/judge` first.
+
+## Regression benchmark (CI gate)
+
+The `/benchmark` command above compares a skill's own history to
+reference standards. For heuristic-regression testing, use
+`scripts/benchmark_pack.py` instead:
+
+```shell
+python3 scripts/benchmark_pack.py
+```
+
+It runs a curated transcript corpus (`benchmarks/corpus/`) through the
+scoring engine and asserts each case satisfies the expected bounds in
+`benchmarks/manifest.json`. Exits non-zero on any drift — wire it into
+CI as a PR gate.
+

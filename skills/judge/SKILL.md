@@ -2,7 +2,7 @@
 name: judge
 displayName: "Verdict — Universal Quality Evaluator"
 description: "Evaluates the execution quality of any skill or agent using 7-dimension scoring with configurable rubrics"
-version: "1.0.0"
+version: "1.1.0"
 author: "Sattyam Jain"
 autoActivate:
   - "when the user asks to judge, evaluate, score, or rate a skill's output"
@@ -294,5 +294,80 @@ Write the JSON scorecard to `skills/judge/scores/{skill-name}-{YYYYMMDD-HHMMSS}.
 
 - **No transcript available**: Report an error. Do not fabricate scores.
 - **Skill not recognized**: Use `default.md` and note it in the output.
-- **No previous scores for consistency**: Score consistency as 7.0 (neutral baseline) and note "No prior executions for comparison."
-- **Evaluation of Verdict itself**: This is allowed. Apply the same process without bias.
+- **No previous scores for consistency**: Score consistency as 5.0
+  (neutral mid-range) and note "No prior executions for comparison."
+  The earlier 7.0 baseline inflated first-run composites; v1.1.0+ uses
+  5.0 to avoid biasing upwards when history is empty.
+- **Session ended in API error (StopFailure)**: Skip auto-judging.
+  The `StopFailure` hook in `hooks/hooks.json` handles this; `/judge`
+  invoked manually on such a transcript should note the API error
+  rather than score it.
+- **Routine-triggered session**: Treat normally. Routines produce
+  standard Claude Code transcripts — the routine prompt is the user
+  turn.
+- **Non-Claude transcript** (Codex, Cursor, Continue, OpenAI-compatible):
+  Use `score.py --adapter NAME` to extract lines via the matching
+  adapter in `skills/judge/adapters/`.
+- **Evaluation of Verdict itself**: This is allowed. Apply the same
+  process without bias.
+
+---
+
+## New in v1.1.0
+
+### Per-rubric weight overrides
+
+Any rubric can override the global dimension weights with a sibling
+`<rubric>.weights.json`:
+
+```json
+{
+  "correctness": 0.20,
+  "completeness": 0.15,
+  "adherence": 0.10,
+  "actionability": 0.10,
+  "efficiency": 0.05,
+  "safety": 0.35,
+  "consistency": 0.05
+}
+```
+
+Sum must equal 1.0 (±1e-6). The shipped `security.weights.json`
+applies 0.35 to safety so security-audit transcripts weight that
+dimension above correctness.
+
+### Model-aware efficiency
+
+`score.py` auto-detects the model from JSONL transcripts via the
+standard `"model": "<id>"` field. The efficiency analyser scales its
+long-transcript thresholds (2000 and 1000 lines) by a per-model
+baseline from `judge-config.json.tokenizer_baselines`. Ships with
+`claude-opus-4-7: 1.35` to absorb Opus 4.7's new tokenizer, which
+produces up to 35% more tokens than Opus 4.6 for the same text. Add
+an entry per model you care about, or override the `default` key.
+
+### Cross-ecosystem adapters
+
+Use `--adapter NAME` to score transcripts from other ecosystems:
+
+- `claude-code` — native JSONL (default).
+- `cowork` — Claude Cowork sessions.
+- `openai-compatible` — Cursor, Continue, and any tool using the
+  standard OpenAI chat-completion format.
+- `codex` — OpenAI Codex CLI (markdown sessions plus JSON sidecars).
+- `cursor`, `continue` — aliases for `openai-compatible`.
+
+### `/judge --against`
+
+Delegates to `skills/judge/scripts/against.py`. Picks two scorecards
+for the same skill, renders a Unicode delta table, and exits 2 on
+composite regression. Useful for CI gates and manual "did this change
+help" checks.
+
+### Validators and regression gates
+
+- `python3 scripts/validate_marketplace.py` — stdlib-only schema check
+  for `.claude-plugin/marketplace.json` against the April 2026 spec.
+- `python3 scripts/benchmark_pack.py` — runs the curated corpus in
+  `benchmarks/` and asserts each case satisfies its expected bounds.
+  Wire into CI to catch heuristic regressions.
