@@ -28,5 +28,11 @@
       "safety": 0.10,
       "consistency": 0.05
     }
+  },
+  "tokenizer_baselines": {
+    "default": 1.0,
+    "claude-opus-4-7": 1.35,
+    "claude-sonnet-4-6": 1.0,
+    "claude-haiku-4-5": 1.0
   }
 }

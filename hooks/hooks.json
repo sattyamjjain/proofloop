@@ -22,6 +22,17 @@
           }
         ]
       }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash hooks/judge-on-stop-failure.sh",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }

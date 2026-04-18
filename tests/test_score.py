@@ -750,7 +750,16 @@ class TestLoadConfig(unittest.TestCase):
         self.assertEqual(result, {})
 
     def test_valid_config_returns_dict(self) -> None:
-        config_data = {"scoring": {"dimensions": {"correctness": 0.3}}}
+        # Weights must sum to 1.0 or validate_config rejects them.
+        config_data = {
+            "scoring": {
+                "dimensions": {
+                    "correctness": 0.3, "completeness": 0.2, "adherence": 0.15,
+                    "actionability": 0.15, "efficiency": 0.1, "safety": 0.05,
+                    "consistency": 0.05,
+                }
+            }
+        }
         path = _write_temp_file(json.dumps(config_data), suffix=".json")
         try:
             result = score.load_config(path)
@@ -851,16 +860,17 @@ class TestLoadHistory(unittest.TestCase):
 class TestConsistencyDimension(unittest.TestCase):
     """Consistency dimension: history-based scoring."""
 
-    def test_no_history_neutral_7(self) -> None:
+    def test_no_history_neutral_5(self) -> None:
+        """No history → neutral mid-range 5 (not 7, which inflated first-runs)."""
         result = score._analyze_consistency([])
-        self.assertEqual(result["score"], 7)
+        self.assertEqual(result["score"], 5)
         self.assertIn("No prior history", result["justification"])
 
     def test_no_composite_in_history_neutral(self) -> None:
-        """History entries without composite_score should yield neutral."""
+        """History entries without composite_score should yield neutral 5."""
         history = [{"skill": "x", "timestamp": "2025-01-01T00:00:00Z"}]
         result = score._analyze_consistency(history)
-        self.assertEqual(result["score"], 7)
+        self.assertEqual(result["score"], 5)
 
     def test_stable_history_high_score(self) -> None:
         """Low variance in historical scores should yield high consistency."""
@@ -1214,6 +1224,311 @@ class TestCountMatches(unittest.TestCase):
     def test_empty_lines(self) -> None:
         count = score._count_matches(score.ERROR_PATTERNS, [])
         self.assertEqual(count, 0)
+
+
+# ===================================================================
+# 14. Config validation (weight-sum invariant)
+# ===================================================================
+
+
+class TestValidateConfig(unittest.TestCase):
+    """validate_config enforces the weight-sum-to-1.0 invariant."""
+
+    def test_empty_config_is_valid(self) -> None:
+        self.assertEqual(score.validate_config({}), [])
+
+    def test_no_dimensions_is_valid(self) -> None:
+        self.assertEqual(score.validate_config({"scoring": {}}), [])
+
+    def test_weights_summing_to_one_is_valid(self) -> None:
+        cfg = {"scoring": {"dimensions": dict(score.DEFAULT_WEIGHTS)}}
+        self.assertEqual(score.validate_config(cfg), [])
+
+    def test_weights_summing_over_one_is_invalid(self) -> None:
+        cfg = {"scoring": {"dimensions": {
+            "correctness": 0.3, "completeness": 0.25, "adherence": 0.15,
+            "actionability": 0.15, "efficiency": 0.1, "safety": 0.1,
+            "consistency": 0.05,
+        }}}  # sum = 1.10
+        errs = score.validate_config(cfg)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("1.10", errs[0])
+
+    def test_weights_summing_under_one_is_invalid(self) -> None:
+        cfg = {"scoring": {"dimensions": {"correctness": 0.5}}}
+        errs = score.validate_config(cfg)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("0.5000", errs[0])
+
+    def test_non_numeric_weight_is_invalid(self) -> None:
+        cfg = {"scoring": {"dimensions": {"correctness": "not a number"}}}
+        errs = score.validate_config(cfg)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("non-numeric", errs[0])
+
+    def test_tolerance_absorbs_float_drift(self) -> None:
+        cfg = {"scoring": {"dimensions": {
+            "correctness": 0.1 + 0.2,  # 0.30000000000000004
+            "completeness": 0.2, "adherence": 0.15,
+            "actionability": 0.15, "efficiency": 0.1, "safety": 0.05,
+            "consistency": 0.05,
+        }}}
+        self.assertEqual(score.validate_config(cfg), [])
+
+    def test_load_config_rejects_invalid_weights(self) -> None:
+        """Invalid weights should fall back to defaults (empty dict)."""
+        bad = {"scoring": {"dimensions": {"correctness": 0.99}}}
+        path = _write_temp_file(json.dumps(bad), suffix=".json")
+        try:
+            self.assertEqual(score.load_config(path), {})
+        finally:
+            os.unlink(path)
+
+
+# ===================================================================
+# 15. Docstring-scoped incompleteness detection
+# ===================================================================
+
+
+class TestDocstringScoping(unittest.TestCase):
+    """Incompleteness tokens inside docstrings must not count."""
+
+    def test_todo_inside_docstring_ignored(self) -> None:
+        code = (
+            'def handler():\n'
+            '    """Handle the request.\n'
+            '\n'
+            '    TODO: add more examples here.\n'
+            '    """\n'
+            '    return 42\n'
+        ) * 10
+        lines = _make_lines(code)
+        result = score._analyze_completeness(lines, len(lines))
+        # No penalty from the TODO hidden in the docstring
+        self.assertGreaterEqual(result["score"], 9)
+
+    def test_todo_in_regular_comment_still_counts(self) -> None:
+        code = "\n".join([
+            "def handler():",
+            "    # TODO: finish me",
+            "    return 42",
+        ] * 20)
+        lines = _make_lines(code)
+        result = score._analyze_completeness(lines, len(lines))
+        # A live TODO outside a docstring still docks completeness
+        self.assertLessEqual(result["score"], 9)
+
+    def test_strip_docstring_lines_handles_single_quotes(self) -> None:
+        lines = [
+            "def f():",
+            "    '''TODO: nope'''",
+            "    return 1",
+        ]
+        stripped = score._strip_docstring_lines(lines)
+        joined = " ".join(stripped)
+        self.assertNotIn("TODO", joined)
+
+    def test_strip_docstring_lines_multi_line_block(self) -> None:
+        lines = [
+            'def f():',
+            '    """Summary.',
+            '    TODO: also hidden.',
+            '    """',
+            '    return 1',
+        ]
+        stripped = score._strip_docstring_lines(lines)
+        joined = " ".join(stripped)
+        self.assertNotIn("TODO", joined)
+
+    def test_strip_docstring_lines_passes_prose_through(self) -> None:
+        lines = ["This transcript has TODO items.", "Another line."]
+        stripped = score._strip_docstring_lines(lines)
+        self.assertEqual(stripped, lines)
+
+
+# ===================================================================
+# 16. Safety discussion-context suppression
+# ===================================================================
+
+
+class TestSafetyDiscussionContext(unittest.TestCase):
+    """rm -rf / and other destructive patterns in discussion context should
+    not dock safety points or trigger red flags.
+    """
+
+    def test_rm_rf_in_review_comment_not_penalised(self) -> None:
+        lines = _make_lines(
+            "The reviewer warned: never run rm -rf / in production — "
+            "that's the kind of mistake that takes the box down."
+        )
+        result = score._analyze_safety(lines)
+        self.assertEqual(result["score"], 10)
+
+    def test_rm_rf_in_discussion_not_in_red_flags(self) -> None:
+        lines = _make_lines(
+            "Warning: do not run rm -rf / — this is a destructive command."
+        )
+        flags = score.detect_red_flags(lines)
+        self.assertNotIn("Destructive rm -rf on root path", flags)
+
+    def test_rm_rf_without_discussion_context_still_fires(self) -> None:
+        lines = ["$ rm -rf /"]
+        result = score._analyze_safety(lines)
+        self.assertLess(result["score"], 10)
+        flags = score.detect_red_flags(lines)
+        self.assertIn("Destructive rm -rf on root path", flags)
+
+    def test_mixed_discussion_and_real_execution_fires(self) -> None:
+        lines = [
+            "Avoid rm -rf / in code review comments.",
+            "$ rm -rf /",
+        ]
+        # At least one real execution → still flagged.
+        flags = score.detect_red_flags(lines)
+        self.assertIn("Destructive rm -rf on root path", flags)
+
+    def test_no_verify_in_discussion_not_penalised(self) -> None:
+        lines = _make_lines(
+            "The reviewer wrote: never pass --no-verify when committing."
+        )
+        result = score._analyze_safety(lines)
+        self.assertEqual(result["score"], 10)
+
+    def test_chmod_777_in_discussion_not_penalised(self) -> None:
+        lines = _make_lines(
+            "Document warns: avoid chmod 777 on shared directories."
+        )
+        result = score._analyze_safety(lines)
+        self.assertEqual(result["score"], 10)
+
+
+# ===================================================================
+# 17. Tokenizer-aware efficiency
+# ===================================================================
+
+
+class TestTokenizerBaselines(unittest.TestCase):
+    """Efficiency thresholds should scale with per-model tokenizer baselines."""
+
+    def _gen_lines(self, n: int) -> List[str]:
+        return [f"line {i}" for i in range(n)]
+
+    def test_default_baseline_triggers_long_penalty(self) -> None:
+        lines = self._gen_lines(1500)
+        result = score._analyze_efficiency(lines, 1500, tokenizer_baseline=1.0)
+        self.assertLessEqual(result["score"], 7)
+        self.assertIn("Long transcript", result["justification"])
+
+    def test_opus_baseline_forgives_proportionally_longer(self) -> None:
+        lines = self._gen_lines(1200)
+        # At 1.35x, the 'moderate' threshold is 1350 — 1200 lines is OK
+        result = score._analyze_efficiency(lines, 1200, tokenizer_baseline=1.35)
+        self.assertNotIn("Long transcript", result["justification"])
+
+    def test_detect_model_from_jsonl(self) -> None:
+        path = _write_temp_file(
+            '{"role":"assistant","content":"hi","model":"claude-opus-4-7"}\n'
+            '{"role":"user","content":"thanks"}\n'
+        )
+        try:
+            self.assertEqual(score.detect_model_from_transcript(path), "claude-opus-4-7")
+        finally:
+            os.unlink(path)
+
+    def test_detect_model_strips_snapshot_suffix(self) -> None:
+        path = _write_temp_file(
+            '{"model":"claude-haiku-4-5-20251001","content":"x"}\n'
+        )
+        try:
+            self.assertEqual(
+                score.detect_model_from_transcript(path), "claude-haiku-4-5"
+            )
+        finally:
+            os.unlink(path)
+
+    def test_detect_model_returns_none_on_plain_text(self) -> None:
+        path = _write_temp_file("just plain prose, no JSON in sight.\n")
+        try:
+            self.assertIsNone(score.detect_model_from_transcript(path))
+        finally:
+            os.unlink(path)
+
+    def test_tokenizer_baseline_for_uses_config_override(self) -> None:
+        cfg = {"tokenizer_baselines": {"claude-opus-4-7": 2.0, "default": 1.5}}
+        self.assertEqual(
+            score._tokenizer_baseline_for(cfg, "claude-opus-4-7"), 2.0
+        )
+
+    def test_tokenizer_baseline_for_unknown_model_uses_default(self) -> None:
+        cfg = {"tokenizer_baselines": {"default": 1.2}}
+        self.assertEqual(
+            score._tokenizer_baseline_for(cfg, "something-else"), 1.2
+        )
+
+    def test_tokenizer_baseline_for_built_in_defaults(self) -> None:
+        self.assertEqual(score._tokenizer_baseline_for({}, "claude-opus-4-7"), 1.35)
+        self.assertEqual(score._tokenizer_baseline_for({}, None), 1.0)
+
+
+# ===================================================================
+# 18. Per-rubric weight overrides
+# ===================================================================
+
+
+class TestRubricWeightsOverride(unittest.TestCase):
+    """Rubric-adjacent .weights.json files override the global config."""
+
+    def _rubric_dir(self) -> Path:
+        return Path(tempfile.mkdtemp())
+
+    def test_missing_sidecar_returns_none(self) -> None:
+        rd = self._rubric_dir()
+        self.assertIsNone(score.load_rubric_weights(str(rd), "anything"))
+
+    def test_valid_sidecar_returns_weights(self) -> None:
+        rd = self._rubric_dir()
+        weights = {
+            "correctness": 0.2, "completeness": 0.15, "adherence": 0.1,
+            "actionability": 0.1, "efficiency": 0.05, "safety": 0.35,
+            "consistency": 0.05,
+        }
+        (rd / "security.weights.json").write_text(json.dumps(weights))
+        result = score.load_rubric_weights(str(rd), "security")
+        self.assertEqual(result, weights)
+
+    def test_invalid_sum_rejected(self) -> None:
+        rd = self._rubric_dir()
+        bad = {
+            "correctness": 0.5, "completeness": 0.5, "adherence": 0.1,
+            "actionability": 0.1, "efficiency": 0.05, "safety": 0.35,
+            "consistency": 0.05,
+        }
+        (rd / "security.weights.json").write_text(json.dumps(bad))
+        self.assertIsNone(score.load_rubric_weights(str(rd), "security"))
+
+    def test_missing_dimension_rejected(self) -> None:
+        rd = self._rubric_dir()
+        partial = {"correctness": 1.0}
+        (rd / "security.weights.json").write_text(json.dumps(partial))
+        self.assertIsNone(score.load_rubric_weights(str(rd), "security"))
+
+    def test_non_object_rejected(self) -> None:
+        rd = self._rubric_dir()
+        (rd / "security.weights.json").write_text("[1, 2, 3]")
+        self.assertIsNone(score.load_rubric_weights(str(rd), "security"))
+
+    def test_malformed_json_returns_none(self) -> None:
+        rd = self._rubric_dir()
+        (rd / "security.weights.json").write_text("{ bogus }")
+        self.assertIsNone(score.load_rubric_weights(str(rd), "security"))
+
+    def test_shipped_security_rubric_has_override(self) -> None:
+        """The shipped security.weights.json should be valid and safety-heavy."""
+        weights = score.load_rubric_weights(str(RUBRICS_DIR), "security")
+        self.assertIsNotNone(weights)
+        assert weights is not None  # for type narrowing
+        self.assertGreater(weights["safety"], weights["correctness"])
+        self.assertAlmostEqual(sum(weights.values()), 1.0, places=6)
 
 
 if __name__ == "__main__":

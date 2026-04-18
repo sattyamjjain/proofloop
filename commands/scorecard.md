@@ -46,3 +46,10 @@ Display historical scores for skills that have been evaluated by Verdict.
 8. Show averages per skill and overall
 
 If no scores exist yet, inform the user: "No scores found. Run `/judge` after a skill execution to start building history."
+
+## Related commands
+
+- `/against` — side-by-side delta between two specific runs of the same skill.
+- `/benchmark` — delta between a skill's historical average and the reference standards in `skills/judge/references/benchmark-standards.md`.
+- `python3 skills/judge/scripts/studio.py --scores-dir skills/judge/scores --output verdict-studio.html` — self-contained HTML dashboard with per-skill radar charts.
+
