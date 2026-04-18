@@ -36,6 +36,18 @@ DEFAULT_WEIGHTS: Dict[str, float] = {
     "consistency": 0.05,
 }
 
+# Per-model line-count baseline multipliers for efficiency scoring.
+# Source: docs/research-log.md — Opus 4.7 uses a new tokenizer that
+# produces up to ~1.35x as many tokens for the same text; its transcripts
+# therefore run correspondingly longer and should not be penalised as
+# "inefficient" on the old length thresholds.
+DEFAULT_TOKENIZER_BASELINES: Dict[str, float] = {
+    "default": 1.0,
+    "claude-opus-4-7": 1.35,
+    "claude-sonnet-4-6": 1.0,
+    "claude-haiku-4-5": 1.0,
+}
+
 # ---------------------------------------------------------------------------
 # Grade mapping
 # ---------------------------------------------------------------------------
@@ -101,6 +113,51 @@ REPEATED_TOOL_PATTERN = re.compile(
 # ---------------------------------------------------------------------------
 # Transcript loading
 # ---------------------------------------------------------------------------
+
+
+MODEL_ID_PATTERN = re.compile(
+    r'"model"\s*:\s*"(claude-[a-z0-9.\-]+)"',
+    re.IGNORECASE,
+)
+
+
+def detect_model_from_transcript(path: str) -> Optional[str]:
+    """Return the first Claude model ID referenced in the transcript, or None.
+
+    Scans the raw file for ``"model": "<id>"`` occurrences — the shape used
+    by JSONL Claude Code transcripts. Returns the shortest canonical form
+    (strips trailing ``-YYYYMMDD`` snapshot suffixes) so lookups against
+    ``DEFAULT_TOKENIZER_BASELINES`` hit the base model key.
+    """
+    transcript_path = Path(path)
+    if not transcript_path.is_file():
+        return None
+    try:
+        raw = transcript_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = MODEL_ID_PATTERN.search(raw)
+    if not match:
+        return None
+    model = match.group(1).lower()
+    # Strip trailing ``-YYYYMMDD`` snapshot suffixes so aliases map.
+    model = re.sub(r"-\d{8}$", "", model)
+    return model
+
+
+def _tokenizer_baseline_for(config: Dict[str, Any], model: Optional[str]) -> float:
+    """Return the line-count multiplier for *model* from config or defaults."""
+    baselines = dict(DEFAULT_TOKENIZER_BASELINES)
+    cfg_baselines = config.get("tokenizer_baselines") if isinstance(config, dict) else None
+    if isinstance(cfg_baselines, dict):
+        for key, value in cfg_baselines.items():
+            try:
+                baselines[str(key)] = float(value)
+            except (TypeError, ValueError):
+                continue
+    if model and model in baselines:
+        return baselines[model]
+    return baselines.get("default", 1.0)
 
 
 def load_transcript(path: str) -> List[str]:
@@ -258,6 +315,59 @@ def _get_weights(config: Dict[str, Any]) -> Dict[str, float]:
     return weights
 
 
+def load_rubric_weights(
+    rubric_dir: str,
+    rubric_name: str,
+) -> Optional[Dict[str, float]]:
+    """Return per-rubric weight overrides from ``<rubric>.weights.json`` or None.
+
+    The sidecar must contain a JSON object mapping each of Verdict's seven
+    dimensions to a float; the sum must equal 1.0 within
+    ``WEIGHT_SUM_TOLERANCE``. Any other shape emits a stderr warning and
+    returns None so the caller falls back to the global config.
+    """
+    sidecar = Path(rubric_dir) / f"{rubric_name}.weights.json"
+    if not sidecar.is_file():
+        return None
+    try:
+        data = json.loads(sidecar.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        print(
+            f"Warning: Could not parse {sidecar} ({exc}); using global weights.",
+            file=sys.stderr,
+        )
+        return None
+    if not isinstance(data, dict):
+        print(
+            f"Warning: {sidecar} is not an object; using global weights.",
+            file=sys.stderr,
+        )
+        return None
+    try:
+        coerced = {str(k): float(v) for k, v in data.items()}
+    except (TypeError, ValueError) as exc:
+        print(
+            f"Warning: {sidecar} has non-numeric weights ({exc}); using global weights.",
+            file=sys.stderr,
+        )
+        return None
+    missing = set(DEFAULT_WEIGHTS) - set(coerced)
+    if missing:
+        print(
+            f"Warning: {sidecar} missing dimensions {sorted(missing)}; using global weights.",
+            file=sys.stderr,
+        )
+        return None
+    total = sum(coerced[dim] for dim in DEFAULT_WEIGHTS)
+    if abs(total - 1.0) > WEIGHT_SUM_TOLERANCE:
+        print(
+            f"Warning: {sidecar} weights sum to {total:.4f} (expected 1.0); using global weights.",
+            file=sys.stderr,
+        )
+        return None
+    return {dim: coerced[dim] for dim in DEFAULT_WEIGHTS}
+
+
 # ---------------------------------------------------------------------------
 # History loading (for consistency checks)
 # ---------------------------------------------------------------------------
@@ -334,10 +444,13 @@ def analyze_dimension(
     transcript_lines: List[str],
     rubric_criteria: Dict[str, str],
     history: List[Dict[str, Any]],
+    tokenizer_baseline: float = 1.0,
 ) -> Dict[str, Any]:
     """Score a single dimension (1-10) with justification.
 
     Uses heuristic analysis of the transcript combined with rubric criteria.
+    ``tokenizer_baseline`` (default 1.0) is forwarded to the efficiency
+    analyser so length thresholds can be model-aware.
     """
     total_lines = len(transcript_lines)
     full_text = "\n".join(transcript_lines)
@@ -351,7 +464,7 @@ def analyze_dimension(
     elif name == "actionability":
         return _analyze_actionability(transcript_lines, full_text)
     elif name == "efficiency":
-        return _analyze_efficiency(transcript_lines, total_lines)
+        return _analyze_efficiency(transcript_lines, total_lines, tokenizer_baseline)
     elif name == "safety":
         return _analyze_safety(transcript_lines)
     elif name == "consistency":
@@ -547,8 +660,18 @@ def _analyze_actionability(lines: List[str], full_text: str) -> Dict[str, Any]:
     return {"score": score, "justification": justification}
 
 
-def _analyze_efficiency(lines: List[str], total: int) -> Dict[str, Any]:
-    """Efficiency: tool call count, repetition, transcript length."""
+def _analyze_efficiency(
+    lines: List[str],
+    total: int,
+    tokenizer_baseline: float = 1.0,
+) -> Dict[str, Any]:
+    """Efficiency: tool call count, repetition, transcript length.
+
+    ``tokenizer_baseline`` scales the long-transcript thresholds so models
+    that simply emit more tokens (e.g. Opus 4.7) are not penalised for
+    producing proportionally longer transcripts. Default 1.0 preserves
+    pre-existing behaviour.
+    """
     score = 8
     reasons: List[str] = []
 
@@ -578,13 +701,17 @@ def _analyze_efficiency(lines: List[str], total: int) -> Dict[str, Any]:
         score -= 1
         reasons.append(f"Minor retries ({repeated_calls} hits)")
 
-    # Very long transcripts may indicate inefficiency
-    if total > 2000:
+    # Very long transcripts may indicate inefficiency. Thresholds are
+    # scaled by the model's tokenizer baseline so Opus 4.7's ~35%-longer
+    # outputs aren't penalised on the Opus-4.6-era numbers.
+    high_threshold = int(2000 * tokenizer_baseline)
+    moderate_threshold = int(1000 * tokenizer_baseline)
+    if total > high_threshold:
         score -= 2
-        reasons.append(f"Very long transcript ({total} lines)")
-    elif total > 1000:
+        reasons.append(f"Very long transcript ({total} lines, threshold {high_threshold})")
+    elif total > moderate_threshold:
         score -= 1
-        reasons.append(f"Long transcript ({total} lines)")
+        reasons.append(f"Long transcript ({total} lines, threshold {moderate_threshold})")
 
     score = max(1, min(10, score))
     justification = "; ".join(reasons) if reasons else "Efficient execution"
@@ -962,24 +1089,33 @@ def build_scorecard(
     rubric_dir: str,
     scores_dir: str,
     config_path: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build a full scorecard for the given skill execution.
 
     This is the primary entry point that orchestrates loading, analysis,
-    scoring, and persistence.
+    scoring, and persistence. ``model`` overrides transcript-detected
+    model identification when provided (useful for non-JSONL transcripts).
     """
     # 1. Load inputs
     config = load_config(config_path)
-    weights = _get_weights(config)
     transcript_lines = load_transcript(transcript_path)
     rubric_name, rubric_text = load_rubric(rubric_dir, skill_name)
     rubric_criteria = _parse_rubric_criteria(rubric_text)
     history = load_history(scores_dir, skill_name)
+    detected_model = model or detect_model_from_transcript(transcript_path)
+    tokenizer_baseline = _tokenizer_baseline_for(config, detected_model)
+    # Per-rubric weight overrides take precedence over global config
+    rubric_weights = load_rubric_weights(rubric_dir, rubric_name)
+    weights = rubric_weights if rubric_weights else _get_weights(config)
+    weights_source = "rubric" if rubric_weights else "config"
 
     # 2. Score each dimension
     dimensions: Dict[str, Dict[str, Any]] = {}
     for dim in weights:
-        result = analyze_dimension(dim, transcript_lines, rubric_criteria, history)
+        result = analyze_dimension(
+            dim, transcript_lines, rubric_criteria, history, tokenizer_baseline
+        )
         weight = weights[dim]
         weighted = round(result["score"] * weight, 2)
         dimensions[dim] = {
@@ -1043,6 +1179,9 @@ def build_scorecard(
         "recommendations": recommendations,
         "rubric_used": rubric_name,
         "transcript_lines": len(transcript_lines),
+        "model": detected_model,
+        "tokenizer_baseline": tokenizer_baseline,
+        "weights_source": weights_source,
     }
 
     # 5. Persist
@@ -1088,6 +1227,15 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=None,
         help="Path to judge-config.json (optional; uses defaults if omitted).",
     )
+    parser.add_argument(
+        "--model",
+        default=None,
+        help=(
+            "Model ID override (e.g. claude-opus-4-7). When omitted, the "
+            "model is auto-detected from the transcript; when absent from "
+            "the transcript the 'default' tokenizer baseline is used."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -1101,6 +1249,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         rubric_dir=args.rubric_dir,
         scores_dir=args.scores_dir,
         config_path=args.config,
+        model=args.model,
     )
 
     # Remove internal metadata before printing

@@ -1402,5 +1402,134 @@ class TestSafetyDiscussionContext(unittest.TestCase):
         self.assertEqual(result["score"], 10)
 
 
+# ===================================================================
+# 17. Tokenizer-aware efficiency
+# ===================================================================
+
+
+class TestTokenizerBaselines(unittest.TestCase):
+    """Efficiency thresholds should scale with per-model tokenizer baselines."""
+
+    def _gen_lines(self, n: int) -> List[str]:
+        return [f"line {i}" for i in range(n)]
+
+    def test_default_baseline_triggers_long_penalty(self) -> None:
+        lines = self._gen_lines(1500)
+        result = score._analyze_efficiency(lines, 1500, tokenizer_baseline=1.0)
+        self.assertLessEqual(result["score"], 7)
+        self.assertIn("Long transcript", result["justification"])
+
+    def test_opus_baseline_forgives_proportionally_longer(self) -> None:
+        lines = self._gen_lines(1200)
+        # At 1.35x, the 'moderate' threshold is 1350 — 1200 lines is OK
+        result = score._analyze_efficiency(lines, 1200, tokenizer_baseline=1.35)
+        self.assertNotIn("Long transcript", result["justification"])
+
+    def test_detect_model_from_jsonl(self) -> None:
+        path = _write_temp_file(
+            '{"role":"assistant","content":"hi","model":"claude-opus-4-7"}\n'
+            '{"role":"user","content":"thanks"}\n'
+        )
+        try:
+            self.assertEqual(score.detect_model_from_transcript(path), "claude-opus-4-7")
+        finally:
+            os.unlink(path)
+
+    def test_detect_model_strips_snapshot_suffix(self) -> None:
+        path = _write_temp_file(
+            '{"model":"claude-haiku-4-5-20251001","content":"x"}\n'
+        )
+        try:
+            self.assertEqual(
+                score.detect_model_from_transcript(path), "claude-haiku-4-5"
+            )
+        finally:
+            os.unlink(path)
+
+    def test_detect_model_returns_none_on_plain_text(self) -> None:
+        path = _write_temp_file("just plain prose, no JSON in sight.\n")
+        try:
+            self.assertIsNone(score.detect_model_from_transcript(path))
+        finally:
+            os.unlink(path)
+
+    def test_tokenizer_baseline_for_uses_config_override(self) -> None:
+        cfg = {"tokenizer_baselines": {"claude-opus-4-7": 2.0, "default": 1.5}}
+        self.assertEqual(
+            score._tokenizer_baseline_for(cfg, "claude-opus-4-7"), 2.0
+        )
+
+    def test_tokenizer_baseline_for_unknown_model_uses_default(self) -> None:
+        cfg = {"tokenizer_baselines": {"default": 1.2}}
+        self.assertEqual(
+            score._tokenizer_baseline_for(cfg, "something-else"), 1.2
+        )
+
+    def test_tokenizer_baseline_for_built_in_defaults(self) -> None:
+        self.assertEqual(score._tokenizer_baseline_for({}, "claude-opus-4-7"), 1.35)
+        self.assertEqual(score._tokenizer_baseline_for({}, None), 1.0)
+
+
+# ===================================================================
+# 18. Per-rubric weight overrides
+# ===================================================================
+
+
+class TestRubricWeightsOverride(unittest.TestCase):
+    """Rubric-adjacent .weights.json files override the global config."""
+
+    def _rubric_dir(self) -> Path:
+        return Path(tempfile.mkdtemp())
+
+    def test_missing_sidecar_returns_none(self) -> None:
+        rd = self._rubric_dir()
+        self.assertIsNone(score.load_rubric_weights(str(rd), "anything"))
+
+    def test_valid_sidecar_returns_weights(self) -> None:
+        rd = self._rubric_dir()
+        weights = {
+            "correctness": 0.2, "completeness": 0.15, "adherence": 0.1,
+            "actionability": 0.1, "efficiency": 0.05, "safety": 0.35,
+            "consistency": 0.05,
+        }
+        (rd / "security.weights.json").write_text(json.dumps(weights))
+        result = score.load_rubric_weights(str(rd), "security")
+        self.assertEqual(result, weights)
+
+    def test_invalid_sum_rejected(self) -> None:
+        rd = self._rubric_dir()
+        bad = {
+            "correctness": 0.5, "completeness": 0.5, "adherence": 0.1,
+            "actionability": 0.1, "efficiency": 0.05, "safety": 0.35,
+            "consistency": 0.05,
+        }
+        (rd / "security.weights.json").write_text(json.dumps(bad))
+        self.assertIsNone(score.load_rubric_weights(str(rd), "security"))
+
+    def test_missing_dimension_rejected(self) -> None:
+        rd = self._rubric_dir()
+        partial = {"correctness": 1.0}
+        (rd / "security.weights.json").write_text(json.dumps(partial))
+        self.assertIsNone(score.load_rubric_weights(str(rd), "security"))
+
+    def test_non_object_rejected(self) -> None:
+        rd = self._rubric_dir()
+        (rd / "security.weights.json").write_text("[1, 2, 3]")
+        self.assertIsNone(score.load_rubric_weights(str(rd), "security"))
+
+    def test_malformed_json_returns_none(self) -> None:
+        rd = self._rubric_dir()
+        (rd / "security.weights.json").write_text("{ bogus }")
+        self.assertIsNone(score.load_rubric_weights(str(rd), "security"))
+
+    def test_shipped_security_rubric_has_override(self) -> None:
+        """The shipped security.weights.json should be valid and safety-heavy."""
+        weights = score.load_rubric_weights(str(RUBRICS_DIR), "security")
+        self.assertIsNotNone(weights)
+        assert weights is not None  # for type narrowing
+        self.assertGreater(weights["safety"], weights["correctness"])
+        self.assertAlmostEqual(sum(weights.values()), 1.0, places=6)
+
+
 if __name__ == "__main__":
     unittest.main()
