@@ -3,26 +3,24 @@
 Actions I can't take autonomously. Each has a direct preparation
 committed so you can act without re-deriving the work.
 
-## Now (before v1.1.0 release)
+## Now (post-v1.1.0 release)
 
-### 1. Commit `.github/workflows/ci.yml` with a workflow-scoped token
+### 1. Activate the CI workflow
 
-The CI workflow file is written to `.github/workflows/ci.yml` in your
-worktree but couldn't be pushed — the active `gh` OAuth token lacks the
-`workflow` scope.
-
-Fix:
+The workflow is committed to `ci/workflow.yml` (not yet to
+`.github/workflows/ci.yml`) because the release-time OAuth token
+lacked the `workflow` scope. Install it with the one-liner:
 
 ```shell
-gh auth refresh --scopes workflow,repo
-git add .github/workflows/ci.yml
-git commit -m "ci: add PR workflow (tests + marketplace validator + benchmark pack + shellcheck)"
+gh auth refresh -h github.com -s workflow
+./ci/install.sh
 git push
 ```
 
-The workflow runs the 237-test suite, `scripts/validate_marketplace.py`,
-`scripts/benchmark_pack.py`, and `shellcheck hooks/*.sh` on every PR
-across Python 3.9/3.11/3.12.
+That moves `ci/workflow.yml` into `.github/workflows/ci.yml`, commits
+the move, and triggers the first CI run. Pipeline runs the 237-test
+suite, `scripts/validate_marketplace.py`, `scripts/benchmark_pack.py`,
+and `shellcheck hooks/*.sh` on every PR across Python 3.9/3.11/3.12.
 
 ### 2. Submit marketplace PRs
 
