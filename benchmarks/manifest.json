@@ -1,0 +1,33 @@
+{
+  "description": "Curated transcript corpus. Each case declares expected bounds; benchmark_pack.py asserts no regression.",
+  "cases": [
+    {
+      "name": "clean-code-review",
+      "skill": "code-review",
+      "transcript": "corpus/clean-code-review.jsonl",
+      "expected_grade_min": "B",
+      "expected_composite_min": 7.5
+    },
+    {
+      "name": "failing-completeness",
+      "skill": "code-review",
+      "transcript": "corpus/failing-completeness.jsonl",
+      "expected_dimension_max": {"completeness": 5}
+    },
+    {
+      "name": "safety-discussion-not-penalised",
+      "skill": "code-review",
+      "transcript": "corpus/safety-discussion.jsonl",
+      "expected_dimension_min": {"safety": 8},
+      "expected_composite_min": 7.5
+    },
+    {
+      "name": "openai-compatible-adapter",
+      "skill": "code-review",
+      "transcript": "corpus/openai-compatible.json",
+      "adapter": "openai-compatible",
+      "expected_grade_min": "B",
+      "expected_composite_min": 7.5
+    }
+  ]
+}

@@ -160,16 +160,41 @@ def _tokenizer_baseline_for(config: Dict[str, Any], model: Optional[str]) -> flo
     return baselines.get("default", 1.0)
 
 
-def load_transcript(path: str) -> List[str]:
+def load_transcript(path: str, adapter: Optional[str] = None) -> List[str]:
     """Read a transcript file and return a list of lines.
 
-    Handles both JSON-lines format (one JSON object per line) and plain text.
-    For JSON-lines, extracts the text content from each record.
+    Handles both JSON-lines format (one JSON object per line) and plain
+    text. When *adapter* is provided, delegates to the registered adapter
+    in ``skills/judge/adapters``. When omitted, the built-in Claude Code
+    logic is applied for backward compatibility.
     """
     transcript_path = Path(path)
     if not transcript_path.exists():
         print(f"Error: Transcript file not found: {path}", file=sys.stderr)
         sys.exit(1)
+
+    if adapter:
+        try:
+            # Local import to keep the scripts dir self-contained and avoid
+            # circular-import surprises when score.py is imported as a module.
+            sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+            from adapters import get_adapter  # type: ignore
+        except ImportError as exc:
+            print(
+                f"Warning: adapter '{adapter}' unavailable ({exc}); using built-in loader.",
+                file=sys.stderr,
+            )
+        else:
+            try:
+                lines = get_adapter(adapter)(path)
+                if not lines:
+                    print(f"Warning: Transcript is empty: {path}", file=sys.stderr)
+                return lines
+            except KeyError:
+                print(
+                    f"Warning: unknown adapter '{adapter}'; using built-in loader.",
+                    file=sys.stderr,
+                )
 
     raw = transcript_path.read_text(encoding="utf-8")
     lines: List[str] = []
@@ -1090,16 +1115,20 @@ def build_scorecard(
     scores_dir: str,
     config_path: Optional[str] = None,
     model: Optional[str] = None,
+    adapter: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build a full scorecard for the given skill execution.
 
     This is the primary entry point that orchestrates loading, analysis,
     scoring, and persistence. ``model`` overrides transcript-detected
     model identification when provided (useful for non-JSONL transcripts).
+    ``adapter`` selects a registered transcript adapter from
+    ``skills/judge/adapters`` for non-native formats (codex, cursor,
+    continue, openai-compatible, cowork).
     """
     # 1. Load inputs
     config = load_config(config_path)
-    transcript_lines = load_transcript(transcript_path)
+    transcript_lines = load_transcript(transcript_path, adapter=adapter)
     rubric_name, rubric_text = load_rubric(rubric_dir, skill_name)
     rubric_criteria = _parse_rubric_criteria(rubric_text)
     history = load_history(scores_dir, skill_name)
@@ -1236,6 +1265,15 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
             "the transcript the 'default' tokenizer baseline is used."
         ),
     )
+    parser.add_argument(
+        "--adapter",
+        default=None,
+        help=(
+            "Transcript adapter for non-Claude ecosystems. Choices: "
+            "claude-code, cowork, openai-compatible, codex, cursor, continue. "
+            "Omitted: use the built-in Claude Code JSONL loader."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -1250,6 +1288,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         scores_dir=args.scores_dir,
         config_path=args.config,
         model=args.model,
+        adapter=args.adapter,
     )
 
     # Remove internal metadata before printing
