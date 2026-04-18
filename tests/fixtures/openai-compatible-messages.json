@@ -1,0 +1,7 @@
+{
+  "model": "gpt-5-turbo",
+  "messages": [
+    {"role": "user", "content": "Optimise this query."},
+    {"role": "assistant", "content": "Added an index on the user_id column."}
+  ]
+}

@@ -1,0 +1,17 @@
+[
+  {"role": "user", "content": "Look up the latest release for anthropics/claude-code."},
+  {
+    "role": "assistant",
+    "content": "Fetching the release list.",
+    "tool_calls": [
+      {
+        "id": "call_1",
+        "function": {
+          "name": "github_api",
+          "arguments": "{\"endpoint\":\"/repos/anthropics/claude-code/releases/latest\"}"
+        }
+      }
+    ]
+  },
+  {"role": "tool", "tool_call_id": "call_1", "content": "{\"tag_name\":\"v2.1.4\"}"}
+]

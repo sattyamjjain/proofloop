@@ -1,0 +1,4 @@
+{"role":"user","content":"/code-review verify the deploy script handles rollbacks cleanly."}
+{"role":"assistant","content":"The deploy script uses the `rollback_manager.safe_revert()` function I see imported at line 14. This function takes a backup snapshot and reverts atomically."}
+{"role":"assistant","content":"Actually, I need to correct myself — I hallucinated that function. Looking again at the actual file, there is no `rollback_manager` module imported. The deploy script has no rollback logic at all. My earlier claim was fabricated."}
+{"role":"assistant","content":"The real state: deploy.sh runs `kubectl apply` and exits. On failure, the prior Deployment resource is replaced. There is no explicit rollback path, no snapshot, no atomic revert. This is a genuine gap in the script."}

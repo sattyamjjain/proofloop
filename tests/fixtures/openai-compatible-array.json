@@ -1,0 +1,5 @@
+[
+  {"role": "system", "content": "You are a senior engineer."},
+  {"role": "user", "content": "Fix the auth bug."},
+  {"role": "assistant", "content": "Found the bug in middleware.py:42. Patching now."}
+]

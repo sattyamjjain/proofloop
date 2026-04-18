@@ -24,8 +24,13 @@ get_plugin_root() {
   cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd
 }
 
-# Detect which skill was used from a transcript
-# Looks for skill invocation patterns in the transcript
+# Detect which skill was used from a transcript.
+#
+# Looks for skill invocation patterns in order; first match wins.
+# Uses `sed -nE` instead of `grep -oP` so the function works on
+# BSD sed (macOS) as well as GNU (Linux, CI). `grep -oP` relies on
+# PCRE, which macOS's BSD grep rejects — the old implementation
+# silently fell through to "no skill detected" on every darwin run.
 detect_skill_from_transcript() {
   local transcript_path="$1"
 
@@ -34,34 +39,31 @@ detect_skill_from_transcript() {
     return
   fi
 
-  # Pattern 1: Look for skills/*/SKILL.md references
   local skill_name
-  skill_name=$(grep -oP '(?<=skills/)[^/]+(?=/SKILL\.md)' "$transcript_path" 2>/dev/null | tail -1)
 
+  # Pattern 1: skills/<name>/SKILL.md references (last match wins)
+  skill_name=$(sed -nE 's|.*skills/([a-zA-Z0-9_-]+)/SKILL\.md.*|\1|p' "$transcript_path" 2>/dev/null | tail -1)
   if [ -n "$skill_name" ]; then
     echo "$skill_name"
     return
   fi
 
-  # Pattern 2: Look for /skill-name command invocations
-  skill_name=$(grep -oP '(?<=Skill tool invoked: )[a-zA-Z0-9_-]+' "$transcript_path" 2>/dev/null | tail -1)
-
+  # Pattern 2: "Skill tool invoked: <name>" marker
+  skill_name=$(sed -nE 's|.*Skill tool invoked: ([a-zA-Z0-9_-]+).*|\1|p' "$transcript_path" 2>/dev/null | tail -1)
   if [ -n "$skill_name" ]; then
     echo "$skill_name"
     return
   fi
 
-  # Pattern 3: Look for skill: "name" in Skill tool calls
-  skill_name=$(grep -oP '(?<="skill":\s?")[a-zA-Z0-9_-]+' "$transcript_path" 2>/dev/null | tail -1)
-
+  # Pattern 3: JSON "skill": "<name>" field
+  skill_name=$(sed -nE 's|.*"skill":[[:space:]]*"([a-zA-Z0-9_-]+)".*|\1|p' "$transcript_path" 2>/dev/null | tail -1)
   if [ -n "$skill_name" ]; then
     echo "$skill_name"
     return
   fi
 
-  # Pattern 4: Look for /skill-name command invocations
-  skill_name=$(grep -oP '(?<=^/)[a-zA-Z0-9_-]+' "$transcript_path" 2>/dev/null | head -1)
-
+  # Pattern 4: leading /skill-name slash command (first match wins)
+  skill_name=$(sed -nE 's|^/([a-zA-Z0-9_-]+).*|\1|p' "$transcript_path" 2>/dev/null | head -1)
   if [ -n "$skill_name" ]; then
     echo "$skill_name"
     return

@@ -1,0 +1,4 @@
+{"role":"user","content":"/code-review review src/auth/middleware.py","model":"claude-opus-4-7"}
+{"role":"assistant","content":"Reviewing the middleware now."}
+{"role":"assistant","content":[{"type":"text","text":"Block one — no errors."},{"type":"text","text":"Block two — clean structure."}]}
+{"role":"assistant","content":"Done. No issues."}

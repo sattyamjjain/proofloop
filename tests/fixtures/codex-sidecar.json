@@ -1,0 +1,10 @@
+{
+  "events": [
+    {"role": "user", "content": "Run the benchmark suite."},
+    {"role": "assistant", "content": "Benchmark completed in 12.4s. Median throughput: 8.2k req/s."}
+  ],
+  "messages": [
+    {"role": "user", "content": "Run the benchmark suite."},
+    {"role": "assistant", "content": "Benchmark completed in 12.4s. Median throughput: 8.2k req/s."}
+  ]
+}
