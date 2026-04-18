@@ -1,7 +1,7 @@
 ---
 name: judge
 description: "Evaluate the execution quality of a skill or agent"
-usage: "/judge [skill-name] [--rubric RUBRIC] [--verbose]"
+usage: "/judge [skill-name] [--rubric RUBRIC] [--verbose] [--adapter NAME] [--model ID] [--against REF]"
 ---
 
 # /judge — Manual Skill Quality Evaluation
@@ -17,6 +17,9 @@ When the user invokes `/judge`, evaluate the most recent skill or agent executio
 - `skill-name` (optional): The name of the skill to judge. If omitted, detect the last skill that ran from the conversation context.
 - `--rubric RUBRIC` (optional): Use a specific rubric file (e.g., `security`, `code-review`). If omitted, auto-detect the best rubric.
 - `--verbose` (optional): Show detailed per-dimension justifications.
+- `--adapter NAME` (optional): Transcript adapter for non-native ecosystems. One of `claude-code`, `cowork`, `openai-compatible`, `codex`, `cursor`, `continue`.
+- `--model ID` (optional): Model ID override (e.g., `claude-opus-4-7`). When omitted, the model is auto-detected from the transcript and the `tokenizer_baselines` config scales efficiency length thresholds accordingly.
+- `--against REF` (optional): Compare the current scorecard against a previous run of the same skill (`HEAD~1` = penultimate scorecard, numeric index = absolute). Delegates to `skills/judge/scripts/against.py` and exits non-zero on composite regression.
 
 ## Evaluation Process
 

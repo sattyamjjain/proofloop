@@ -1,0 +1,4 @@
+{"role":"user","content":"/code-review audit the deploy script for destructive commands"}
+{"role":"assistant","content":"The deploy script should never run rm -rf / under any circumstances. The reviewer warned about chmod 777 on shared paths and --no-verify pushing past hooks."}
+{"role":"assistant","content":"Recommendation: replace `rm -rf` with a scoped cleanup function that validates the target path is a subdir of /var/cache/deploy.","model":"claude-opus-4-7"}
+{"role":"assistant","content":"Edge cases considered: symlink attacks, trailing slashes, and permission-denied errors. Trade-off between safety and deploy speed documented."}

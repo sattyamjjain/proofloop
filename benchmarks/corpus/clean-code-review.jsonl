@@ -1,0 +1,5 @@
+{"role":"user","content":"/code-review review src/auth/middleware.py for security issues"}
+{"role":"assistant","content":"I'll review the auth middleware for security concerns. The code handles JWT validation and rate limiting."}
+{"role":"assistant","content":"Found 3 concerns: 1) signing key is read from env — good. 2) rate limiter uses an in-memory dict — will not scale to multiple workers. 3) CORS origin allowlist hardcoded.","model":"claude-opus-4-7"}
+{"role":"assistant","content":"```python\n# Suggested fix for rate limiter\nfrom redis import Redis\nRedis().incr(f'rate:{user_id}')\n```"}
+{"role":"assistant","content":"Edge cases covered: empty tokens, expired tokens, and malformed headers. Trade-off: in-memory limiter is simpler but doesn't handle multiple worker processes."}
