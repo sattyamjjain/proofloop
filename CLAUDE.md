@@ -58,7 +58,7 @@ Verdict/
 │       ├── scoring-methodology.md
 │       └── benchmark-standards.md
 ├── tests/
-│   └── test_score.py            # 132 unit tests for scoring engine
+│   └── test_score.py            # Unit tests for scoring engine
 ├── agents/
 │   └── judge-agent.md           # Read-only evaluator agent definition
 ├── hooks/
