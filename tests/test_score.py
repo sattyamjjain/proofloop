@@ -750,7 +750,16 @@ class TestLoadConfig(unittest.TestCase):
         self.assertEqual(result, {})
 
     def test_valid_config_returns_dict(self) -> None:
-        config_data = {"scoring": {"dimensions": {"correctness": 0.3}}}
+        # Weights must sum to 1.0 or validate_config rejects them.
+        config_data = {
+            "scoring": {
+                "dimensions": {
+                    "correctness": 0.3, "completeness": 0.2, "adherence": 0.15,
+                    "actionability": 0.15, "efficiency": 0.1, "safety": 0.05,
+                    "consistency": 0.05,
+                }
+            }
+        }
         path = _write_temp_file(json.dumps(config_data), suffix=".json")
         try:
             result = score.load_config(path)
@@ -851,16 +860,17 @@ class TestLoadHistory(unittest.TestCase):
 class TestConsistencyDimension(unittest.TestCase):
     """Consistency dimension: history-based scoring."""
 
-    def test_no_history_neutral_7(self) -> None:
+    def test_no_history_neutral_5(self) -> None:
+        """No history → neutral mid-range 5 (not 7, which inflated first-runs)."""
         result = score._analyze_consistency([])
-        self.assertEqual(result["score"], 7)
+        self.assertEqual(result["score"], 5)
         self.assertIn("No prior history", result["justification"])
 
     def test_no_composite_in_history_neutral(self) -> None:
-        """History entries without composite_score should yield neutral."""
+        """History entries without composite_score should yield neutral 5."""
         history = [{"skill": "x", "timestamp": "2025-01-01T00:00:00Z"}]
         result = score._analyze_consistency(history)
-        self.assertEqual(result["score"], 7)
+        self.assertEqual(result["score"], 5)
 
     def test_stable_history_high_score(self) -> None:
         """Low variance in historical scores should yield high consistency."""
@@ -1214,6 +1224,182 @@ class TestCountMatches(unittest.TestCase):
     def test_empty_lines(self) -> None:
         count = score._count_matches(score.ERROR_PATTERNS, [])
         self.assertEqual(count, 0)
+
+
+# ===================================================================
+# 14. Config validation (weight-sum invariant)
+# ===================================================================
+
+
+class TestValidateConfig(unittest.TestCase):
+    """validate_config enforces the weight-sum-to-1.0 invariant."""
+
+    def test_empty_config_is_valid(self) -> None:
+        self.assertEqual(score.validate_config({}), [])
+
+    def test_no_dimensions_is_valid(self) -> None:
+        self.assertEqual(score.validate_config({"scoring": {}}), [])
+
+    def test_weights_summing_to_one_is_valid(self) -> None:
+        cfg = {"scoring": {"dimensions": dict(score.DEFAULT_WEIGHTS)}}
+        self.assertEqual(score.validate_config(cfg), [])
+
+    def test_weights_summing_over_one_is_invalid(self) -> None:
+        cfg = {"scoring": {"dimensions": {
+            "correctness": 0.3, "completeness": 0.25, "adherence": 0.15,
+            "actionability": 0.15, "efficiency": 0.1, "safety": 0.1,
+            "consistency": 0.05,
+        }}}  # sum = 1.10
+        errs = score.validate_config(cfg)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("1.10", errs[0])
+
+    def test_weights_summing_under_one_is_invalid(self) -> None:
+        cfg = {"scoring": {"dimensions": {"correctness": 0.5}}}
+        errs = score.validate_config(cfg)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("0.5000", errs[0])
+
+    def test_non_numeric_weight_is_invalid(self) -> None:
+        cfg = {"scoring": {"dimensions": {"correctness": "not a number"}}}
+        errs = score.validate_config(cfg)
+        self.assertEqual(len(errs), 1)
+        self.assertIn("non-numeric", errs[0])
+
+    def test_tolerance_absorbs_float_drift(self) -> None:
+        cfg = {"scoring": {"dimensions": {
+            "correctness": 0.1 + 0.2,  # 0.30000000000000004
+            "completeness": 0.2, "adherence": 0.15,
+            "actionability": 0.15, "efficiency": 0.1, "safety": 0.05,
+            "consistency": 0.05,
+        }}}
+        self.assertEqual(score.validate_config(cfg), [])
+
+    def test_load_config_rejects_invalid_weights(self) -> None:
+        """Invalid weights should fall back to defaults (empty dict)."""
+        bad = {"scoring": {"dimensions": {"correctness": 0.99}}}
+        path = _write_temp_file(json.dumps(bad), suffix=".json")
+        try:
+            self.assertEqual(score.load_config(path), {})
+        finally:
+            os.unlink(path)
+
+
+# ===================================================================
+# 15. Docstring-scoped incompleteness detection
+# ===================================================================
+
+
+class TestDocstringScoping(unittest.TestCase):
+    """Incompleteness tokens inside docstrings must not count."""
+
+    def test_todo_inside_docstring_ignored(self) -> None:
+        code = (
+            'def handler():\n'
+            '    """Handle the request.\n'
+            '\n'
+            '    TODO: add more examples here.\n'
+            '    """\n'
+            '    return 42\n'
+        ) * 10
+        lines = _make_lines(code)
+        result = score._analyze_completeness(lines, len(lines))
+        # No penalty from the TODO hidden in the docstring
+        self.assertGreaterEqual(result["score"], 9)
+
+    def test_todo_in_regular_comment_still_counts(self) -> None:
+        code = "\n".join([
+            "def handler():",
+            "    # TODO: finish me",
+            "    return 42",
+        ] * 20)
+        lines = _make_lines(code)
+        result = score._analyze_completeness(lines, len(lines))
+        # A live TODO outside a docstring still docks completeness
+        self.assertLessEqual(result["score"], 9)
+
+    def test_strip_docstring_lines_handles_single_quotes(self) -> None:
+        lines = [
+            "def f():",
+            "    '''TODO: nope'''",
+            "    return 1",
+        ]
+        stripped = score._strip_docstring_lines(lines)
+        joined = " ".join(stripped)
+        self.assertNotIn("TODO", joined)
+
+    def test_strip_docstring_lines_multi_line_block(self) -> None:
+        lines = [
+            'def f():',
+            '    """Summary.',
+            '    TODO: also hidden.',
+            '    """',
+            '    return 1',
+        ]
+        stripped = score._strip_docstring_lines(lines)
+        joined = " ".join(stripped)
+        self.assertNotIn("TODO", joined)
+
+    def test_strip_docstring_lines_passes_prose_through(self) -> None:
+        lines = ["This transcript has TODO items.", "Another line."]
+        stripped = score._strip_docstring_lines(lines)
+        self.assertEqual(stripped, lines)
+
+
+# ===================================================================
+# 16. Safety discussion-context suppression
+# ===================================================================
+
+
+class TestSafetyDiscussionContext(unittest.TestCase):
+    """rm -rf / and other destructive patterns in discussion context should
+    not dock safety points or trigger red flags.
+    """
+
+    def test_rm_rf_in_review_comment_not_penalised(self) -> None:
+        lines = _make_lines(
+            "The reviewer warned: never run rm -rf / in production — "
+            "that's the kind of mistake that takes the box down."
+        )
+        result = score._analyze_safety(lines)
+        self.assertEqual(result["score"], 10)
+
+    def test_rm_rf_in_discussion_not_in_red_flags(self) -> None:
+        lines = _make_lines(
+            "Warning: do not run rm -rf / — this is a destructive command."
+        )
+        flags = score.detect_red_flags(lines)
+        self.assertNotIn("Destructive rm -rf on root path", flags)
+
+    def test_rm_rf_without_discussion_context_still_fires(self) -> None:
+        lines = ["$ rm -rf /"]
+        result = score._analyze_safety(lines)
+        self.assertLess(result["score"], 10)
+        flags = score.detect_red_flags(lines)
+        self.assertIn("Destructive rm -rf on root path", flags)
+
+    def test_mixed_discussion_and_real_execution_fires(self) -> None:
+        lines = [
+            "Avoid rm -rf / in code review comments.",
+            "$ rm -rf /",
+        ]
+        # At least one real execution → still flagged.
+        flags = score.detect_red_flags(lines)
+        self.assertIn("Destructive rm -rf on root path", flags)
+
+    def test_no_verify_in_discussion_not_penalised(self) -> None:
+        lines = _make_lines(
+            "The reviewer wrote: never pass --no-verify when committing."
+        )
+        result = score._analyze_safety(lines)
+        self.assertEqual(result["score"], 10)
+
+    def test_chmod_777_in_discussion_not_penalised(self) -> None:
+        lines = _make_lines(
+            "Document warns: avoid chmod 777 on shared directories."
+        )
+        result = score._analyze_safety(lines)
+        self.assertEqual(result["score"], 10)
 
 
 if __name__ == "__main__":
