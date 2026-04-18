@@ -1,5 +1,9 @@
 # Verdict
 
+[![CI](https://github.com/sattyamjjain/verdict/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sattyamjjain/verdict/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sattyamjjain/verdict)](https://github.com/sattyamjjain/verdict/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 **Auto-grade every Claude Code and Cowork skill execution on seven
 dimensions. No LLM call. No config. Just a scorecard.**
 
@@ -188,7 +192,10 @@ routines/
 docs/
   research-log.md          # Dated citations for external specs
   followups.md             # Tasks awaiting human action
-  launch/                  # Launch collateral (HN, Reddit, X, DMs)
+  metrics.md               # Weekly launch + engineering metrics
+  launch/                  # Launch collateral (HN, Reddit, X, DMs, marketplace)
+.github/workflows/
+  ci.yml                   # Tests + validators + benchmark gate + shellcheck
 judge-config.json
 CLAUDE.md, CHANGELOG.md, INSTALL-COWORK.md, README.md, LICENSE
 ```
