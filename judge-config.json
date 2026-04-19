@@ -34,5 +34,10 @@
     "claude-opus-4-7": 1.35,
     "claude-sonnet-4-6": 1.0,
     "claude-haiku-4-5": 1.0
+  },
+  "llm_second_opinion": {
+    "enabled": false,
+    "model": "claude-haiku-4-5",
+    "budget_tokens": null
   }
 }

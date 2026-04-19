@@ -19,6 +19,7 @@ from .claude_code import extract_lines as _claude_code_extract
 from .cowork import extract_lines as _cowork_extract
 from .openai_compatible import extract_lines as _openai_compatible_extract
 from .codex import extract_lines as _codex_extract
+from .gemini_cli import extract_lines as _gemini_cli_extract
 
 Adapter = Callable[[str], List[str]]
 
@@ -29,6 +30,8 @@ ADAPTERS: Dict[str, Adapter] = {
     "codex": _codex_extract,
     "cursor": _openai_compatible_extract,
     "continue": _openai_compatible_extract,
+    "gemini-cli": _gemini_cli_extract,
+    "gemini": _gemini_cli_extract,
 }
 
 

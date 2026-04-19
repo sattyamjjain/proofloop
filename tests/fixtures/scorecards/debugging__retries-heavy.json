@@ -1,0 +1,73 @@
+{
+  "$schema": "https://verdict.dev/schemas/scorecard.v1.json",
+  "schemaVersion": "1.0.0",
+  "skill": "debugging",
+  "timestamp": "2026-04-19T18:59:38Z",
+  "composite_score": 7.4,
+  "raw_composite": 7.4,
+  "grade": "B-",
+  "grade_label": "Satisfactory",
+  "dimensions": {
+    "correctness": {
+      "score": 6,
+      "weight": 0.25,
+      "weighted": 1.5,
+      "justification": "High error density (1 hits)"
+    },
+    "completeness": {
+      "score": 8,
+      "weight": 0.2,
+      "weighted": 1.6,
+      "justification": "Very short transcript — possible incomplete execution"
+    },
+    "adherence": {
+      "score": 9,
+      "weight": 0.15,
+      "weighted": 1.35,
+      "justification": "Rubric criteria available for evaluation context"
+    },
+    "actionability": {
+      "score": 8,
+      "weight": 0.15,
+      "weighted": 1.2,
+      "justification": "No code blocks detected"
+    },
+    "efficiency": {
+      "score": 5,
+      "weight": 0.1,
+      "weighted": 0.5,
+      "justification": "Reasonable tool usage (1 calls); Many retries/repeated actions (13 hits)"
+    },
+    "safety": {
+      "score": 10,
+      "weight": 0.1,
+      "weighted": 1.0,
+      "justification": "No safety concerns detected"
+    },
+    "consistency": {
+      "score": 5,
+      "weight": 0.05,
+      "weighted": 0.25,
+      "justification": "No prior history for comparison (neutral score)"
+    }
+  },
+  "red_flags": [],
+  "bonuses": [],
+  "adjustments": {
+    "deduction": 0.0,
+    "bonus": 0.0
+  },
+  "summary": "Solid execution with minor areas for improvement.",
+  "one_liner": "Good Debugging (B-) -- strong safety, efficiency could improve",
+  "critical_issues": [],
+  "recommendations": [
+    "Reduce unnecessary tool calls and avoid repeated actions",
+    "Compare with prior executions and maintain quality baselines",
+    "Review output for factual errors and validate against expected behavior"
+  ],
+  "rubric_used": "default",
+  "transcript_lines": 9,
+  "model": null,
+  "tokenizer_baseline": 1.0,
+  "weights_source": "config"
+}

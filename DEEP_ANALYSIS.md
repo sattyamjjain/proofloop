@@ -298,3 +298,82 @@ Coverage by category:
 ## 13. Bottom line
 
 Verdict is a **tight, principled starting point** for plugin-based quality evaluation on Claude Code and Cowork. Its strengths — zero-dependency Python, a strong test suite, well-structured domain rubrics, dual-mode (auto + manual), and persistent JSON scorecards — are exactly right for a v1.0 release. The next release should treat the regex analyzers as a *fallback* behind an optional LLM judge and address the length-as-proxy and neutral-baseline biases. Once those are fixed, Verdict can credibly claim the "universal" in its tagline.
+
+---
+
+## 14. Schema stability contract *(added 2026-04-19 with v1.1.1)*
+
+Every persisted scorecard JSON carries `"$schema"` and `"schemaVersion"`
+fields at the top of the document. These are injected unconditionally by
+`skills/judge/scripts/score.py::save_score`; no caller needs to supply
+them. The canonical schema lives at
+`schemas/scorecard.v1.schema.json` and is tested against every fixture
+in `tests/fixtures/scorecards/` via `tests/test_schema.py`.
+
+### Identifiers
+
+- `$schema`: `https://verdict.dev/schemas/scorecard.v1.json` — stable
+  URI that never changes for the v1 line of the schema. The domain will
+  resolve to a static copy of the schema once `verdict.dev` is live; until
+  then the URI is a logical identifier and the authoritative copy is the
+  file in-repo.
+- `schemaVersion`: SemVer string `"MAJOR.MINOR.PATCH"`.
+  - **MAJOR** is pinned to `1` for this schema URI. A breaking change
+    (removal of a field, change of a type, change of an enum value,
+    change of a required-list) forces a new schema file at
+    `schemas/scorecard.v2.schema.json` and a new URI.
+  - **MINOR** bumps for additive-compatible changes: new optional
+    properties, new enum values on an open enum, newly relaxed
+    constraints. Consumers that pin to `schemaVersion >= 1.1.0` must
+    keep parsing older documents.
+  - **PATCH** bumps are purely editorial: reworded `description` text,
+    doc typos, tightened `additionalProperties: true → true with a
+    pattern`, and the like.
+
+### Evolution rules
+
+- New **required** top-level field → MAJOR bump (old consumers break).
+- New **optional** top-level field → MINOR bump.
+- New dimension in `dimensions` → MAJOR bump (existing consumers iterate
+  the seven canonical keys and would miss it); this is avoided in
+  practice by adding LLM-side data inside the existing dimension entry
+  (`dimensions.correctness.llm_score` et al.).
+- Enum extension (e.g. a new grade tier) → MINOR bump if old consumers
+  can safely ignore the new value, MAJOR otherwise.
+- Removing a field that was optional → MINOR bump and a deprecation
+  note in `CHANGELOG.md`.
+- Renaming a field → treated as remove+add, so MAJOR.
+
+### Deprecation window
+
+Fields marked for removal ship in a MINOR release with a
+`"deprecated": true` note in their `description`, then are removed only
+in the next MAJOR. Consumers should check `schemaVersion` and fall back
+to the legacy field when parsing older documents.
+
+### Consumer pinning
+
+Downstream tools (including Verdict Studio, `benchmark_pack.py`, and
+external dashboards) should parse `schemaVersion` first. The minimum
+compatible pin is `>= 1.0.0, < 2.0.0`. Any tool that needs a v1.1+
+field should guard on `schemaVersion` and degrade gracefully for
+v1.0.x documents.
+
+### Test surface
+
+- `tests/test_schema.py::TestSchemaFileWellFormed` — schema itself
+  parses and advertises the correct `$id`.
+- `tests/test_schema.py::TestPersistedFixtures` — every file in
+  `tests/fixtures/scorecards/` validates against the schema and carries
+  the right `$schema`/`schemaVersion` values.
+- `tests/test_schema.py::TestPersistInjection` — `save_score` injects
+  both fields on every write, idempotently, even when the caller's dict
+  already carries them (canonical values win).
+
+### Rationale
+
+Before v1.1.1 the scorecard JSON was a moving target: any downstream
+consumer that parsed last week's scorecard broke when we added fields
+(`model`, `tokenizer_baseline`, `weights_source`). The schema contract
+converts that implicit API into an explicit one and gives future
+consumers a version they can pin against.

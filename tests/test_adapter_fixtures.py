@@ -88,5 +88,15 @@ class TestCodexSidecarFixture(unittest.TestCase):
         self.assertIn("Benchmark completed", joined)
 
 
+class TestGeminiCliFixture(unittest.TestCase):
+    def test_extracts_every_part(self) -> None:
+        path = str(FIXTURES_DIR / "gemini-cli.jsonl")
+        lines = adapters.get_adapter("gemini-cli")(path)
+        joined = "\n".join(lines)
+        self.assertIn("middleware.py", joined)
+        self.assertIn("audience validation", joined)
+        self.assertTrue(any(line.startswith("tool_use: read_file(") for line in lines))
+
+
 if __name__ == "__main__":
     unittest.main()
