@@ -1,118 +1,171 @@
-# PR draft — `v1.1.1 → v1.2.0-beta.1` landing
+# PR drafts — stacked v1.1.1 + v1.2.0 landing
 
-Copy-paste the body below when you open the PR. The title line is the
-repository's expected convention; keep it if you can. This file is
-intentionally committed so you can eyeball the draft locally before
-publishing.
+Two PRs, stacked. Copy-paste the body you need when you open each.
+Kept in-repo so you can eyeball them locally before publishing.
 
 ---
 
-## PR title
+## PR 1 — v1.1.1 (schema + issue hygiene)
+
+### PR title
 
 ```
-v1.1.1 — scorecard schema + $schema field + issue cleanup (plus v1.2.0-beta.1 features)
+v1.1.1 — scorecard schema + $schema field + issue cleanup
 ```
 
-## PR base / head
+### Base / head
 
 - base: `main`
 - head: `feat/v1.2.0-schema-llm-opinion`
 
-## PR body
+### Body
 
-Executes the 2026-04-19 Claude Code Prompt (Thread A). Every task
-below has a commit + tests; the branch grows 262 → 314 passing tests.
+Executes Thread A of the 2026-04-19 prompt. Commit `0b225cb` on branch
+`feat/v1.2.0-schema-llm-opinion`. **Stop here if you want only v1.1.1
+scope**; the v1.2.0 N1–N8 work stacks on top in PR 2.
 
-### Thread A — tasks completed
+- **A1** — `schemas/scorecard.v1.schema.json` + `$schema` /
+  `schemaVersion` injection in `save_score`. Four committed fixtures
+  under `tests/fixtures/scorecards/`. DEEP_ANALYSIS.md §Schema
+  stability contract.
+- **A2** — issue #2 closed with a v1.1.0 completeness summary;
+  issue #3 opened for v1.2.0 tracking.
+- **A3** — opt-in LLM second-opinion analyzer
+  (`skills/judge/analyzers/llm_judge.py`). Off by default.
+- **A4** — Gemini CLI adapter (`skills/judge/adapters/gemini_cli.py`)
+  registered under `gemini-cli` / `gemini`.
+- **A5** — `/judge --watch` live re-scoring
+  (`skills/judge/scripts/watch.py`).
+- **A6** — dogfood self-score CI gate
+  (`.github/workflows/self-score.yml`).
 
-- **A1 — `scorecard.v1.schema.json` + `$schema` field.** Canonical
-  JSON Schema at `schemas/scorecard.v1.schema.json`. `save_score`
-  injects `$schema` and `schemaVersion` at the top of every emitted
-  document. DEEP_ANALYSIS.md §Schema stability contract documents the
-  SemVer rules. New suites: `tests/test_schema.py`, `tests/_schema_validator.py`
-  (stdlib-only validator so we don't take a `jsonschema` dep), and
-  four committed scorecard fixtures under
-  `tests/fixtures/scorecards/`.
+Tests: 262 → 314 (+52). CI green locally (`validate_marketplace` +
+`benchmark_pack` both pass).
 
-- **A2 — issue hygiene.** [#2][i2] closed with a summary covering
-  every completed v1.1.0 item; [#3][i3] opened for v1.2.0 tracking.
-  [i2]: https://github.com/sattyamjjain/verdict/issues/2
-  [i3]: https://github.com/sattyamjjain/verdict/issues/3
+---
 
-- **A3 — opt-in LLM second-opinion analyzer.**
-  `skills/judge/analyzers/llm_judge.py` with stdlib-only
-  `AnthropicClient`. Gated by
-  `judge-config.json.llm_second_opinion.enabled` (default `false`).
-  When on, emits `dimensions[dim].llm_score` /
-  `dimensions[dim].llm_justification` alongside the heuristic entries.
-  Transcripts trimmed to 16k chars (~4k tokens) with a head/tail
-  preservation strategy. Sends `task-budgets-2026-03-13` beta header
-  when `budget_tokens` is configured. `tests/test_llm_judge.py` injects
-  a fake client — zero network calls in CI. Failures degrade
-  gracefully (heuristics-only scorecard, stderr warning).
+## PR 2 — v1.2.0 (Auto Memory + task budgets + rubric pack + interop)
 
-- **A4 — Gemini CLI adapter.** `skills/judge/adapters/gemini_cli.py`
-  handles `parts[]`, flattened `content`, `functionCall`, and
-  `functionResponse` shapes. Registered under `gemini-cli` and `gemini`
-  in the adapter registry. Fixture:
-  `tests/fixtures/gemini-cli.jsonl`. Tests in `test_adapters.py`
-  and `test_adapter_fixtures.py`.
+### PR title
 
-- **A5 — `/judge --watch` live re-scoring.**
-  `skills/judge/scripts/watch.py` polls the scores directory every 2 s
-  (configurable via `--interval`). On change, emits a single-line diff
-  header (`improved X, regressed Y, unchanged Z` + composite delta
-  with ↑/↓/→) and re-renders Verdict Studio. `--once` flag for tests.
-  Slash-command docs updated in `commands/judge.md`.
-  `tests/test_watch.py` covers diff math, run-pass behaviour, and the
-  CLI once-path.
+```
+v1.2.0 — Auto Memory, task budgets, rubric packs, MLflow/OpenAI-Evals interop
+```
 
-- **A6 — dogfood self-score CI gate.**
-  `.github/workflows/self-score.yml` treats the PR title + body +
-  changed-files list as a synthetic transcript and scores it against
-  the code-review rubric. Fails the job when composite <
-  `VERDICT_PR_THRESHOLD` (default 7.0). Posts the Unicode scorecard as
-  a PR comment via `actions/github-script@v7`; updates in place on
-  subsequent pushes.
+### Base / head
+
+- base: `feat/v1.2.0-schema-llm-opinion` *(stacks on PR 1; merge that
+  first, then rebase)*
+- head: `feat/v1.2.0-rubric-pack-expansion`
+
+### Body
+
+Executes the 2026-04-20 prompt. Tests: 314 → 384 (+70). Benchmark
+pack 8/8, marketplace validator clean.
+
+#### N1 — Auto Memory cross-session stitching
+
+`adapters/claude_code.py::extract_lines` now accepts a directory of
+`*.jsonl` session files. Concatenates in mtime order with
+`--- session break ---` markers. Memory-preamble lines flagged with
+`[system-memory] ` so downstream scorers can separate injected system
+context from actual user-turn output. Tokens recognised:
+`memory_block`, `<memory>`, `auto-memory`, `claude_memory`. Fixture at
+`tests/fixtures/claude-code-multisession/` + `tests/test_auto_memory.py`
+(12 cases).
+
+#### N2 — `task_budgets-2026-03-13` beta header
+
+`AnthropicClient` now sends the `anthropic-beta:
+task_budgets-2026-03-13` header when a `budget_tokens` is set, plus
+`output_config.task_budget` soft cap and a `max_tokens` hard ceiling
+at `1.25×` of the soft budget. Enforces the 20k minimum documented
+by Anthropic. Optional stderr countdown for CI drift monitoring.
+Config plumbing: `llm_second_opinion.task_budget_tokens`.
+`tests/test_llm_judge_budget.py` (9 cases) verifies the exact wire
+format without touching the network.
+
+#### N3 — Three new rubrics
+
+- `code-review-aider-polyglot.md` — maps Aider-polyglot benchmark
+  axes (syntactic/semantic correctness, multi-file coherence,
+  instruction-follow, diff compaction) onto Verdict's canonical
+  seven dimensions.
+- `skill-compliance.md` — MLflow's "skill compliance" dimension
+  (did the agent actually load and follow the skill?) ported offline.
+- `model-spec-compliance.md` — OpenAI Model Spec Evals 1-7 scale,
+  with a documented rescaling table to Verdict's native 1-10.
+
+Each carries a `source_signal:` header citing the article it rides.
+`tests/test_rubric_packs.py` (6 cases) exercises structure + parser +
+end-to-end scoring.
+
+#### N4 — `--export openai-evals` exporter
+
+`skills/judge/exporters/openai_evals.py` converts a Verdict scorecard
+into Model Spec Evals JSON (`{run_id, criteria, summary}`). Threshold
+7/10 default. `--export-rescale` flag emits Model Spec's native 1-7
+bucket. LLM second-opinion fields round-trip into `llm_score` /
+`llm_rationale`. CLI flag wired through `score.py`.
+`tests/test_openai_evals_export.py` (10 cases).
+
+#### N5 — LightEval metric shim
+
+`skills/judge/integrations/lighteval_shim.py` exposes
+`verdict_metric(predictions, references, rubric)` returning a float in
+`[0, 1]`. `lighteval` is **never** imported at runtime — lazy-import
+protocol preserves Verdict's offline-first pitch.
+`tests/test_lighteval_shim.py` (7 cases).
+
+#### N6 — MLflow trace ingestion adapter
+
+`skills/judge/adapters/mlflow_trace.py` parses
+`mlflow.entities.Trace` JSON exports without importing `mlflow`.
+Registered under `mlflow-trace` / `mlflow`; auto-detected via a
+file-head fingerprint (`adapters.detect_adapter`).
+Fixture at `tests/fixtures/mlflow-trace.json`.
+`tests/test_mlflow_trace_adapter.py` (14 cases).
+
+#### N7 — Schema registry static site
+
+`docs/schema-registry.md` + `.github/workflows/pages.yml`. Every file
+under `schemas/` mirrors to GitHub Pages on push to `main`; once
+`verdict.dev` is live, a CNAME swap lands the canonical URLs.
+
+#### N8 — `/judge --compare-runs` (and `/compare` slash command)
+
+`skills/judge/scripts/compare.py` + `commands/compare.md`. Explicit
+two-file delta with narrative callouts for Auto Memory regression
+signatures (composite drop, memory growth, consistency slide,
+per-dimension ≥ 3-point drops). Exit 2 on composite regression so CI
+can gate. Complement to `/judge --against HEAD~1`.
+`tests/test_compare_runs.py` (12 cases).
 
 ### Version bumps
 
-- `plugin.json` · `marketplace.json` · `SKILL.md` → `1.2.0-beta.1`
-- `CHANGELOG.md` — full Added / Changed / Tests / Out-of-scope section
+- `plugin.json` · `marketplace.json` · `SKILL.md` → `1.2.0`
+- `CHANGELOG.md` — full Added / Changed / Tests sections for both
+  2026-04-19 and 2026-04-20 sessions.
+- `plugin.json.components.commands` now registers `./commands/compare.md`.
 
-### Tests
+### Hard constraints honoured
 
-| Suite                         | Before | After |
-| ----------------------------- | :----: | :---: |
-| Total unit tests              |  262   |  314  |
-| Benchmark pack cases          |    8   |    8  |
-| `test_schema.py`              |    —   |    7  |
-| `test_llm_judge.py`           |    —   |   24  |
-| `test_watch.py`               |    —   |   12  |
-| Gemini coverage               |    —   |    9  |
+- Offline-first preserved: LLM judge default **off**, MLflow adapter
+  **parse-only** (never imports `mlflow`), LightEval shim **lazy-imports**.
+- No new non-stdlib runtime deps in Verdict core.
+- No secrets in fixtures.
+- 384 / 314 / 237 — test count never dropped below baseline at any
+  intermediate commit.
 
-All green locally. Shellcheck clean on `hooks/*.sh`. Marketplace
-validator passes.
+### Out of scope (per the 2026-04-20 prompt)
 
-### Out of scope for this PR
+- Rubric marketplace live index
+- `verdict` PyPI shim
+- Paid / hosted schema registry
+- `verdict-airlock` scaffold — explicitly rejected on 2026-04-19 and
+  reaffirmed on 2026-04-20
 
-- Rubric marketplace index (P2)
-- Scorecard delta webhook (P2)
-- `verdict` PyPI shim (P2)
-- MLflow integration (future)
+### Prompt references
 
-### Upgrade notes for consumers
-
-- Scorecard JSON now carries `$schema` and `schemaVersion` at the top.
-  Existing consumers that iterate top-level keys will see two new
-  entries; add them to your allowlist or (better) pin to the schema.
-- `llm_second_opinion` config block is present but disabled. Old
-  configs without the block continue to work; `_llm_second_opinion_config`
-  treats a missing block as disabled without warning.
-- `adapters/` registry now has `gemini-cli` and `gemini` entries. If
-  you vendored the registry, regenerate it.
-
-### Prompt reference
-
-Executes the 2026-04-19 prompt (Thread A only — Thread B was out of
-scope by your decision).
+Executes the 2026-04-19 prompt (Thread A only, Thread B skipped by
+explicit user decision) and the 2026-04-20 prompt (N1–N8).

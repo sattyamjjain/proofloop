@@ -1,0 +1,82 @@
+name: Publish schemas to Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "schemas/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    name: Mirror schemas/*.json to gh-pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build static site from schemas/
+        run: |
+          set -euo pipefail
+          SITE=_site
+          rm -rf "$SITE"
+          mkdir -p "$SITE/schemas"
+          cp -R schemas/. "$SITE/schemas/"
+
+          # Landing page — pure static, no build step.
+          cat > "$SITE/index.html" <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <title>Verdict schema registry</title>
+            <style>
+              body { font-family: -apple-system, system-ui, sans-serif; max-width: 42rem; margin: 3rem auto; padding: 0 1.25rem; color: #1a1a1a; }
+              h1 { margin: 0 0 0.25rem; font-size: 1.25rem; }
+              .tagline { color: #666; margin-bottom: 2rem; }
+              table { border-collapse: collapse; width: 100%; font-size: 0.95rem; }
+              th, td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #eee; text-align: left; }
+              th { font-weight: 600; background: #fafafa; }
+              code { background: #f4f4f4; padding: 0.05rem 0.3rem; border-radius: 3px; font-size: 0.9em; }
+              a { color: #0057c2; }
+            </style>
+          </head>
+          <body>
+            <h1>Verdict schema registry</h1>
+            <p class="tagline">Canonical JSON schemas for scorecards emitted by <a href="https://github.com/sattyamjjain/verdict">sattyamjjain/verdict</a>. See <a href="https://github.com/sattyamjjain/verdict/blob/main/docs/schema-registry.md">docs/schema-registry.md</a> for the stability contract.</p>
+            <table>
+              <thead><tr><th>Schema</th><th>Version</th><th>URL</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>Scorecard</td>
+                  <td>v1</td>
+                  <td><a href="./schemas/scorecard.v1.schema.json"><code>schemas/scorecard.v1.schema.json</code></a></td>
+                </tr>
+              </tbody>
+            </table>
+          </body>
+          </html>
+          HTML
+
+          ls -la "$SITE" "$SITE/schemas"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
