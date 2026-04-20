@@ -20,6 +20,10 @@ from .cowork import extract_lines as _cowork_extract
 from .openai_compatible import extract_lines as _openai_compatible_extract
 from .codex import extract_lines as _codex_extract
 from .gemini_cli import extract_lines as _gemini_cli_extract
+from .mlflow_trace import (
+    extract_lines as _mlflow_trace_extract,
+    looks_like_mlflow_trace as _mlflow_trace_fingerprint,
+)
 
 Adapter = Callable[[str], List[str]]
 
@@ -32,7 +36,22 @@ ADAPTERS: Dict[str, Adapter] = {
     "continue": _openai_compatible_extract,
     "gemini-cli": _gemini_cli_extract,
     "gemini": _gemini_cli_extract,
+    "mlflow-trace": _mlflow_trace_extract,
+    "mlflow": _mlflow_trace_extract,
 }
+
+
+def detect_adapter(path: str) -> str:
+    """Auto-detect the adapter name for *path* by file-head sniff.
+
+    Returns the adapter name; falls back to ``"claude-code"`` when
+    nothing else matches. v1.2.0 only detects the MLflow trace shape;
+    the other ecosystems don't carry a stable fingerprint we can rely
+    on without parsing the whole file.
+    """
+    if _mlflow_trace_fingerprint(path):
+        return "mlflow-trace"
+    return "claude-code"
 
 
 def list_adapters() -> List[str]:
@@ -45,4 +64,4 @@ def get_adapter(name: str) -> Adapter:
     return ADAPTERS[name]
 
 
-__all__ = ["Adapter", "ADAPTERS", "list_adapters", "get_adapter"]
+__all__ = ["Adapter", "ADAPTERS", "list_adapters", "get_adapter", "detect_adapter"]

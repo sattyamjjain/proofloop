@@ -1090,14 +1090,23 @@ def _llm_second_opinion_config(config: Dict[str, Any]) -> Dict[str, Any]:
 
     Defaults: disabled, Haiku 4.5, no explicit budget. Callers should
     treat a missing or malformed block as "disabled" without warning.
+    ``task_budget_tokens`` (2026-04-20+) is the ``task_budgets-2026-03-13``
+    beta-header soft cap — passed through when the caller lets Verdict
+    construct the default AnthropicClient.
     """
     block = config.get("llm_second_opinion") if isinstance(config, dict) else None
     if not isinstance(block, dict):
-        return {"enabled": False, "model": "claude-haiku-4-5", "budget_tokens": None}
+        return {
+            "enabled": False,
+            "model": "claude-haiku-4-5",
+            "budget_tokens": None,
+            "task_budget_tokens": None,
+        }
     return {
         "enabled": bool(block.get("enabled", False)),
         "model": str(block.get("model", "claude-haiku-4-5")),
         "budget_tokens": block.get("budget_tokens"),
+        "task_budget_tokens": block.get("task_budget_tokens"),
     }
 
 
@@ -1125,6 +1134,7 @@ def _maybe_llm_second_opinion(
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
         from analyzers.llm_judge import (  # type: ignore
+            AnthropicClient,
             LLMJudgeError,
             score_with_llm,
         )
@@ -1132,13 +1142,25 @@ def _maybe_llm_second_opinion(
         print(f"Warning: LLM second opinion unavailable — {exc}", file=sys.stderr)
         return
 
+    # If no client was injected, construct the default with the
+    # configured task_budget_tokens so the beta header flows through.
+    effective_client = client
+    if effective_client is None:
+        try:
+            effective_client = AnthropicClient(
+                budget_tokens=cfg.get("task_budget_tokens") or cfg.get("budget_tokens"),
+            )
+        except LLMJudgeError as exc:
+            print(f"Warning: LLM second opinion unavailable — {exc}", file=sys.stderr)
+            return
+
     rubric_envelope = {"name": rubric_name, "criteria": rubric_criteria}
     try:
         llm_scores = score_with_llm(
             transcript=transcript_lines,
             rubric=rubric_envelope,
             model=cfg["model"],
-            client=client,
+            client=effective_client,
         )
     except LLMJudgeError as exc:
         print(f"Warning: LLM second opinion failed — {exc}", file=sys.stderr)
@@ -1370,8 +1392,33 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=None,
         help=(
             "Transcript adapter for non-Claude ecosystems. Choices: "
-            "claude-code, cowork, openai-compatible, codex, cursor, continue. "
-            "Omitted: use the built-in Claude Code JSONL loader."
+            "claude-code, cowork, openai-compatible, codex, cursor, continue, "
+            "gemini-cli, mlflow-trace. Omitted: use the built-in Claude Code "
+            "JSONL loader."
+        ),
+    )
+    parser.add_argument(
+        "--export",
+        choices=["openai-evals"],
+        default=None,
+        help=(
+            "Emit a portable scorecard alongside the native Verdict output. "
+            "Currently supports 'openai-evals' (OpenAI Model Spec Evals JSON). "
+            "Requires --out to specify the destination file."
+        ),
+    )
+    parser.add_argument(
+        "--out",
+        default=None,
+        help="Output path for --export. Ignored without --export.",
+    )
+    parser.add_argument(
+        "--export-rescale",
+        action="store_true",
+        help=(
+            "When used with --export openai-evals, rescale the 1-10 Verdict "
+            "scores into the 1-7 Model Spec bucket. Off by default so the "
+            "numeric score matches downstream Verdict consumers."
         ),
     )
     return parser.parse_args(argv)
@@ -1394,6 +1441,31 @@ def main(argv: Optional[List[str]] = None) -> None:
     # Remove internal metadata before printing
     output = {k: v for k, v in scorecard.items() if not k.startswith("_")}
     print(json.dumps(output, indent=2, ensure_ascii=False))
+
+    # Optional interop export
+    if args.export == "openai-evals":
+        if not args.out:
+            print(
+                "Error: --export openai-evals requires --out <path>.",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+            from exporters.openai_evals import to_openai_evals_format  # type: ignore
+        except ImportError as exc:
+            print(f"Error: openai-evals exporter unavailable — {exc}", file=sys.stderr)
+            raise SystemExit(2)
+        exported = to_openai_evals_format(
+            output, rescale=args.export_rescale,
+        )
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
+            json.dumps(exported, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        print(f"[score] wrote openai-evals export to {out_path}", file=sys.stderr)
 
 
 if __name__ == "__main__":

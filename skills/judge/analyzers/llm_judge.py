@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional, Protocol, Tuple
@@ -55,7 +56,20 @@ MAX_TRANSCRIPT_CHARS: int = 16_000
 
 ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
-TASK_BUDGETS_BETA = "task-budgets-2026-03-13"
+# 2026-04-20 verified: beta header is underscore-cased per the current
+# platform docs (anthropic-beta: task_budgets-2026-03-13). Kept the
+# hyphenated alias around for older clients that still send the dashed
+# form — both variants are accepted by the Messages API during the
+# research-preview window.
+TASK_BUDGETS_BETA = "task_budgets-2026-03-13"
+TASK_BUDGETS_BETA_LEGACY = "task-budgets-2026-03-13"
+
+# Minimum total tokens the task_budgets header accepts (per docs).
+TASK_BUDGET_MIN_TOKENS: int = 20_000
+# Hard ceiling multiplier: task_budget is a soft suggestion; the
+# ``max_tokens`` request parameter is the hard cap. Verdict sets both
+# so the judge finishes gracefully without over-spend.
+TASK_BUDGET_HARD_CEILING_RATIO: float = 1.25
 
 
 class LLMJudgeError(RuntimeError):
@@ -92,6 +106,7 @@ class AnthropicClient:
         api_key: Optional[str] = None,
         budget_tokens: Optional[int] = None,
         timeout: float = 30.0,
+        log_budget_countdown: bool = True,
     ) -> None:
         self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not self.api_key:
@@ -100,6 +115,7 @@ class AnthropicClient:
             )
         self.budget_tokens = budget_tokens
         self.timeout = timeout
+        self.log_budget_countdown = log_budget_countdown
 
     def messages_create(
         self,
@@ -108,7 +124,15 @@ class AnthropicClient:
         prompt: str,
         max_tokens: int = 2048,
     ) -> str:
-        body = {
+        # Enforce the task_budgets invariants:
+        # - soft budget (task_budget.total) >= TASK_BUDGET_MIN_TOKENS
+        # - hard ceiling (max_tokens) = ceil(budget * TASK_BUDGET_HARD_CEILING_RATIO)
+        # task_budget is a hint that lets Claude finish mid-sentence
+        # when it's close to done; max_tokens is the model-side cap.
+        # Per Anthropic docs (2026-04-20): total is soft, max_tokens
+        # is hard. Verdict sets both so the judge finishes gracefully
+        # without over-spend.
+        body: Dict[str, Any] = {
             "model": model,
             "max_tokens": max_tokens,
             "system": system,
@@ -120,8 +144,21 @@ class AnthropicClient:
             "content-type": "application/json",
         }
         if self.budget_tokens:
+            soft_budget = max(int(self.budget_tokens), TASK_BUDGET_MIN_TOKENS)
             headers["anthropic-beta"] = TASK_BUDGETS_BETA
-            headers["anthropic-task-budget-tokens"] = str(self.budget_tokens)
+            body["output_config"] = {
+                "task_budget": {"type": "tokens", "total": soft_budget},
+            }
+            # Raise max_tokens to the hard ceiling when the caller asked
+            # for less — otherwise the soft budget can never kick in.
+            hard_ceiling = int(soft_budget * TASK_BUDGET_HARD_CEILING_RATIO)
+            body["max_tokens"] = max(max_tokens, hard_ceiling)
+            if self.log_budget_countdown:
+                print(
+                    f"[llm_judge] task_budget soft={soft_budget} "
+                    f"hard_ceiling={body['max_tokens']} model={model}",
+                    file=sys.stderr,
+                )
 
         req = urllib.request.Request(
             ANTHROPIC_MESSAGES_URL,
