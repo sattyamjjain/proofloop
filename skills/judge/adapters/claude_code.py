@@ -129,9 +129,15 @@ def extract_lines(path: str) -> List[str]:
     """
     source = Path(path)
     if source.is_dir():
+        # Sort by mtime, using the filename as a stable tie-breaker.
+        # ``git clone`` stamps every checked-out file with the same
+        # mtime, so an mtime-only sort collapses on fresh CI runners;
+        # the filename fallback keeps ordering deterministic there
+        # without breaking the mtime-wins behaviour in live Auto
+        # Memory layouts where the session files are timestamped.
         session_files = sorted(
             (p for p in source.glob("*.jsonl") if p.is_file()),
-            key=lambda p: p.stat().st_mtime,
+            key=lambda p: (p.stat().st_mtime, p.name),
         )
         if not session_files:
             return []
