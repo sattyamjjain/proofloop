@@ -18,6 +18,7 @@ enough to exercise every branch of the corresponding adapter
 | `openai-compatible-tools.json`   | Cursor/Continue  | `openai-compatible` | `tool_calls` flattening         |
 | `codex.md`                       | OpenAI Codex CLI | `codex`             | Markdown-style session          |
 | `codex-sidecar.json`             | OpenAI Codex CLI | `codex`             | JSON sidecar delegates OpenAI   |
+| `gemini-cli.jsonl`               | Gemini CLI       | `gemini-cli`        | parts[] + functionCall/Response |
 
 When an ecosystem changes its format, update the fixture *and* the
 adapter together so the test pins the new behaviour. Never rely on

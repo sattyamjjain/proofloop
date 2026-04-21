@@ -1081,9 +1081,85 @@ def _generate_recommendations(dimensions: Dict[str, Dict[str, Any]]) -> List[str
 # Score persistence
 # ---------------------------------------------------------------------------
 
+SCORECARD_SCHEMA_URL: str = "https://verdict.dev/schemas/scorecard.v1.json"
+SCORECARD_SCHEMA_VERSION: str = "1.0.0"
+
+
+def _llm_second_opinion_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the normalised ``llm_second_opinion`` sub-config.
+
+    Defaults: disabled, Haiku 4.5, no explicit budget. Callers should
+    treat a missing or malformed block as "disabled" without warning.
+    """
+    block = config.get("llm_second_opinion") if isinstance(config, dict) else None
+    if not isinstance(block, dict):
+        return {"enabled": False, "model": "claude-haiku-4-5", "budget_tokens": None}
+    return {
+        "enabled": bool(block.get("enabled", False)),
+        "model": str(block.get("model", "claude-haiku-4-5")),
+        "budget_tokens": block.get("budget_tokens"),
+    }
+
+
+def _maybe_llm_second_opinion(
+    config: Dict[str, Any],
+    transcript_lines: List[str],
+    rubric_criteria: Dict[str, str],
+    rubric_name: str,
+    dimensions: Dict[str, Dict[str, Any]],
+    client: Optional[Any] = None,
+) -> None:
+    """Merge LLM second-opinion scores into ``dimensions`` in place.
+
+    No-op when the config block has ``enabled=false`` (the default).
+    Failures (missing API key, HTTP error, unparseable response) are
+    logged to stderr and swallowed — Verdict must stay offline-first,
+    so a busted LLM path can never fail the whole scorecard.
+    """
+    cfg = _llm_second_opinion_config(config)
+    if not cfg["enabled"]:
+        return
+
+    # Local import so the module only pulls llm_judge when actually
+    # needed, keeping cold-start costs (and test import times) down.
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        from analyzers.llm_judge import (  # type: ignore
+            LLMJudgeError,
+            score_with_llm,
+        )
+    except ImportError as exc:
+        print(f"Warning: LLM second opinion unavailable — {exc}", file=sys.stderr)
+        return
+
+    rubric_envelope = {"name": rubric_name, "criteria": rubric_criteria}
+    try:
+        llm_scores = score_with_llm(
+            transcript=transcript_lines,
+            rubric=rubric_envelope,
+            model=cfg["model"],
+            client=client,
+        )
+    except LLMJudgeError as exc:
+        print(f"Warning: LLM second opinion failed — {exc}", file=sys.stderr)
+        return
+    except Exception as exc:  # pragma: no cover — last-ditch defensive
+        print(f"Warning: LLM second opinion crashed — {exc}", file=sys.stderr)
+        return
+
+    for dim, (score_val, justification) in llm_scores.items():
+        if dim in dimensions:
+            dimensions[dim]["llm_score"] = score_val
+            dimensions[dim]["llm_justification"] = justification
+
 
 def save_score(scorecard: Dict[str, Any], scores_dir: str) -> str:
     """Persist the scorecard as a JSON file in *scores_dir*.
+
+    Injects ``$schema`` and ``schemaVersion`` at the top of every
+    emitted document so downstream consumers can version-pin against
+    ``schemas/scorecard.v1.schema.json``. See DEEP_ANALYSIS.md
+    §Schema stability contract for the compatibility rules.
 
     Returns the path to the saved file.
     """
@@ -1096,8 +1172,20 @@ def save_score(scorecard: Dict[str, Any], scores_dir: str) -> str:
     filename = f"{skill}_{safe_ts}.json"
     filepath = scores_path / filename
 
+    # Emit schema identifiers at the top. Constructing a new dict (rather
+    # than mutating the caller's) keeps insertion order deterministic and
+    # avoids surprising callers that hold a reference to ``scorecard``.
+    versioned: Dict[str, Any] = {
+        "$schema": SCORECARD_SCHEMA_URL,
+        "schemaVersion": SCORECARD_SCHEMA_VERSION,
+    }
+    for key, value in scorecard.items():
+        if key in ("$schema", "schemaVersion"):
+            continue
+        versioned[key] = value
+
     filepath.write_text(
-        json.dumps(scorecard, indent=2, ensure_ascii=False) + "\n",
+        json.dumps(versioned, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
     return str(filepath)
@@ -1116,6 +1204,7 @@ def build_scorecard(
     config_path: Optional[str] = None,
     model: Optional[str] = None,
     adapter: Optional[str] = None,
+    llm_client: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Build a full scorecard for the given skill execution.
 
@@ -1125,6 +1214,9 @@ def build_scorecard(
     ``adapter`` selects a registered transcript adapter from
     ``skills/judge/adapters`` for non-native formats (codex, cursor,
     continue, openai-compatible, cowork).
+    ``llm_client`` is the optional second-opinion LLM client — injected
+    by tests; when omitted and the config enables the feature, a default
+    :class:`analyzers.llm_judge.AnthropicClient` is constructed.
     """
     # 1. Load inputs
     config = load_config(config_path)
@@ -1153,6 +1245,14 @@ def build_scorecard(
             "weighted": weighted,
             "justification": result["justification"],
         }
+
+    # 2b. Opt-in LLM second opinion (off by default; see
+    # analyzers/llm_judge.py). Mutates `dimensions` in place to add
+    # `llm_score` / `llm_justification` alongside the heuristic entries.
+    _maybe_llm_second_opinion(
+        config, transcript_lines, rubric_criteria, rubric_name, dimensions,
+        client=llm_client,
+    )
 
     # 3. Composite score
     raw_composite = compute_composite(dimensions, weights)

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://verdict.dev/schemas/scorecard.v1.json",
+  "schemaVersion": "1.0.0",
+  "skill": "code-review",
+  "timestamp": "2026-04-19T18:59:38Z",
+  "composite_score": 9.2,
+  "raw_composite": 8.7,
+  "grade": "A",
+  "grade_label": "Excellent",
+  "dimensions": {
+    "correctness": {
+      "score": 10,
+      "weight": 0.25,
+      "weighted": 2.5,
+      "justification": "No error or hallucination signals detected"
+    },
+    "completeness": {
+      "score": 8,
+      "weight": 0.2,
+      "weighted": 1.6,
+      "justification": "Very short transcript — possible incomplete execution"
+    },
+    "adherence": {
+      "score": 9,
+      "weight": 0.15,
+      "weighted": 1.35,
+      "justification": "Rubric criteria available for evaluation context"
+    },
+    "actionability": {
+      "score": 8,
+      "weight": 0.15,
+      "weighted": 1.2,
+      "justification": "Output appears ready to use"
+    },
+    "efficiency": {
+      "score": 8,
+      "weight": 0.1,
+      "weighted": 0.8,
+      "justification": "Efficient execution"
+    },
+    "safety": {
+      "score": 10,
+      "weight": 0.1,
+      "weighted": 1.0,
+      "justification": "No safety concerns detected"
+    },
+    "consistency": {
+      "score": 5,
+      "weight": 0.05,
+      "weighted": 0.25,
+      "justification": "No prior history for comparison (neutral score)"
+    }
+  },
+  "red_flags": [],
+  "bonuses": [
+    "Proactively addresses edge cases",
+    "Provides well-reasoned justifications for choices"
+  ],
+  "adjustments": {
+    "deduction": 0.0,
+    "bonus": 0.5
+  },
+  "summary": "Outstanding execution across all dimensions.",
+  "one_liner": "Excellent Code Review (A) -- top marks across all dimensions",
+  "critical_issues": [],
+  "recommendations": [
+    "Compare with prior executions and maintain quality baselines"
+  ],
+  "rubric_used": "code-review",
+  "transcript_lines": 5,
+  "model": "claude-opus-4-7",
+  "tokenizer_baseline": 1.35,
+  "weights_source": "config"
+}

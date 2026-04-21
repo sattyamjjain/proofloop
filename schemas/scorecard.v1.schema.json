@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://verdict.dev/schemas/scorecard.v1.json",
+  "title": "Verdict Scorecard",
+  "description": "Canonical shape of a Verdict scorecard JSON document as emitted by skills/judge/scripts/score.py::save_score. See DEEP_ANALYSIS.md §Schema stability contract for evolution rules.",
+  "type": "object",
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "skill",
+    "timestamp",
+    "composite_score",
+    "grade",
+    "grade_label",
+    "dimensions",
+    "red_flags",
+    "bonuses",
+    "adjustments",
+    "summary",
+    "one_liner",
+    "critical_issues",
+    "recommendations",
+    "rubric_used",
+    "transcript_lines"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "https://verdict.dev/schemas/scorecard.v1.json"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^1\\.\\d+\\.\\d+$",
+      "description": "SemVer. Major = 1 for the lifetime of this schema. Minor bumps are additive-compatible; patch bumps are purely editorial."
+    },
+    "skill": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Name of the evaluated skill or subagent (e.g. 'code-review')."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 UTC timestamp of scoring (e.g. '2026-04-18T08:27:18Z')."
+    },
+    "composite_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 10.0,
+      "description": "Final 0–10 composite after red-flag deductions and bonuses."
+    },
+    "raw_composite": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 10.0,
+      "description": "Weighted-sum composite BEFORE adjustments. Optional; not emitted by older runs."
+    },
+    "grade": {
+      "type": "string",
+      "enum": ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"]
+    },
+    "grade_label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dimensions": {
+      "type": "object",
+      "required": [
+        "correctness",
+        "completeness",
+        "adherence",
+        "actionability",
+        "efficiency",
+        "safety",
+        "consistency"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "correctness":   {"$ref": "#/$defs/dimensionEntry"},
+        "completeness":  {"$ref": "#/$defs/dimensionEntry"},
+        "adherence":     {"$ref": "#/$defs/dimensionEntry"},
+        "actionability": {"$ref": "#/$defs/dimensionEntry"},
+        "efficiency":    {"$ref": "#/$defs/dimensionEntry"},
+        "safety":        {"$ref": "#/$defs/dimensionEntry"},
+        "consistency":   {"$ref": "#/$defs/dimensionEntry"}
+      }
+    },
+    "red_flags": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Auto-deduction triggers (hallucination, contradiction, ignored constraint, placeholder, rm -rf /)."
+    },
+    "bonuses": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Auto-bonus triggers (edge cases, trade-off reasoning, structured output)."
+    },
+    "adjustments": {
+      "type": "object",
+      "required": ["deduction", "bonus"],
+      "additionalProperties": false,
+      "properties": {
+        "deduction": {"type": "number", "minimum": 0.0, "maximum": 2.0},
+        "bonus":     {"type": "number", "minimum": 0.0, "maximum": 1.0}
+      }
+    },
+    "summary":         {"type": "string"},
+    "one_liner":       {"type": "string"},
+    "critical_issues": {"type": "array", "items": {"type": "string"}},
+    "recommendations": {"type": "array", "items": {"type": "string"}},
+    "rubric_used":     {"type": "string", "minLength": 1},
+    "transcript_lines":{"type": "integer", "minimum": 0},
+    "model": {
+      "type": ["string", "null"],
+      "description": "Model ID auto-detected from the transcript (e.g. 'claude-opus-4-7'), or null when none was detected."
+    },
+    "tokenizer_baseline": {
+      "type": "number",
+      "exclusiveMinimum": 0.0,
+      "description": "Multiplier applied to efficiency length thresholds for this model."
+    },
+    "weights_source": {
+      "type": "string",
+      "enum": ["config", "rubric"],
+      "description": "Whether the weights came from the global config or a per-rubric <rubric>.weights.json sidecar."
+    }
+  },
+  "$defs": {
+    "dimensionEntry": {
+      "type": "object",
+      "required": ["score", "weight", "weighted", "justification"],
+      "additionalProperties": true,
+      "properties": {
+        "score":         {"type": "integer", "minimum": 1, "maximum": 10},
+        "weight":        {"type": "number",  "minimum": 0.0, "maximum": 1.0},
+        "weighted":      {"type": "number",  "minimum": 0.0, "maximum": 10.0},
+        "justification": {"type": "string",  "minLength": 1},
+        "llm_score": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Optional LLM second-opinion score. Present only when llm_second_opinion.enabled=true in judge-config.json. Forward-compatible addition planned for v1.2.0."
+        },
+        "llm_justification": {
+          "type": ["string", "null"],
+          "description": "Justification produced by the LLM second-opinion analyzer. Present alongside llm_score."
+        }
+      }
+    }
+  }
+}

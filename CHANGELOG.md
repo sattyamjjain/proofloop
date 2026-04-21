@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0-beta.1] - 2026-04-19
+
+### Added
+
+- **Scorecard schema** (`schemas/scorecard.v1.schema.json`) — JSON
+  Schema draft 2020-12 describing every field of the persisted scorecard
+  JSON, with per-dimension entries and forward-compatible slots for LLM
+  second-opinion output.
+- **`$schema` + `schemaVersion` fields** on every persisted scorecard.
+  Injected by `save_score`; callers can't forget or override the
+  canonical identifiers. Consumers should pin `schemaVersion >= 1.0.0,
+  < 2.0.0`.
+- **DEEP_ANALYSIS.md §Schema stability contract** documenting SemVer
+  rules, deprecation window, and test surface for the v1 schema line.
+- **Opt-in LLM second-opinion analyzer**
+  (`skills/judge/analyzers/llm_judge.py`). When
+  `judge-config.json.llm_second_opinion.enabled = true` and
+  `ANTHROPIC_API_KEY` is set, Verdict emits both heuristic and LLM
+  scores under `dimensions[dim].llm_score` /
+  `dimensions[dim].llm_justification`. Stdlib-only HTTP
+  (`urllib.request`); no `anthropic` package is imported. Sends the
+  `task-budgets-2026-03-13` beta header when `budget_tokens` is set.
+  Transcripts over 16k chars are truncated with a head/tail split and
+  an elision marker.
+- **Gemini CLI adapter** (`skills/judge/adapters/gemini_cli.py`).
+  Handles `parts[]`, flattened `content`, `functionCall`, and
+  `functionResponse` shapes; registered under both `gemini-cli` and
+  `gemini`.
+- **`/judge --watch` live re-scoring** (`skills/judge/scripts/watch.py`).
+  Polls `scores/` every 2 s, renders a diff header per change
+  (`improved X, regressed Y, unchanged Z since last run`), and
+  re-emits Verdict Studio.
+- **Dogfood self-score CI gate**
+  (`.github/workflows/self-score.yml`). Treats the PR title + body +
+  changed-files list as a synthetic transcript, scores it against the
+  code-review rubric, and fails the job when composite drops below
+  the `VERDICT_PR_THRESHOLD` (default 7.0). Scorecard posted as a PR
+  comment.
+- **Scorecard fixtures** at `tests/fixtures/scorecards/` — canonical
+  examples covering every adapter / rubric path; every fixture must
+  validate against the shipped schema on every CI run.
+
+### Changed
+
+- `/judge` usage line now documents `--adapter`, `--model`,
+  `--against`, `--watch`, and `--llm-second-opinion` flags; includes
+  `gemini-cli` in the adapter list.
+- Version bumps to `1.2.0-beta.1` across `plugin.json`,
+  `marketplace.json`, and `SKILL.md`.
+
+### Tests
+
+- 262 → 314 (+52). New suites: `test_schema.py`, `test_llm_judge.py`,
+  `test_watch.py`; Gemini cases added to `test_adapters.py` and
+  `test_adapter_fixtures.py`.
+
+### Out of scope for this beta
+
+Rubric marketplace index (P2), scorecard delta webhook (P2),
+`verdict` PyPI shim (P2), MLflow integration (future).
+
 ## [1.1.0] - 2026-04-18
 
 ### Added

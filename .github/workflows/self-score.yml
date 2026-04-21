@@ -1,0 +1,156 @@
+name: Self-score
+
+# Dogfooding gate. Treat the PR title + body + changed-files list as a
+# synthetic transcript and run Verdict's own heuristic pass on it. Fail
+# when the composite drops below the threshold (default 7.0). The
+# scorecard is posted as a PR comment so reviewers see the signal
+# alongside test + marketplace validator output.
+#
+# The self-score is intentionally loose: it doesn't read actual diff
+# content, only metadata. Its job is to catch PRs that look obviously
+# incomplete (no description, dozens of touched files with "TODO" in
+# their names, etc.), not to evaluate code quality.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: self-score-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  self-score:
+    name: Score this PR against the code-review rubric
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR head
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Build synthetic transcript from PR metadata
+        id: transcript
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY:  ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          mkdir -p .self-score
+          TRANSCRIPT=.self-score/transcript.txt
+
+          {
+            echo "User: /code-review PR #${{ github.event.pull_request.number }}: ${PR_TITLE:-<no title>}"
+            echo ""
+            echo "Description:"
+            echo "${PR_BODY:-<no description>}"
+            echo ""
+            echo "Changed files:"
+            git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD \
+              | head -200
+            echo ""
+            echo "Shortstat:"
+            git diff --shortstat origin/${{ github.event.pull_request.base.ref }}...HEAD
+          } > "${TRANSCRIPT}"
+
+          echo "transcript=${TRANSCRIPT}" >> "${GITHUB_OUTPUT}"
+          echo "Generated transcript (${TRANSCRIPT}):"
+          head -40 "${TRANSCRIPT}"
+
+      - name: Run Verdict self-score
+        id: score
+        run: |
+          set -euo pipefail
+          mkdir -p .self-score/out
+          python3 skills/judge/scripts/score.py \
+            --skill code-review \
+            --transcript "${{ steps.transcript.outputs.transcript }}" \
+            --rubric-dir skills/judge/rubrics \
+            --scores-dir .self-score/out \
+            --config judge-config.json \
+            > .self-score/scorecard.json
+          python3 -c "
+          import json, sys
+          card = json.load(open('.self-score/scorecard.json'))
+          print(f\"composite={card['composite_score']}\")
+          print(f\"grade={card['grade']}\")
+          print(f\"one_liner={card.get('one_liner', '')}\")
+          "
+
+      - name: Validate threshold
+        id: threshold
+        run: |
+          set -euo pipefail
+          THRESHOLD="${VERDICT_PR_THRESHOLD:-7.0}"
+          COMPOSITE=$(python3 -c "import json; print(json.load(open('.self-score/scorecard.json'))['composite_score'])")
+          echo "composite=${COMPOSITE}" >> "${GITHUB_OUTPUT}"
+          echo "threshold=${THRESHOLD}" >> "${GITHUB_OUTPUT}"
+          python3 -c "
+          import sys
+          composite = float('${COMPOSITE}')
+          threshold = float('${THRESHOLD}')
+          sys.exit(0 if composite >= threshold else 1)
+          " || {
+            echo "::error title=Self-score below threshold::composite ${COMPOSITE} < threshold ${THRESHOLD}"
+            exit 1
+          }
+
+      - name: Render Unicode scorecard
+        if: always()
+        id: render
+        run: |
+          set -euo pipefail
+          python3 skills/judge/scripts/report.py \
+            --scores-dir .self-score/out \
+            --skill code-review \
+            --last 1 \
+            > .self-score/report.txt
+          echo '```'  > .self-score/comment.md
+          cat       .self-score/report.txt >> .self-score/comment.md
+          echo '```' >> .self-score/comment.md
+          echo ''    >> .self-score/comment.md
+          echo "*Self-score on PR metadata — threshold ${{ steps.threshold.outputs.threshold }}. See [docs/launch/dogfood-ci.md](../tree/main/docs/launch) for rationale.*" \
+            >> .self-score/comment.md
+
+      - name: Post or update PR comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('.self-score/comment.md', 'utf8');
+            const marker = '<!-- verdict-self-score -->';
+            const payload = `${marker}\n${body}`;
+
+            const {data: comments} = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                comment_id: existing.id,
+                body: payload,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                issue_number: context.issue.number,
+                body: payload,
+              });
+            }
