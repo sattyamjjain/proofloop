@@ -1,0 +1,23 @@
+{
+  "schema": "mlflow.entities.Trace",
+  "info": {
+    "request_id": "req_01JHFY5QZCJ7W8X9",
+    "trace_id": "tr_01JHFY5QZCJ7W8X9",
+    "status": "OK",
+    "execution_time_ms": 2173
+  },
+  "data": {
+    "spans": [
+      {
+        "name": "root",
+        "events": [
+          {"name": "user", "attributes": {"content": "/code-review review src/auth/middleware.py"}},
+          {"name": "assistant", "attributes": {"content": "Reviewing auth middleware."}},
+          {"name": "tool_call", "attributes": {"name": "read_file", "args": {"path": "src/auth/middleware.py"}}},
+          {"name": "tool_result", "attributes": {"name": "read_file", "result": "62 lines read"}},
+          {"name": "assistant", "attributes": {"content": "Found one missing audience check. Suggest adding aud=[expected] to jwt.decode()."}}
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+{"role": "user", "content": "Now look at src/cache/redis_client.py"}
+{"role": "assistant", "content": "Scanning cache client for race conditions."}

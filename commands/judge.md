@@ -22,6 +22,10 @@ When the user invokes `/judge`, evaluate the most recent skill or agent executio
 - `--against REF` (optional): Compare the current scorecard against a previous run of the same skill (`HEAD~1` = penultimate scorecard, numeric index = absolute). Delegates to `skills/judge/scripts/against.py` and exits non-zero on composite regression.
 - `--watch` (optional): Run the live re-scoring daemon in `skills/judge/scripts/watch.py`. Polls the scores directory every 2 s, prints a one-line diff header per change (`improved X, regressed Y, unchanged Z since last run`), and re-emits Verdict Studio to the `--output` HTML path. Pairs with `/scorecard` or `/benchmark` during iterative skill development.
 - `--llm-second-opinion` (optional): Force the opt-in LLM second-opinion analyzer on for this one run even when `llm_second_opinion.enabled = false` in `judge-config.json`. Requires `ANTHROPIC_API_KEY`. See `skills/judge/analyzers/llm_judge.py`.
+- `--export {openai-evals}` (optional): Emit a portable scorecard alongside the native Verdict output. Today supports `openai-evals` (OpenAI Model Spec Evals JSON). Pair with `--out <path>`.
+- `--out PATH` (optional): Destination file for `--export`. Ignored otherwise.
+- `--export-rescale` (optional): When exporting to `openai-evals`, rescale 1-10 Verdict scores into the 1-7 Model Spec bucket per the table in `skills/judge/rubrics/model-spec-compliance.md`. Off by default.
+- **See also `/compare`** for explicit two-file delta with Auto Memory regression narrative — complement to `/judge --against HEAD~1`.
 
 ## Evaluation Process
 

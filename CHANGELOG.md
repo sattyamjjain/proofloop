@@ -5,9 +5,71 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0-beta.1] - 2026-04-19
+## [1.2.0] - 2026-04-20
 
-### Added
+### Added (2026-04-20 session, N1–N8)
+
+- **Auto Memory cross-session transcript stitching** — `adapters/
+  claude_code.py::extract_lines` now accepts a directory of `*.jsonl`
+  session files (e.g. `~/.claude/history/`) and concatenates them in
+  mtime order with a `--- session break ---` marker between files.
+  Memory-preamble lines (detected via `memory_block`, `<memory>`,
+  `auto-memory`, `claude_memory` tokens) are prefixed with
+  `[system-memory] ` so downstream scoring can separate injected
+  system context from user-turn output.
+- **`task_budgets-2026-03-13` beta header** wired into the opt-in
+  LLM judge (`skills/judge/analyzers/llm_judge.py`). Reads
+  `judge-config.json.llm_second_opinion.task_budget_tokens`, enforces
+  the 20k minimum, sends the soft budget via
+  `output_config.task_budget` **and** raises `max_tokens` to a 1.25×
+  hard ceiling so the judge finishes without over-spend. Optional
+  stderr countdown logs every call for CI drift monitoring.
+- **Three new rubrics** in the v1.2.0 pack:
+  - `code-review-aider-polyglot.md` — Aider-polyglot-flavoured
+    mapping against Verdict's canonical dimensions.
+  - `skill-compliance.md` — MLflow "skill compliance" dimension
+    ported offline.
+  - `model-spec-compliance.md` — OpenAI Model Spec Evals 1-7 scale
+    mapped onto Verdict 1-10 via a documented rescaling table.
+  - Each rubric carries a `source_signal:` header citing provenance.
+- **`--export openai-evals` exporter**
+  (`skills/judge/exporters/openai_evals.py`) + matching CLI flag.
+  Default threshold 7/10. Optional `--export-rescale` flag emits the
+  Model Spec 1-7 bucket. LLM second-opinion fields round-trip.
+- **LightEval v0.13.0+ metric shim**
+  (`skills/judge/integrations/lighteval_shim.py`) — exposes Verdict
+  as a callable metric returning a float in `[0, 1]`. Lazy-import
+  protocol: `lighteval` is never imported by Verdict at runtime.
+- **MLflow trace ingestion adapter**
+  (`skills/judge/adapters/mlflow_trace.py`) — parses
+  `mlflow.entities.Trace` JSON exports without importing `mlflow`.
+  Registered as `mlflow-trace` / `mlflow`; auto-detected via a
+  file-head fingerprint.
+- **Schema registry static site**: `docs/schema-registry.md` +
+  `.github/workflows/pages.yml` mirror `schemas/*.json` to GitHub
+  Pages at `https://sattyamjjain.github.io/verdict/schemas/…`.
+- **`/judge --compare-runs` + `/compare` slash command**
+  (`skills/judge/scripts/compare.py`) — two-file delta with
+  narrative callouts for Auto Memory regression signatures:
+  composite drop, memory-block growth, consistency slide,
+  per-dimension ≥ 3-point drops.
+
+### Changed (2026-04-20 session)
+
+- `judge-config.json.llm_second_opinion` gains a `task_budget_tokens`
+  field (nullable). Off-by-default semantics unchanged.
+- `commands/judge.md` adds `--export`, `--out`, `--export-rescale`
+  flags plus a pointer to the new `/compare` command.
+- `plugin.json` now registers `./commands/compare.md`.
+
+### Tests (2026-04-20 session)
+
+- 314 → 384 (+70). New suites: `test_auto_memory.py`,
+  `test_llm_judge_budget.py`, `test_rubric_packs.py`,
+  `test_openai_evals_export.py`, `test_lighteval_shim.py`,
+  `test_mlflow_trace_adapter.py`, `test_compare_runs.py`.
+
+### Added (2026-04-19 session, A1–A6 — carried forward from v1.1.1 scope)
 
 - **Scorecard schema** (`schemas/scorecard.v1.schema.json`) — JSON
   Schema draft 2020-12 describing every field of the persisted scorecard

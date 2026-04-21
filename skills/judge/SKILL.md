@@ -2,7 +2,7 @@
 name: judge
 displayName: "Verdict — Universal Quality Evaluator"
 description: "Evaluates the execution quality of any skill or agent using 7-dimension scoring with configurable rubrics"
-version: "1.2.0-beta.1"
+version: "1.2.0"
 author: "Sattyam Jain"
 autoActivate:
   - "when the user asks to judge, evaluate, score, or rate a skill's output"

@@ -1,0 +1,3 @@
+{"auto-memory": true, "content": "Loaded memory block from prior session."}
+{"role": "user", "content": "/code-review review auth middleware"}
+{"role": "assistant", "content": "Reviewing auth middleware."}
