@@ -14,7 +14,14 @@ Expected shape (2026-04-20 MLflow ``mlflow.entities.Trace``):
      "info": {"request_id": "...", "trace_id": "...", "status": "OK"},
      "data": {
        "spans": [
-         {"name": "run", "events": [
+         {"name": "run",
+          "attributes": {
+            "gen_ai.request.model": "claude-opus-4-7",
+            "gen_ai.usage.input_tokens": 120,
+            "gen_ai.usage.output_tokens": 60,
+            "gen_ai.response.finish_reasons": ["stop"]
+          },
+          "events": [
            {"name": "tool_call",   "attributes": {"name":"search","args":"{...}"}},
            {"name": "tool_result", "attributes": {"name":"search","result":"..."}},
            {"name": "assistant",   "attributes": {"content":"..."}},
@@ -26,6 +33,15 @@ Expected shape (2026-04-20 MLflow ``mlflow.entities.Trace``):
 
 Real MLflow traces carry more metadata; the adapter is tolerant of
 missing fields and only extracts the pieces Verdict scores against.
+
+OpenTelemetry GenAI semconv (v1.3.0+, MLflow 3.11.1+)
+-----------------------------------------------------
+When a span carries OpenTelemetry GenAI semantic-convention
+attributes, the adapter emits pseudo-turn lines for the model name,
+token usage, and finish reason so downstream analyzers — especially
+the model-aware efficiency threshold added in Verdict v1.1.0 — can
+read them from the flattened line stream. The enrichment is
+best-effort: spans without OTel attributes flow through unchanged.
 """
 from __future__ import annotations
 
@@ -47,6 +63,13 @@ _EVENT_PREFIX = {
     "system":       "[system]",
     "note":         "[note]",
 }
+
+# OpenTelemetry GenAI semconv attribute keys. Kept as constants so the
+# adapter can be updated in lock-step when the otel-gen-ai spec evolves.
+OTEL_GENAI_MODEL_KEY:           str = "gen_ai.request.model"
+OTEL_GENAI_INPUT_TOKENS_KEY:    str = "gen_ai.usage.input_tokens"
+OTEL_GENAI_OUTPUT_TOKENS_KEY:   str = "gen_ai.usage.output_tokens"
+OTEL_GENAI_FINISH_REASONS_KEY:  str = "gen_ai.response.finish_reasons"
 
 
 def _stringify(value: Any) -> str:
@@ -76,8 +99,84 @@ def _event_to_line(event: Any) -> str:
     return f"{prefix} {_stringify(attrs)}" if attrs else prefix
 
 
-def _iter_events(trace: dict) -> Iterable[Any]:
-    """Yield events from every span in a trace, preserving span order."""
+def _extract_otel_genai_attrs(span: Any) -> dict:
+    """Return a dict of OpenTelemetry GenAI semconv attributes on *span*.
+
+    Keys present in the returned dict:
+
+    - ``model`` — string, from ``gen_ai.request.model`` (also accepts
+      ``gen_ai.response.model`` as a fallback; OTel v1.3.0 uses the
+      request key, some older exporters populated only the response
+      key).
+    - ``input_tokens`` — int, from ``gen_ai.usage.input_tokens``.
+    - ``output_tokens`` — int, from ``gen_ai.usage.output_tokens``.
+    - ``finish_reasons`` — list of strings, from
+      ``gen_ai.response.finish_reasons``. Always a list, even when the
+      span reports a single reason as a string.
+
+    Missing / malformed attributes are silently dropped. The adapter's
+    caller should treat an empty return as "no enrichment available"
+    rather than "span is malformed".
+    """
+    if not isinstance(span, dict):
+        return {}
+    raw_attrs = span.get("attributes")
+    if not isinstance(raw_attrs, dict):
+        return {}
+    out: dict = {}
+    model = raw_attrs.get(OTEL_GENAI_MODEL_KEY)
+    if not isinstance(model, str) or not model:
+        model = raw_attrs.get("gen_ai.response.model")
+    if isinstance(model, str) and model:
+        out["model"] = model
+    for key, out_key in (
+        (OTEL_GENAI_INPUT_TOKENS_KEY, "input_tokens"),
+        (OTEL_GENAI_OUTPUT_TOKENS_KEY, "output_tokens"),
+    ):
+        value = raw_attrs.get(key)
+        if isinstance(value, bool):
+            continue
+        if isinstance(value, int):
+            out[out_key] = value
+        elif isinstance(value, float) and value.is_integer():
+            out[out_key] = int(value)
+    reasons = raw_attrs.get(OTEL_GENAI_FINISH_REASONS_KEY)
+    if isinstance(reasons, str) and reasons:
+        out["finish_reasons"] = [reasons]
+    elif isinstance(reasons, list):
+        cleaned = [r for r in reasons if isinstance(r, str) and r]
+        if cleaned:
+            out["finish_reasons"] = cleaned
+    return out
+
+
+def _otel_genai_lines(span: Any) -> Iterable[str]:
+    """Emit Verdict-flavoured pseudo-turns from a span's OTel GenAI attrs."""
+    attrs = _extract_otel_genai_attrs(span)
+    if not attrs:
+        return
+    model = attrs.get("model")
+    if model:
+        # The literal ``"model":"<id>"`` form is what
+        # ``score.detect_model_from_transcript`` fingerprints on, so
+        # embed it in JSON-ish shape on the line. This unlocks the
+        # model-aware efficiency thresholds introduced in v1.1.0.
+        yield f'[model] "model":"{model}"'
+    input_tokens = attrs.get("input_tokens")
+    output_tokens = attrs.get("output_tokens")
+    if input_tokens is not None or output_tokens is not None:
+        pieces: List[str] = []
+        if input_tokens is not None:
+            pieces.append(f"input_tokens={input_tokens}")
+        if output_tokens is not None:
+            pieces.append(f"output_tokens={output_tokens}")
+        yield f"[usage] {' '.join(pieces)}"
+    for reason in attrs.get("finish_reasons", []):
+        yield f"[finish_reason] {reason}"
+
+
+def _iter_spans(trace: dict) -> Iterable[Any]:
+    """Yield the spans in a trace, preserving order."""
     data = trace.get("data")
     if not isinstance(data, dict):
         return
@@ -85,12 +184,8 @@ def _iter_events(trace: dict) -> Iterable[Any]:
     if not isinstance(spans, list):
         return
     for span in spans:
-        if not isinstance(span, dict):
-            continue
-        events = span.get("events")
-        if not isinstance(events, list):
-            continue
-        yield from events
+        if isinstance(span, dict):
+            yield span
 
 
 def extract_lines(trace_path: str) -> List[str]:
@@ -124,10 +219,17 @@ def extract_lines(trace_path: str) -> List[str]:
             request_id = info.get("request_id") or info.get("trace_id")
             if request_id:
                 out.append(f"[trace_start] {request_id}")
-        for event in _iter_events(trace):
-            line = _event_to_line(event)
-            if line:
+        # OTel GenAI semconv enrichment: emit a pseudo-turn per span
+        # that carries ``gen_ai.*`` attributes. Traversal order matches
+        # _iter_events so per-span context lands just before the span's
+        # own events.
+        for span in _iter_spans(trace):
+            for line in _otel_genai_lines(span):
                 out.append(line)
+            for event in span.get("events", []) or []:
+                line = _event_to_line(event)
+                if line:
+                    out.append(line)
         if info.get("status"):
             out.append(f"[trace_end] status={info['status']}")
     return out

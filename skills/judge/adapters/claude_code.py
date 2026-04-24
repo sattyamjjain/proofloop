@@ -24,22 +24,73 @@ the first session's payload: ``memory_block``, ``<memory>``,
 ``auto-memory``, ``claude_memory``. Lines inside a memory block are
 prefixed with ``[system-memory]`` so ``score.py`` can choose to treat
 them as system context rather than user-turn output.
+
+Managed agents (``managed-agents-2026-04-01`` beta)
+---------------------------------------------------
+Parallel sub-agents share state through a server-managed memory
+endpoint. Claude Code streams synthetic records into the JSONL
+transcript whenever a managed sub-agent reads from or writes to the
+shared store. These records carry tokens like ``managed_memory_v1``,
+``agent_memory``, or ``parent_agent_id``. Verdict tags pull events
+with ``[managed-memory-pull]`` and push events with
+``[managed-memory-push]`` so the scoring engine can tell apart first-
+party reasoning from memory stitching.
 """
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 SESSION_BREAK_MARKER: str = "--- session break ---"
 MEMORY_PREFIX: str = "[system-memory] "
+MANAGED_MEMORY_PULL_PREFIX: str = "[managed-memory-pull] "
+MANAGED_MEMORY_PUSH_PREFIX: str = "[managed-memory-push] "
 
 _MEMORY_TOKENS = ("memory_block", "<memory>", "auto-memory", "claude_memory")
+_MANAGED_MEMORY_TOKENS = ("managed_memory_v1", "agent_memory", "parent_agent_id")
+_MANAGED_PULL_OPS = frozenset({
+    "read", "pull", "fetch", "load", "get", "retrieve",
+})
+_MANAGED_PUSH_OPS = frozenset({
+    "write", "push", "store", "save", "set", "commit", "append",
+})
 
 
 def _is_memory_marker(text: str) -> bool:
     lowered = text.lower()
     return any(token in lowered for token in _MEMORY_TOKENS)
+
+
+def _is_managed_memory_record(record: Dict[str, Any], raw_text: str) -> bool:
+    """Detect managed-agents ``managed-agents-2026-04-01`` memory records."""
+    lowered = raw_text.lower()
+    if any(token in lowered for token in _MANAGED_MEMORY_TOKENS):
+        return True
+    for key in ("type", "event", "record_type"):
+        value = record.get(key)
+        if isinstance(value, str) and any(
+            token in value.lower() for token in _MANAGED_MEMORY_TOKENS
+        ):
+            return True
+    return False
+
+
+def _managed_memory_prefix(record: Dict[str, Any], raw_text: str) -> str:
+    """Choose pull vs push prefix based on the record's op/event fields."""
+    for key in ("op", "operation", "direction", "action", "event", "type"):
+        value = record.get(key)
+        if isinstance(value, str):
+            lowered = value.lower()
+            if any(token in lowered for token in _MANAGED_PUSH_OPS):
+                return MANAGED_MEMORY_PUSH_PREFIX
+            if any(token in lowered for token in _MANAGED_PULL_OPS):
+                return MANAGED_MEMORY_PULL_PREFIX
+    # Fall back to payload-body heuristics before defaulting to pull.
+    lowered = raw_text.lower()
+    if any(tok in lowered for tok in _MANAGED_PUSH_OPS):
+        return MANAGED_MEMORY_PUSH_PREFIX
+    return MANAGED_MEMORY_PULL_PREFIX
 
 
 def _extract_from_record(record: dict, raw_line: str, in_memory: bool) -> List[str]:
@@ -66,7 +117,10 @@ def _extract_from_record(record: dict, raw_line: str, in_memory: bool) -> List[s
             break
     else:
         out.append(raw_line)
-    if in_memory:
+    if _is_managed_memory_record(record, raw_line):
+        prefix = _managed_memory_prefix(record, raw_line)
+        out = [prefix + line for line in out]
+    elif in_memory:
         out = [MEMORY_PREFIX + line for line in out]
     return out
 
@@ -118,6 +172,55 @@ def _extract_lines_from_file(path: Path) -> List[str]:
     return out
 
 
+def parse_managed_agent_memory(lines: List[str]) -> List[str]:
+    """Re-tag managed-agents memory records in an already-extracted line list.
+
+    This is a post-processing pass for transcripts whose records reached
+    the extractor via the raw-JSON fallback branch (records with no
+    recognised content field). For each such line, if the JSON carries a
+    managed-memory marker, replace it with a ``[managed-memory-pull]`` /
+    ``[managed-memory-push]`` tagged version. Lines that already carry a
+    managed-memory prefix are left untouched. Non-JSON lines pass
+    through unchanged.
+
+    The extractor already tags managed-memory records during the primary
+    pass; this helper is exposed separately so callers working with a
+    pre-extracted line list (e.g. archived scorecards or third-party
+    tools) can still reclaim the tagging.
+    """
+    out: List[str] = []
+    for line in lines:
+        if line.startswith(MANAGED_MEMORY_PULL_PREFIX) or line.startswith(
+            MANAGED_MEMORY_PUSH_PREFIX
+        ):
+            out.append(line)
+            continue
+        stripped = line.strip()
+        if not (stripped.startswith("{") and stripped.endswith("}")):
+            out.append(line)
+            continue
+        try:
+            record = json.loads(stripped)
+        except json.JSONDecodeError:
+            out.append(line)
+            continue
+        if not isinstance(record, dict):
+            out.append(line)
+            continue
+        if not _is_managed_memory_record(record, stripped):
+            out.append(line)
+            continue
+        for key in ("content", "text", "snippet", "value"):
+            value = record.get(key)
+            if isinstance(value, str) and value:
+                body = value
+                break
+        else:
+            body = stripped
+        out.append(_managed_memory_prefix(record, stripped) + body)
+    return out
+
+
 def extract_lines(path: str) -> List[str]:
     """Return one text line per meaningful record in a Claude Code transcript.
 
@@ -125,7 +228,9 @@ def extract_lines(path: str) -> List[str]:
     session files (Auto Memory layout). Returned lines are flat; session
     boundaries in multi-file input are denoted by the
     :data:`SESSION_BREAK_MARKER` line. Memory-preamble lines are
-    prefixed with :data:`MEMORY_PREFIX`.
+    prefixed with :data:`MEMORY_PREFIX`. Managed-agents memory pulls /
+    pushes are prefixed with :data:`MANAGED_MEMORY_PULL_PREFIX` or
+    :data:`MANAGED_MEMORY_PUSH_PREFIX`.
     """
     source = Path(path)
     if source.is_dir():
@@ -146,5 +251,8 @@ def extract_lines(path: str) -> List[str]:
             if index > 0:
                 combined.append(SESSION_BREAK_MARKER)
             combined.extend(_extract_lines_from_file(session_path))
-        return combined
-    return _extract_lines_from_file(source)
+        # Belt-and-braces: catch any managed-memory records whose content
+        # field slipped through the primary tagging pass. The call is
+        # idempotent — already-tagged lines pass through unchanged.
+        return parse_managed_agent_memory(combined)
+    return parse_managed_agent_memory(_extract_lines_from_file(source))

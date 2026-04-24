@@ -110,13 +110,71 @@ REPEATED_TOOL_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# SWE-bench Pro contamination markers. Verified is SWE-bench's
+# publicly-indexed split; Pro is the contamination-resistant
+# successor. If a Pro-rubric transcript references Verified instance
+# IDs (e.g. django__django-12345) or the literal split name, that's
+# strong evidence the skill pattern-matched Verified artefacts
+# instead of solving the Pro task from scratch. Penalty is capped in
+# _apply_contamination_penalty; the regex only fingerprints.
+VERIFIED_FIXTURE_PATTERNS: List[re.Pattern] = [
+    # Instance-ID patterns for repos that appear in the Verified split.
+    # Anchor on ``__`` to avoid colliding with bare repo references.
+    re.compile(r"\b[a-z][a-z0-9\-]+__[a-z0-9\-]+-\d{3,6}\b", re.IGNORECASE),
+    # Split-name literals.
+    re.compile(r"\bswe[-_ ]bench[-_ ]verified\b", re.IGNORECASE),
+    re.compile(r"\bverified_instance_ids?\b", re.IGNORECASE),
+    re.compile(r"\bprinceton-nlp/swe-bench-verified\b", re.IGNORECASE),
+]
+
+# Deduction per literal match, capped at MAX_CONTAMINATION_PENALTY.
+CONTAMINATION_PER_MATCH: float = 0.25
+MAX_CONTAMINATION_PENALTY: float = 1.5
+# Rubric names that activate the contamination scanner. Keep narrow so
+# unrelated rubrics can cite Verified in prose without penalty.
+CONTAMINATION_RUBRICS: frozenset = frozenset({"swe-bench-pro"})
+
+
+def _apply_contamination_penalty(
+    transcript_lines: List[str],
+    rubric_name: str,
+) -> float:
+    """Return a contamination deduction for SWE-bench Pro transcripts.
+
+    Active only when *rubric_name* is listed in
+    :data:`CONTAMINATION_RUBRICS`. Scans *transcript_lines* for
+    references to the SWE-bench Verified split (instance IDs or
+    split-name literals). Each unique match adds
+    :data:`CONTAMINATION_PER_MATCH` to the deduction; the total is
+    capped at :data:`MAX_CONTAMINATION_PENALTY`. Returns ``0.0`` when
+    the rubric is not contamination-scanned or no matches are found.
+    """
+    if rubric_name not in CONTAMINATION_RUBRICS:
+        return 0.0
+    seen: set = set()
+    for line in transcript_lines:
+        for pattern in VERIFIED_FIXTURE_PATTERNS:
+            for match in pattern.finditer(line):
+                seen.add(match.group(0).lower())
+    if not seen:
+        return 0.0
+    deduction = min(
+        len(seen) * CONTAMINATION_PER_MATCH,
+        MAX_CONTAMINATION_PENALTY,
+    )
+    return round(deduction, 2)
+
 # ---------------------------------------------------------------------------
 # Transcript loading
 # ---------------------------------------------------------------------------
 
 
 MODEL_ID_PATTERN = re.compile(
-    r'"model"\s*:\s*"(claude-[a-z0-9.\-]+)"',
+    # Matches ``"model": "claude-..."`` and any OpenTelemetry GenAI
+    # key that ends in ``.model`` (e.g. ``gen_ai.request.model``,
+    # ``gen_ai.response.model``). The dotted prefix is optional so the
+    # bare Claude Code shape still matches byte-for-byte.
+    r'"(?:[\w.]+\.)?model"\s*:\s*"(claude-[a-z0-9.\-]+)"',
     re.IGNORECASE,
 )
 
@@ -1286,6 +1344,15 @@ def build_scorecard(
         raw_composite, red_flags, bonuses
     )
 
+    # 4b. Rubric-specific contamination penalty (SWE-bench Pro only).
+    # Applied after the generic adjustments so it stacks on top of any
+    # red-flag deductions the transcript already earned.
+    contamination_deduction = _apply_contamination_penalty(
+        transcript_lines, rubric_name,
+    )
+    if contamination_deduction > 0:
+        final_composite = round(max(1.0, final_composite - contamination_deduction), 2)
+
     # 5. Grade (based on final adjusted score)
     grade, grade_label = assign_grade(final_composite)
 
@@ -1323,6 +1390,7 @@ def build_scorecard(
         "adjustments": {
             "deduction": total_deduction,
             "bonus": total_bonus,
+            "contamination": contamination_deduction,
         },
         "summary": " ".join(summary_parts),
         "one_liner": one_liner,
