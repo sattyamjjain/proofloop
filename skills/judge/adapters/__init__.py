@@ -24,6 +24,14 @@ from .mlflow_trace import (
     extract_lines as _mlflow_trace_extract,
     looks_like_mlflow_trace as _mlflow_trace_fingerprint,
 )
+from .inspect_ai_log import (
+    extract_lines as _inspect_ai_extract,
+    looks_like_inspect_ai_log as _inspect_ai_fingerprint,
+)
+from .terminal_bench import (
+    extract_lines as _terminal_bench_extract,
+    looks_like_terminal_bench as _terminal_bench_fingerprint,
+)
 
 Adapter = Callable[[str], List[str]]
 
@@ -38,6 +46,10 @@ ADAPTERS: Dict[str, Adapter] = {
     "gemini": _gemini_cli_extract,
     "mlflow-trace": _mlflow_trace_extract,
     "mlflow": _mlflow_trace_extract,
+    "inspect-ai": _inspect_ai_extract,
+    "inspect": _inspect_ai_extract,
+    "terminal-bench": _terminal_bench_extract,
+    "terminal": _terminal_bench_extract,
 }
 
 
@@ -45,12 +57,16 @@ def detect_adapter(path: str) -> str:
     """Auto-detect the adapter name for *path* by file-head sniff.
 
     Returns the adapter name; falls back to ``"claude-code"`` when
-    nothing else matches. v1.2.0 only detects the MLflow trace shape;
-    the other ecosystems don't carry a stable fingerprint we can rely
-    on without parsing the whole file.
+    nothing else matches. v1.3.0 detects MLflow traces and Inspect AI
+    evaluation logs; the other ecosystems don't carry a stable
+    fingerprint we can rely on without parsing the whole file.
     """
+    if _inspect_ai_fingerprint(path):
+        return "inspect-ai"
     if _mlflow_trace_fingerprint(path):
         return "mlflow-trace"
+    if _terminal_bench_fingerprint(path):
+        return "terminal-bench"
     return "claude-code"
 
 

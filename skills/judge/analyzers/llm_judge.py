@@ -42,6 +42,8 @@ __all__ = [
     "truncate_transcript",
     "build_prompt",
     "parse_scores",
+    "resolve_cache_ttl_from_env",
+    "build_cached_system_block",
 ]
 
 DIMENSIONS: List[str] = [
@@ -70,6 +72,50 @@ TASK_BUDGET_MIN_TOKENS: int = 20_000
 # ``max_tokens`` request parameter is the hard cap. Verdict sets both
 # so the judge finishes gracefully without over-spend.
 TASK_BUDGET_HARD_CEILING_RATIO: float = 1.25
+
+# Prompt-caching (Apr 2026). Claude Code's changelog enables caching by
+# default; Verdict mirrors that. TTLs: "5m" is stock; "1h" requires the
+# extended-cache-ttl-2025-04-11 beta header. Env vars flip the knob
+# without touching judge-config.json so CI can set them on a hot path.
+EXTENDED_CACHE_TTL_BETA: str = "extended-cache-ttl-2025-04-11"
+DEFAULT_PROMPT_CACHE_TTL: str = "5m"
+ENV_ENABLE_CACHE_1H: str = "ENABLE_PROMPT_CACHING_1H"
+ENV_FORCE_CACHE_5M: str = "FORCE_PROMPT_CACHING_5M"
+
+
+def resolve_cache_ttl_from_env(env: Optional[Dict[str, str]] = None) -> str:
+    """Pick a prompt-cache TTL from Verdict's env-var convention.
+
+    Precedence: ``FORCE_PROMPT_CACHING_5M`` (explicit lock-down) >
+    ``ENABLE_PROMPT_CACHING_1H`` (extended beta) > default ``"5m"``.
+
+    Accepts an *env* mapping for testability; falls back to
+    :data:`os.environ` when omitted.
+    """
+    source = env if env is not None else os.environ
+    force_5m = source.get(ENV_FORCE_CACHE_5M, "").strip()
+    enable_1h = source.get(ENV_ENABLE_CACHE_1H, "").strip()
+    if force_5m and force_5m not in ("0", "false", "False", ""):
+        return "5m"
+    if enable_1h and enable_1h not in ("0", "false", "False", ""):
+        return "1h"
+    return DEFAULT_PROMPT_CACHE_TTL
+
+
+def build_cached_system_block(rubric_md: str, ttl: str = DEFAULT_PROMPT_CACHE_TTL) -> Dict[str, Any]:
+    """Return a cached system content block for the Messages API.
+
+    The rubric text rarely changes within a run, so caching it cuts the
+    per-call token cost dramatically once the cache warms. *ttl* must be
+    either ``"5m"`` (standard) or ``"1h"`` (extended beta).
+    """
+    if ttl not in ("5m", "1h"):
+        raise ValueError(f"prompt cache TTL must be '5m' or '1h', got {ttl!r}")
+    return {
+        "type": "text",
+        "text": rubric_md,
+        "cache_control": {"type": "ephemeral", "ttl": ttl},
+    }
 
 
 class LLMJudgeError(RuntimeError):
@@ -107,6 +153,8 @@ class AnthropicClient:
         budget_tokens: Optional[int] = None,
         timeout: float = 30.0,
         log_budget_countdown: bool = True,
+        prompt_cache_ttl: Optional[str] = None,
+        log_cache_usage: bool = True,
     ) -> None:
         self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not self.api_key:
@@ -116,6 +164,12 @@ class AnthropicClient:
         self.budget_tokens = budget_tokens
         self.timeout = timeout
         self.log_budget_countdown = log_budget_countdown
+        if prompt_cache_ttl is not None and prompt_cache_ttl not in ("5m", "1h"):
+            raise ValueError(
+                f"prompt_cache_ttl must be '5m' or '1h', got {prompt_cache_ttl!r}"
+            )
+        self.prompt_cache_ttl = prompt_cache_ttl
+        self.log_cache_usage = log_cache_usage
 
     def messages_create(
         self,
@@ -135,9 +189,19 @@ class AnthropicClient:
         body: Dict[str, Any] = {
             "model": model,
             "max_tokens": max_tokens,
-            "system": system,
             "messages": [{"role": "user", "content": prompt}],
         }
+        # Prompt caching: wrap the system prompt in a cached content
+        # block. The beta headers stack — 1h TTL requires the extended
+        # beta alongside any other beta (e.g. task_budgets).
+        beta_headers: List[str] = []
+        if self.prompt_cache_ttl:
+            body["system"] = [build_cached_system_block(system, self.prompt_cache_ttl)]
+            if self.prompt_cache_ttl == "1h":
+                beta_headers.append(EXTENDED_CACHE_TTL_BETA)
+        else:
+            body["system"] = system
+
         headers = {
             "x-api-key": self.api_key,
             "anthropic-version": ANTHROPIC_VERSION,
@@ -145,7 +209,7 @@ class AnthropicClient:
         }
         if self.budget_tokens:
             soft_budget = max(int(self.budget_tokens), TASK_BUDGET_MIN_TOKENS)
-            headers["anthropic-beta"] = TASK_BUDGETS_BETA
+            beta_headers.append(TASK_BUDGETS_BETA)
             body["output_config"] = {
                 "task_budget": {"type": "tokens", "total": soft_budget},
             }
@@ -159,6 +223,9 @@ class AnthropicClient:
                     f"hard_ceiling={body['max_tokens']} model={model}",
                     file=sys.stderr,
                 )
+        if beta_headers:
+            # Multiple betas join with ", " per the anthropic-beta spec.
+            headers["anthropic-beta"] = ", ".join(beta_headers)
 
         req = urllib.request.Request(
             ANTHROPIC_MESSAGES_URL,
@@ -180,7 +247,31 @@ class AnthropicClient:
         except json.JSONDecodeError as exc:
             raise LLMJudgeError(f"Anthropic response was not JSON: {exc}")
 
+        if self.log_cache_usage and self.prompt_cache_ttl:
+            _log_cache_usage(data, model)
+
         return _extract_text(data)
+
+
+def _log_cache_usage(response: Dict[str, Any], model: str) -> None:
+    """Emit a cache-hit / cache-miss counter to stderr for observability.
+
+    Reads ``usage.cache_read_input_tokens`` (hit) and
+    ``usage.cache_creation_input_tokens`` (miss) from the Messages API
+    response. Silent when neither field is present — pre-caching hosts
+    won't return them and Verdict shouldn't log noise.
+    """
+    usage = response.get("usage")
+    if not isinstance(usage, dict):
+        return
+    hits = usage.get("cache_read_input_tokens") or 0
+    misses = usage.get("cache_creation_input_tokens") or 0
+    if not (hits or misses):
+        return
+    print(
+        f"[llm_judge] cache_hit={hits} cache_miss={misses} model={model}",
+        file=sys.stderr,
+    )
 
 
 def _extract_text(response: Dict[str, Any]) -> str:
@@ -336,7 +427,7 @@ def score_with_llm(
     catch that and degrade to heuristics-only.
     """
     if client is None:
-        client = AnthropicClient()
+        client = AnthropicClient(prompt_cache_ttl=resolve_cache_ttl_from_env())
     prompt = build_prompt(transcript, rubric)
     response_text = client.messages_create(
         model=model,

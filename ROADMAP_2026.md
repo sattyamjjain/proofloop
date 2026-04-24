@@ -101,6 +101,49 @@ The "no LLM call" detail matters more than you think — every competitor (Brain
 - Verdict v2: rubric versioning, git-diff-aware scoring, regression-aware trends.
 - Partner case studies — 3 teams showing year-over-year skill-quality improvement with Verdict.
 
+### 2026-Q2 Cycle 2 (v1.3.0) — shipped 2026-04-24
+
+New ecosystem and API-compat surface, driven by the April-2026 market
+signals:
+
+- **Inspect AI log adapter** — UK AISI's `inspect_ai` v0.3 stable
+  release (2026-04-20) became the default eval harness for 200+
+  published evaluations. Verdict now ingests its JSON logs directly
+  (`adapters/inspect_ai_log.py`) so teams that already run Inspect
+  can get Verdict scorecards without re-running their agents.
+- **`managed-agents-2026-04-01` memory stitch** — Anthropic's
+  parallel-agent shared-memory beta emits synthetic records into
+  the JSONL transcript. Verdict tags these with
+  `[managed-memory-pull]` / `[managed-memory-push]` so downstream
+  analyzers can tell first-party reasoning from memory stitching.
+- **Prompt caching on the LLM judge** — opt-in second-opinion pass
+  now wraps the system prompt in a `cache_control` ephemeral block
+  (5m default; `ENABLE_PROMPT_CACHING_1H=1` opts into the 1-hour
+  extended beta). Cache hits / misses logged per call.
+- **SWE-bench Pro rubric + contamination penalty** — Pro is the
+  contamination-resistant successor to Verified. Rubric rewards
+  instruction-literal edits; penalty of up to 1.5 composite deducts
+  when transcripts reference Verified instance IDs.
+- **Terminal-Bench trajectory adapter + rubric** — shell-task agents
+  now get a dedicated rubric that weights command-safety + secret-
+  leakage at 30%.
+- **OTel GenAI semconv enrichment for MLflow adapter** — MLflow
+  3.11.1 adopted OpenTelemetry GenAI semantic conventions. Verdict
+  reads `gen_ai.request.model`, `gen_ai.usage.*`, and
+  `gen_ai.response.finish_reasons` so v1.1.0's model-aware
+  efficiency thresholds apply to MLflow traces without caller-side
+  changes.
+
+Baseline: 384 tests green pre-cycle. Shipped: 473 tests green (89
+new), no new runtime deps, stdlib-only invariant preserved.
+
+### 2026-Q2 Cycle 3 and beyond — forward look
+
+- LiveCodeBench rubric (targeting v1.4.0).
+- Official LMSYS Arena adapter pending data-licence clearance.
+- Async streaming of `/judge` output.
+- Anthropic marketplace inclusion (`anthropics/claude-plugins-official`).
+
 ---
 
 ## 4. What to measure

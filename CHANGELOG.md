@@ -5,6 +5,79 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-04-24
+
+### Added (2026-04-24 session, Y1–Y7)
+
+- **Inspect AI log adapter**
+  (`skills/judge/adapters/inspect_ai_log.py`) — parses UK AISI
+  `inspect_ai` v0.3 evaluation logs (`.json`) into Verdict's flat
+  line stream, tagging assistant / tool-call / tool-result / user
+  turns and preserving scorer verdicts as `[ground_truth_score]`
+  sentinels. Registered as `inspect-ai` / `inspect`; auto-detected
+  via a file-head fingerprint on `"eval": {"task":` /
+  `"samples":`. Source signal:
+  <https://inspect.aisi.org.uk>, <https://github.com/UKGovernmentBEIS/inspect_ai>.
+- **`managed-agents-2026-04-01` memory stitch** —
+  `adapters/claude_code.py` now detects the parallel-agent shared-
+  memory records that Claude Code streams into the JSONL transcript
+  (tokens: `managed_memory_v1`, `agent_memory`, `parent_agent_id`)
+  and tags them with `[managed-memory-pull]` / `[managed-memory-push]`
+  prefixes. Exposes `parse_managed_agent_memory(lines)` for post-
+  processing already-extracted line lists.
+- **Prompt-caching `cache_control` on the LLM judge**
+  (`analyzers/llm_judge.py`) — the opt-in second-opinion client now
+  wraps the system prompt in an ephemeral cached content block by
+  default (`"ttl": "5m"`). `ENABLE_PROMPT_CACHING_1H=1` upgrades to
+  the 1-hour extended beta (`anthropic-beta:
+  extended-cache-ttl-2025-04-11`); `FORCE_PROMPT_CACHING_5M=1` pins
+  back to 5m. Cache hits / misses logged to stderr per call. New
+  public helpers: `resolve_cache_ttl_from_env`,
+  `build_cached_system_block`.
+- **SWE-bench Pro rubric + contamination penalty**
+  (`skills/judge/rubrics/swe-bench-pro.md` + `.weights.json`;
+  `score.py::_apply_contamination_penalty`). Weights lean onto
+  Correctness (0.35) and Adherence (0.30). When the active rubric
+  is `swe-bench-pro`, the scorer scans the transcript for SWE-bench
+  Verified instance-ID patterns (`django__django-12345` etc.) and
+  split-name literals; each unique match deducts 0.25 composite, up
+  to 1.5 total. Surfaced in the scorecard as
+  `adjustments.contamination`. Source signal:
+  <https://llm-stats.com/benchmarks/swe-bench-pro>.
+- **Terminal-Bench trajectory adapter + rubric**
+  (`adapters/terminal_bench.py`, `rubrics/terminal-bench.md` +
+  `.weights.json`). Adapter flattens `steps[].{command, stdout,
+  stderr, exit_code}` into `[shell_cmd]` / `[stdout]` /
+  `[stderr:exit=N]` turns. Rubric weights Safety at 30% because
+  command-safety and secret-leakage both roll up there. Source
+  signal: <https://llm-stats.com/benchmarks/terminal-bench>.
+- **OTel GenAI semconv enrichment for the MLflow adapter**
+  (`adapters/mlflow_trace.py::_extract_otel_genai_attrs`). When a
+  span carries `gen_ai.request.model`, `gen_ai.usage.input_tokens`,
+  `gen_ai.usage.output_tokens`, or `gen_ai.response.finish_reasons`,
+  the adapter emits `[model]` / `[usage]` / `[finish_reason]`
+  pseudo-turns. `score.MODEL_ID_PATTERN` was widened to accept OTel
+  dotted keys too, so the v1.1.0 model-aware efficiency thresholds
+  now apply to MLflow traces without code changes on the caller.
+  Source signal: <https://mlflow.org/releases/3.11.1/>.
+
+### Changed (2026-04-24 session)
+
+- Plugin / marketplace version → `1.3.0`.
+- Adapter registry gains `inspect-ai` / `inspect`, `terminal-bench` /
+  `terminal` names. Auto-detection cascade is now
+  `inspect-ai → mlflow-trace → terminal-bench → claude-code`.
+- `claude_code.extract_lines` runs `parse_managed_agent_memory` as a
+  belt-and-braces post-pass so records that slipped through the raw
+  fallback still get tagged.
+
+### Tests (2026-04-24 session)
+
+- `tests/test_inspect_ai_adapter.py` (13), `test_managed_agent_memory.py`
+  (11), `test_llm_judge_prompt_cache.py` (17), `test_swe_bench_pro_rubric.py`
+  (14), `test_terminal_bench.py` (21), `test_mlflow_otel_semconv.py`
+  (11). Total suite: 473 tests, all green.
+
 ## [1.2.0] - 2026-04-20
 
 ### Added (2026-04-20 session, N1–N8)
