@@ -1,7 +1,7 @@
 ---
 name: judge
 description: "Evaluate the execution quality of a skill or agent"
-usage: "/judge [skill-name] [--rubric RUBRIC] [--verbose] [--adapter NAME] [--model ID] [--against REF] [--watch] [--llm-second-opinion]"
+usage: "/judge [skill-name] [--rubric RUBRIC] [--verbose] [--adapter NAME] [--model ID] [--against REF] [--watch] [--llm-second-opinion] [--explain SCORECARD --format md|json]"
 ---
 
 # /judge — Manual Skill Quality Evaluation
@@ -25,6 +25,7 @@ When the user invokes `/judge`, evaluate the most recent skill or agent executio
 - `--export {openai-evals}` (optional): Emit a portable scorecard alongside the native Verdict output. Today supports `openai-evals` (OpenAI Model Spec Evals JSON). Pair with `--out <path>`.
 - `--out PATH` (optional): Destination file for `--export`. Ignored otherwise.
 - `--export-rescale` (optional): When exporting to `openai-evals`, rescale 1-10 Verdict scores into the 1-7 Model Spec bucket per the table in `skills/judge/rubrics/model-spec-compliance.md`. Off by default.
+- `--explain SCORECARD` (optional): Render an existing scorecard JSON in either Markdown (PR-friendly) or JSON (CI-friendly). Delegates to `skills/judge/scripts/explain.py`. Pair with `--format md|json` (default `md`) and optional `--out PATH`. Example: `/judge --explain skills/judge/scores/code-review_2026-04-25.json --format md`. See [`SKILL-judge-explain.md`](../skills/judge/SKILL-judge-explain.md) for the output schema.
 - **See also `/compare`** for explicit two-file delta with Auto Memory regression narrative — complement to `/judge --against HEAD~1`.
 
 ## Evaluation Process
