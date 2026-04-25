@@ -127,6 +127,37 @@ python3 skills/judge/scripts/studio.py \
 open verdict-studio.html
 ```
 
+### Explain a scorecard for a PR comment
+
+```shell
+python3 skills/judge/scripts/explain.py \
+  --scorecard skills/judge/scores/code-review_2026-04-25.json \
+  --format md \
+  --out /tmp/pr-comment.md
+```
+
+`--format json` emits the same data under a stable
+`format_version: "explain.v1"` schema. See
+[`SKILL-judge-explain.md`](skills/judge/SKILL-judge-explain.md).
+
+---
+
+## Compliance rubrics
+
+Rubrics that map external compliance frameworks onto Verdict's
+canonical dimensions. Status reflects the upstream framework, not
+Verdict's coverage.
+
+| Rubric                        | Framework                                  | Upstream status                       |
+| ----------------------------- | ------------------------------------------ | ------------------------------------- |
+| `owasp-mcp-top-10-beta`       | OWASP MCP Top 10                           | **BETA** (Phase 3, not yet ratified — re-validate against [the OWASP page](https://owasp.org/www-project-mcp-top-10/) on every bump) |
+| `model-spec-compliance`       | OpenAI Model Spec Evals                    | Stable (1-7 scale, mapped onto Verdict 1-10) |
+| `swe-bench-pro`               | SWE-bench Pro                              | Stable (contamination-resistant successor to Verified) |
+| `code-review-aider-polyglot`  | Aider polyglot benchmark                   | Stable                                |
+
+Beta rubrics carry a moving-target risk — the upstream framework's
+category names, ordering, or severity may change before v1.
+
 ---
 
 ## Scoring system

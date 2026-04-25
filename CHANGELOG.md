@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] - 2026-04-25
+
+Patch release. Two additive items, no breaking changes to v1.3.0's
+surface.
+
+### Added (2026-04-25 session, Y10 + Y12)
+
+- **`/judge --explain` rationale exporter**
+  (`skills/judge/scripts/explain.py`, `skills/judge/SKILL-judge-explain.md`).
+  Reads an existing scorecard JSON written by `score.py` and renders
+  it as either PR-comment-friendly Markdown (`--format md`,
+  default) or a stable-schema JSON document tagged
+  `format_version: "explain.v1"` (`--format json`). Output sections:
+  per-dimension table, optional LLM second-opinion overlay,
+  adjustments (red flags, bonuses, contamination), critical issues,
+  recommendations, evidence-stat block. New CLI:
+  `python3 skills/judge/scripts/explain.py --scorecard <PATH>
+  [--format md|json] [--out PATH]`. Slash command updated:
+  `/judge --explain <SCORECARD>`. Source signal:
+  [Discussions #43](https://github.com/sattyamjjain/verdict/discussions/43).
+- **OWASP MCP Top 10 (beta) coverage rubric**
+  (`skills/judge/rubrics/owasp-mcp-top-10-beta.md` +
+  `.weights.json`). Maps MCP01–MCP10 risks to Verdict's canonical
+  seven dimensions with per-risk evidence-span criteria for the
+  scorer to grep against. Safety carries 50% of the weight (eight
+  of ten risks roll up there). Carries an explicit BETA caveat —
+  re-validate against
+  [the OWASP page](https://owasp.org/www-project-mcp-top-10/) on
+  every Verdict bump until OWASP marks the list v1.
+
+### Tests (2026-04-25 session)
+
+- `tests/test_judge_explain.py` (23 tests) covers the JSON schema,
+  Markdown sections, missing-scorecard error path, and an end-to-
+  end round trip from `score.build_scorecard` through `explain`.
+- `tests/test_owasp_mcp_rubric.py` (10 tests) pins file existence,
+  source-signal header, weights sum, every MCP01–MCP10 label,
+  rubric resolution, and an end-to-end scoring run.
+- Total suite: **506 tests green** (473 → 506, +33 new).
+
+### Notes
+
+- v1.3.0 already shipped Anthropic's `extended-cache-ttl-2025-04-11`
+  beta header (Y3); the redundant Y11 was dropped from this cycle.
+- GPT-5.5 model registry (Y8), Managed Agents judge harness (Y9),
+  and `bench --watch` (Y13) deferred to v1.4.0.
+
 ## [1.3.0] - 2026-04-24
 
 ### Added (2026-04-24 session, Y1–Y7)
