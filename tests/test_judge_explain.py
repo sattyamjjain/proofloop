@@ -233,6 +233,119 @@ class TestCli(unittest.TestCase):
         self.assertNotEqual(rc, 0)
 
 
+class TestTruncateMarkdown(unittest.TestCase):
+    """O2: Markdown output cap to stay under GitHub's PR comment limit."""
+
+    def test_under_cap_passthrough(self) -> None:
+        body = "# small\n\nbody text"
+        self.assertEqual(explain.truncate_markdown(body, max_chars=1000), body)
+
+    def test_zero_cap_disables_truncation(self) -> None:
+        body = "x" * 100_000
+        self.assertEqual(explain.truncate_markdown(body, max_chars=0), body)
+
+    def test_truncation_footer_with_url(self) -> None:
+        body = "x" * 10_000
+        out = explain.truncate_markdown(
+            body, max_chars=4000,
+            scorecard_url="https://example.com/scorecard/abc",
+        )
+        self.assertLessEqual(len(out), 4000)
+        self.assertIn("Output truncated", out)
+        self.assertIn("https://example.com/scorecard/abc", out)
+
+    def test_truncation_footer_without_url(self) -> None:
+        body = "x" * 10_000
+        out = explain.truncate_markdown(body, max_chars=4000)
+        self.assertLessEqual(len(out), 4000)
+        self.assertIn("Output truncated", out)
+        self.assertIn("--max-evidence-chars=0", out)
+
+    def test_default_cap_is_4000(self) -> None:
+        self.assertEqual(explain.DEFAULT_MAX_EVIDENCE_CHARS, 4000)
+
+    def test_real_scorecard_renders_under_default_cap(self) -> None:
+        body = explain.render_markdown(_sample_card())
+        capped = explain.truncate_markdown(body)
+        self.assertEqual(body, capped)
+
+    def test_synthetically_long_scorecard_gets_capped(self) -> None:
+        # Build a card whose summary dwarfs the default cap. (Per-dim
+        # justifications are column-truncated to 140 chars in the
+        # rendered table, so they don't inflate the output the way
+        # an unbounded summary string does.)
+        card = _sample_card()
+        card["summary"] = "long " * 1000  # ~5KB
+        body = explain.render_markdown(card)
+        self.assertGreater(len(body), 4000)
+        capped = explain.truncate_markdown(body)
+        self.assertLessEqual(len(capped), 4000)
+        self.assertIn("Output truncated", capped)
+
+
+class TestCliMaxEvidenceChars(unittest.TestCase):
+    def test_md_output_respects_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            card = _sample_card()
+            card["summary"] = "long " * 1000
+            card_path = _write_card(card)
+            try:
+                out_path = tmp / "explain.md"
+                rc = explain.main([
+                    "--scorecard", str(card_path),
+                    "--format", "md",
+                    "--max-evidence-chars", "2000",
+                    "--scorecard-url", "https://verdict.example/sc/1",
+                    "--out", str(out_path),
+                ])
+                self.assertEqual(rc, 0)
+                rendered = out_path.read_text(encoding="utf-8")
+                self.assertLessEqual(len(rendered), 2000)
+                self.assertIn("verdict.example", rendered)
+            finally:
+                card_path.unlink()
+
+    def test_zero_cap_emits_full_report(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            card = _sample_card()
+            card["summary"] = "long " * 1000
+            card_path = _write_card(card)
+            try:
+                out_path = tmp / "explain.md"
+                rc = explain.main([
+                    "--scorecard", str(card_path),
+                    "--format", "md",
+                    "--max-evidence-chars", "0",
+                    "--out", str(out_path),
+                ])
+                self.assertEqual(rc, 0)
+                rendered = out_path.read_text(encoding="utf-8")
+                self.assertGreater(len(rendered), 4000)
+                self.assertNotIn("Output truncated", rendered)
+            finally:
+                card_path.unlink()
+
+    def test_json_output_ignores_cap(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            card_path = _write_card(_sample_card())
+            try:
+                out_path = tmp / "explain.json"
+                rc = explain.main([
+                    "--scorecard", str(card_path),
+                    "--format", "json",
+                    "--max-evidence-chars", "100",
+                    "--out", str(out_path),
+                ])
+                self.assertEqual(rc, 0)
+                payload = json.loads(out_path.read_text(encoding="utf-8"))
+                self.assertEqual(payload["format_version"], "explain.v1")
+            finally:
+                card_path.unlink()
+
+
 class TestRoundTripFromBuildScorecard(unittest.TestCase):
     """End-to-end: build a real scorecard via score.py, then explain it."""
 

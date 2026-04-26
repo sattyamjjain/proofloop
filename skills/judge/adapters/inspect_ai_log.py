@@ -1,12 +1,24 @@
 """Inspect AI evaluation-log adapter (read-only).
 
 Parses the evaluation logs produced by UK AISI's ``inspect_ai`` runner
-(`inspect.aisi.org.uk`, 2026-04-20 stable release 0.3). Inspect writes
-its logs either as JSON (``.json``) or the binary framed ``.eval``
-format. Verdict only reads the JSON form — the binary form is out of
-scope for stdlib ingestion. Callers with ``.eval`` logs should first
-run ``inspect log dump`` to produce JSON, then point Verdict at the
-result.
+(`inspect.aisi.org.uk`). Inspect writes its logs either as JSON
+(``.json``) or the binary framed ``.eval`` format. Verdict only reads
+the JSON form — the binary form is out of scope for stdlib ingestion.
+Callers with ``.eval`` logs should first run ``inspect log dump`` to
+produce JSON, then point Verdict at the result.
+
+Version range
+-------------
+Verdict tracks the **Inspect AI 0.3.x** log shape. Tested against
+0.3.180 through 0.3.214 (PyPI latest as of 2026-04-26). 0.4.x is
+unreleased; once it ships, the log shape may change and this adapter
+will need a parallel branch. The :data:`INSPECT_AI_SUPPORTED_RANGE`
+constant pins the expected range, and :func:`_check_inspect_ai_version`
+emits a one-shot stderr warning the first time ``extract_lines`` is
+called against an environment where ``inspect_ai.__version__`` falls
+outside the range. The check is best-effort: if ``inspect_ai`` isn't
+installed (the adapter only needs the JSON file, never the runtime),
+the warning is silently skipped.
 
 Canonical shape (v0.3, verified 2026-04-24):
 
@@ -53,14 +65,24 @@ Market signal: `UKGovernmentBEIS/inspect_ai <https://github.com/UKGovernmentBEIS
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 FINGERPRINT_TOKENS = (
     '"eval": {"task":',
     '"samples":',
     '"inspect_ai"',
 )
+
+# The 0.3.x major-line. 0.4.0 is unreleased as of 2026-04-26.
+INSPECT_AI_SUPPORTED_RANGE: str = ">=0.3.180,<0.4.0"
+_INSPECT_AI_MIN: Tuple[int, int, int] = (0, 3, 180)
+_INSPECT_AI_MAX_EXCLUSIVE: Tuple[int, int, int] = (0, 4, 0)
+
+# Module-level guard so the version warning fires at most once per
+# Verdict process. Tests that exercise the warning path can reset it.
+_VERSION_WARNING_EMITTED: bool = False
 
 _ROLE_PREFIX = {
     "assistant": "[assistant]",
@@ -69,6 +91,71 @@ _ROLE_PREFIX = {
     "system":    "[system]",
     "tool":      "[tool_result]",
 }
+
+
+def _parse_version_tuple(version: str) -> Optional[Tuple[int, int, int]]:
+    """Parse ``X.Y.Z[.suffix]`` into a 3-tuple of ints, or None on failure."""
+    if not isinstance(version, str):
+        return None
+    cleaned = version.split("+", 1)[0]
+    parts = cleaned.split(".", 3)[:3]
+    if len(parts) < 2:
+        return None
+    while len(parts) < 3:
+        parts.append("0")
+    try:
+        return (int(parts[0]), int(parts[1]), int(parts[2]))
+    except (ValueError, TypeError):
+        return None
+
+
+def _check_inspect_ai_version(version: Optional[str] = None) -> Optional[str]:
+    """Return a warning string if ``inspect_ai.__version__`` is out of range.
+
+    *version* is injectable for tests; when omitted, the function
+    lazy-imports ``inspect_ai`` and reads ``__version__``. If the
+    package isn't installed (the adapter never needs the runtime),
+    returns ``None`` — Verdict only reads the JSON log.
+
+    Returns ``None`` when:
+    - the version is in :data:`INSPECT_AI_SUPPORTED_RANGE`, or
+    - ``inspect_ai`` is not installed, or
+    - the version string is unparseable.
+    """
+    if version is None:
+        try:
+            import inspect_ai  # noqa: F401  (lazy, may not be installed)
+            version = getattr(inspect_ai, "__version__", None)
+        except ImportError:
+            return None
+    parsed = _parse_version_tuple(version) if version else None
+    if parsed is None:
+        return None
+    if _INSPECT_AI_MIN <= parsed < _INSPECT_AI_MAX_EXCLUSIVE:
+        return None
+    return (
+        f"[verdict] inspect_ai version {version} is outside the tested "
+        f"range {INSPECT_AI_SUPPORTED_RANGE}; log-shape parsing may drift. "
+        f"Verdict 1.3.x tracks Inspect AI 0.3.x; 0.4.x is unreleased as of "
+        f"2026-04-26."
+    )
+
+
+def _maybe_warn_inspect_ai_version() -> None:
+    """One-shot stderr warning gate, idempotent within a process."""
+    global _VERSION_WARNING_EMITTED
+    if _VERSION_WARNING_EMITTED:
+        return
+    warning = _check_inspect_ai_version()
+    if warning:
+        print(warning, file=sys.stderr)
+    _VERSION_WARNING_EMITTED = True
+
+
+def _reset_version_warning_guard() -> None:
+    """Test hook: reset the one-shot warning gate."""
+    global _VERSION_WARNING_EMITTED
+    _VERSION_WARNING_EMITTED = False
 
 
 def _stringify(value: Any) -> str:
@@ -177,8 +264,38 @@ def looks_like_inspect_ai_log(path: str, scan_bytes: int = 2048) -> bool:
     return detect(head)
 
 
+def detection_score(path: str, scan_bytes: int = 2048) -> float:
+    """Confidence score for the dispatch registry (0.0–1.0).
+
+    Scoring tiers:
+    - 0.85 — explicit ``"inspect_ai"`` literal in head (unambiguous).
+    - 0.70 — ``"eval": {"task":`` co-occurs with ``"samples":`` (the
+      canonical Inspect log envelope).
+    - 0.50 — ``"samples":`` alone (could be other ML eval formats too,
+      so the ``mlflow_trace`` adapter at 0.95 wins on its schema
+      literal when traces carry both shapes — see Issue #11).
+    """
+    target = Path(path)
+    if not target.is_file():
+        return 0.0
+    try:
+        with target.open("rb") as handle:
+            head = handle.read(scan_bytes)
+    except OSError:
+        return 0.0
+    text = head.decode("utf-8", errors="replace")
+    if '"inspect_ai"' in text:
+        return 0.85
+    if '"eval": {"task":' in text and '"samples":' in text:
+        return 0.70
+    if '"samples":' in text:
+        return 0.50
+    return 0.0
+
+
 def extract_lines(path: str) -> List[str]:
     """Flatten an Inspect AI JSON log into Verdict-flavoured turn lines."""
+    _maybe_warn_inspect_ai_version()
     source = Path(path)
     if not source.is_file():
         return []

@@ -39,6 +39,24 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Declare sandbox capabilities
+        # Claude Code v2.1.117 (Apr 2026) hardened its runtime sandbox.
+        # CI workflows that run Verdict under that sandbox declare the
+        # caps they intend to use via CLAUDE_SANDBOX_CAPS so the
+        # workflow stays in sync with the runtime's expectations. The
+        # check below is a declaration-only verification — actual
+        # isolation is provided by the runtime, not this step.
+        run: |
+          set -euo pipefail
+          echo "CLAUDE_SANDBOX_CAPS=bash:read,fs:read" >> "${GITHUB_ENV}"
+
+      - name: Verify sandbox-cap declaration
+        env:
+          CLAUDE_SANDBOX_CAPS: bash:read,fs:read
+        run: |
+          set -euo pipefail
+          python3 scripts/sandbox_caps_check.py --strict
+
       - name: Build synthetic transcript from PR metadata
         id: transcript
         env:

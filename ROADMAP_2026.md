@@ -137,12 +137,61 @@ signals:
 Baseline: 384 tests green pre-cycle. Shipped: 473 tests green (89
 new), no new runtime deps, stdlib-only invariant preserved.
 
-### 2026-Q2 Cycle 3 and beyond — forward look
+### 2026-Q2 Cycle 3 (v1.3.1) — shipped 2026-04-25
+
+Patch cycle. Two additive items, no breakage to v1.3.0:
+
+- `/judge --explain` rationale exporter (Markdown + JSON `explain.v1`)
+- OWASP MCP Top 10 (beta) coverage rubric, Safety-weighted 0.50
+
+506 tests green. Q1–Q4 SaaS-pivot product surfaces deferred (ROADMAP
+§5 still stands).
+
+### 2026-Q2 Cycle 4 (v1.3.2) — shipped 2026-04-26
+
+Patch cycle. New adapter, EXPERIMENTAL clinical rubric, two adapter-
+correctness fixes, two open-issue closures:
+
+- **Z1** Gemini 3.1 Pro Deep Research adapter — flattens
+  `research_plan` / `citations[]` / `verifier_notes` /
+  `assistant_synthesis` blocks the existing `gemini_cli` adapter
+  discarded.
+- **Z2** EXPERIMENTAL clinical-agentic-workflow rubric — eight
+  clinical concerns mapped onto the canonical seven dimensions; PHI
+  redaction guard activates for this rubric only and deducts 2.0
+  composite on leak. Ships at EXPERIMENTAL status; **do not market
+  publicly** until Issue O3 (dose-string false-positive class) closes
+  via real clinical-pilot calibration.
+- **Z3** Inspect AI 0.3.x version-pin honesty — adds a one-shot
+  stderr warning when the installed `inspect_ai.__version__` falls
+  outside `>=0.3.180,<0.4.0`.
+- **Z4** Cloudflare AI Gateway eval-webhook integration — pure
+  dict-in / dict-out, no SDK dep.
+- **Z5** Sandbox-aware self-score CI — workflow declares
+  `CLAUDE_SANDBOX_CAPS` explicitly; new `scripts/sandbox_caps_check.py`
+  verifies the declaration matches.
+- **O1** Adapter detection collision fix — score-based dispatch
+  replaces first-match-wins boolean fingerprints. Closes the
+  inspect_ai_log / mlflow_trace collision that emerged after Y6.
+- **O2** `/judge --explain` truncation cap — `--max-evidence-chars`
+  flag (default 4000) keeps Markdown output under GitHub's 65 KB PR
+  comment limit.
+
+619 tests green (506 → 619, +113 new). No new runtime deps.
+
+### 2026-Q2 Cycle 5 and beyond — forward look
 
 - LiveCodeBench rubric (targeting v1.4.0).
 - Official LMSYS Arena adapter pending data-licence clearance.
 - Async streaming of `/judge` output.
 - Anthropic marketplace inclusion (`anthropics/claude-plugins-official`).
+- Issue O3: clinical PHI dose-string false-positive class — needs
+  real clinical-pilot calibration before the rubric leaves
+  EXPERIMENTAL.
+- GPT-5.5 / GPT-5.5 Pro model-pricing registry (Y8 deferred from
+  v1.3.x — needs new infrastructure surface).
+- Claude Managed Agents thin tool-schema wrapper (Y9 deferred —
+  awaits beta → GA transition).
 
 ---
 

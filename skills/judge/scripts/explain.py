@@ -41,6 +41,20 @@ from typing import Any, Dict, List, Optional
 
 EXPLAIN_FORMAT_VERSION: str = "explain.v1"
 
+# GitHub PR-comment hard cap is 65,536 chars; the Markdown render must
+# stay below that or the auto-comment step in `actions/verdict-comment-pr`
+# silently truncates. Default cap leaves headroom for a comment header
+# the action prepends. Override with --max-evidence-chars.
+DEFAULT_MAX_EVIDENCE_CHARS: int = 4000
+TRUNCATION_FOOTER_TEMPLATE: str = (
+    "\n\n_Output truncated to {limit} chars to fit GitHub's PR comment "
+    "limit. See full report at {url}._\n"
+)
+TRUNCATION_FOOTER_NO_URL: str = (
+    "\n\n_Output truncated to {limit} chars to fit GitHub's PR comment "
+    "limit. Re-run with `--max-evidence-chars=0` for the full report._\n"
+)
+
 # Canonical dimension order — matches DIMENSIONS in score.py and
 # llm_judge.py so the output is stable across all three.
 DIMENSIONS: List[str] = [
@@ -180,6 +194,35 @@ def _md_llm_overlay(entries: List[Dict[str, Any]]) -> str:
     return "### LLM second opinion\n\n" + "\n".join(bullets)
 
 
+def truncate_markdown(
+    rendered: str,
+    max_chars: int = DEFAULT_MAX_EVIDENCE_CHARS,
+    scorecard_url: Optional[str] = None,
+) -> str:
+    """Cap *rendered* at *max_chars* and append a truncation footer.
+
+    *max_chars* of ``0`` disables truncation entirely (caller wants
+    the full report — useful when piping to a file rather than a PR
+    comment). The footer points at *scorecard_url* when provided, or
+    instructs the user to re-run with ``--max-evidence-chars=0``.
+
+    The cap counts characters of the rendered output, not Markdown
+    "tokens". GitHub's actual limit is 65,536 chars, so the default
+    of 4,000 leaves substantial headroom for the wrapping action's
+    own header / collapsible-section markup.
+    """
+    if max_chars == 0 or len(rendered) <= max_chars:
+        return rendered
+    if scorecard_url:
+        footer = TRUNCATION_FOOTER_TEMPLATE.format(
+            limit=max_chars, url=scorecard_url,
+        )
+    else:
+        footer = TRUNCATION_FOOTER_NO_URL.format(limit=max_chars)
+    body_budget = max(0, max_chars - len(footer))
+    return rendered[:body_budget].rstrip() + footer
+
+
 def render_markdown(card: Dict[str, Any]) -> str:
     """Render a PR-comment-friendly Markdown explanation."""
     skill = card.get("skill", "?")
@@ -275,6 +318,21 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--out",
         help="Write output to PATH. Default: stdout.",
     )
+    parser.add_argument(
+        "--max-evidence-chars", type=int, default=DEFAULT_MAX_EVIDENCE_CHARS,
+        help=(
+            "Cap Markdown output length to fit GitHub's 65 KB PR comment "
+            f"limit (default: {DEFAULT_MAX_EVIDENCE_CHARS}). Set to 0 to "
+            "disable truncation. Ignored for --format json."
+        ),
+    )
+    parser.add_argument(
+        "--scorecard-url",
+        help=(
+            "URL of the full scorecard. When --max-evidence-chars truncates "
+            "the Markdown body, the truncation footer points readers here."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -285,7 +343,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     except ValueError as exc:
         print(f"verdict-explain: {exc}", file=sys.stderr)
         return 2
-    rendered = render_markdown(card) if args.format == "md" else render_json(card)
+    if args.format == "md":
+        rendered = render_markdown(card)
+        rendered = truncate_markdown(
+            rendered, args.max_evidence_chars, args.scorecard_url,
+        )
+    else:
+        rendered = render_json(card)
     if args.out:
         Path(args.out).write_text(rendered, encoding="utf-8")
     else:

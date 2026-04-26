@@ -13,7 +13,7 @@ Selection order:
 """
 from __future__ import annotations
 
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Tuple
 
 from .claude_code import extract_lines as _claude_code_extract
 from .cowork import extract_lines as _cowork_extract
@@ -23,14 +23,22 @@ from .gemini_cli import extract_lines as _gemini_cli_extract
 from .mlflow_trace import (
     extract_lines as _mlflow_trace_extract,
     looks_like_mlflow_trace as _mlflow_trace_fingerprint,
+    detection_score as _mlflow_trace_score,
 )
 from .inspect_ai_log import (
     extract_lines as _inspect_ai_extract,
     looks_like_inspect_ai_log as _inspect_ai_fingerprint,
+    detection_score as _inspect_ai_score,
 )
 from .terminal_bench import (
     extract_lines as _terminal_bench_extract,
     looks_like_terminal_bench as _terminal_bench_fingerprint,
+    detection_score as _terminal_bench_score,
+)
+from .gemini_deep_research import (
+    extract_lines as _gemini_deep_research_extract,
+    looks_like_gemini_deep_research as _gemini_deep_research_fingerprint,
+    detection_score as _gemini_deep_research_score,
 )
 
 Adapter = Callable[[str], List[str]]
@@ -50,24 +58,47 @@ ADAPTERS: Dict[str, Adapter] = {
     "inspect": _inspect_ai_extract,
     "terminal-bench": _terminal_bench_extract,
     "terminal": _terminal_bench_extract,
+    "gemini-deep-research": _gemini_deep_research_extract,
+    "gemini-deep": _gemini_deep_research_extract,
 }
 
 
-def detect_adapter(path: str) -> str:
-    """Auto-detect the adapter name for *path* by file-head sniff.
+_DETECTION_SCORERS: List[Tuple[str, Callable[[str], float]]] = [
+    ("gemini-deep-research", _gemini_deep_research_score),
+    ("mlflow-trace", _mlflow_trace_score),
+    ("inspect-ai", _inspect_ai_score),
+    ("terminal-bench", _terminal_bench_score),
+]
 
-    Returns the adapter name; falls back to ``"claude-code"`` when
-    nothing else matches. v1.3.0 detects MLflow traces and Inspect AI
-    evaluation logs; the other ecosystems don't carry a stable
-    fingerprint we can rely on without parsing the whole file.
+
+def detect_adapter(path: str) -> str:
+    """Auto-detect the adapter name for *path* by confidence score.
+
+    Each registered adapter exposes a ``detection_score(path) -> float``
+    in the ``[0.0, 1.0]`` range. The dispatcher computes scores across
+    all candidates and returns the highest-scoring adapter name; ties
+    break by the registry order in :data:`_DETECTION_SCORERS`.
+
+    Returns ``"claude-code"`` (the native format) when no adapter
+    scores above ``0.0``.
+
+    Issue #11 (the OTel-enriched MLflow trace + Inspect AI samples
+    collision after Y6) motivated the switch from first-match-wins
+    boolean fingerprints to score-based dispatch. The Trace schema
+    literal scores 0.95 vs Inspect's 0.70, so a trace carrying both
+    shapes resolves to MLflow correctly.
     """
-    if _inspect_ai_fingerprint(path):
-        return "inspect-ai"
-    if _mlflow_trace_fingerprint(path):
-        return "mlflow-trace"
-    if _terminal_bench_fingerprint(path):
-        return "terminal-bench"
-    return "claude-code"
+    best_name = "claude-code"
+    best_score = 0.0
+    for name, scorer in _DETECTION_SCORERS:
+        try:
+            score = scorer(path)
+        except Exception:
+            score = 0.0
+        if score > best_score:
+            best_name = name
+            best_score = score
+    return best_name
 
 
 def list_adapters() -> List[str]:
