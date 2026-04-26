@@ -108,10 +108,10 @@ preserved; no new runtime deps.
 
 ### Honesty correction
 
-- This release contains no `inspect_ai 0.4.0` reference (verified by
-  `tests/test_inspect_ai_version_check.py::TestNoStaleVersionReferenceInChangelog`).
-  v1.3.0's adapter docstring said "0.3 stable release" without a
-  version-range pin — Z3 closes that gap.
+- v1.3.0's adapter docstring said "0.3 stable release" without a
+  version-range pin — Z3 closes that gap. A regression test
+  (`TestNoStaleVersionReferenceInChangelog`) prevents future entries
+  from claiming an unreleased major version is shipped.
 
 ## [1.3.1] - 2026-04-25
 
