@@ -58,11 +58,17 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
   adherence, actionability, efficiency, safety, consistency — weights
   configurable globally or per rubric via a sidecar `.weights.json`.
 - **Cross-ecosystem adapters.** Score transcripts from Claude Code,
-  Cowork, Codex, Cursor, Continue, and any OpenAI-compatible format
-  with a single `--adapter` flag.
-- **11 domain rubrics.** code-review, security, devops, data-analysis,
-  frontend-design, testing, documentation, content-writing, research,
-  plus `default` and a `custom-template`.
+  Cowork, Codex, Cursor, Continue, OpenAI-compatible JSON, Gemini CLI,
+  Gemini 3.1 Pro Deep Research, MLflow, Inspect AI, and Terminal-Bench
+  trajectories with a single `--adapter` flag. Auto-detection by
+  confidence-score dispatch (the highest-scoring adapter wins).
+- **18 domain rubrics + compliance pack.** Eleven everyday rubrics
+  (code-review, security, devops, data-analysis, frontend-design,
+  testing, documentation, content-writing, research, default, custom-
+  template); plus a compliance pack (Aider polyglot, Skill compliance,
+  Model Spec compliance, SWE-bench Pro with contamination penalty,
+  Terminal-Bench, OWASP MCP Top 10 beta, EXPERIMENTAL clinical
+  agentic-workflow).
 - **Model-aware efficiency.** Opus 4.7's new tokenizer (~35% more
   tokens) doesn't silently penalise its longer outputs — length
   thresholds scale by a per-model baseline.
@@ -151,12 +157,15 @@ Verdict's coverage.
 | Rubric                        | Framework                                  | Upstream status                       |
 | ----------------------------- | ------------------------------------------ | ------------------------------------- |
 | `owasp-mcp-top-10-beta`       | OWASP MCP Top 10                           | **BETA** (Phase 3, not yet ratified — re-validate against [the OWASP page](https://owasp.org/www-project-mcp-top-10/) on every bump) |
+| `clinical-agentic-workflow`   | ChatGPT for Clinicians-style workflow eval | **EXPERIMENTAL** — DO NOT USE IN PRODUCTION ([Issue O3](https://github.com/sattyamjjain/verdict/issues/) open, PHI redaction false-positives) |
 | `model-spec-compliance`       | OpenAI Model Spec Evals                    | Stable (1-7 scale, mapped onto Verdict 1-10) |
 | `swe-bench-pro`               | SWE-bench Pro                              | Stable (contamination-resistant successor to Verified) |
 | `code-review-aider-polyglot`  | Aider polyglot benchmark                   | Stable                                |
 
-Beta rubrics carry a moving-target risk — the upstream framework's
-category names, ordering, or severity may change before v1.
+Beta and experimental rubrics carry a moving-target risk — the
+upstream framework's category names, ordering, or severity may
+change before v1, and EXPERIMENTAL rubrics carry known false-
+positive classes that need real-pilot calibration before deploy.
 
 ---
 

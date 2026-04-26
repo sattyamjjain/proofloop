@@ -1,0 +1,22 @@
+{
+  "gateway_id": "verdict-prod",
+  "request_id": "01HXYZ12345",
+  "model": "claude-haiku-4-5",
+  "request": {
+    "messages": [
+      {"role": "system", "content": "You are a code-review assistant."},
+      {"role": "user", "content": "Review this diff for memory leaks."}
+    ],
+    "model": "claude-haiku-4-5"
+  },
+  "response": {
+    "choices": [
+      {
+        "message": {
+          "role": "assistant",
+          "content": "I see one leak in handler.cpp:42 — the file handle is not closed on the error path. Suggest wrapping in RAII via std::unique_ptr<FILE, decltype(&fclose)>."
+        }
+      }
+    ]
+  }
+}

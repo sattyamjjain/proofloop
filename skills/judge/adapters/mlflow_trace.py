@@ -246,3 +246,30 @@ def looks_like_mlflow_trace(path: str, scan_bytes: int = 2048) -> bool:
     except OSError:
         return False
     return TRACE_FINGERPRINT in head
+
+
+def detection_score(path: str, scan_bytes: int = 2048) -> float:
+    """Confidence score for the dispatch registry (0.0–1.0).
+
+    The ``mlflow.entities.Trace`` schema literal is highly specific
+    and earns the top tier (0.95). The OTel ``data.spans[]`` shape
+    alone scores lower (0.60) because it can co-occur with Inspect AI
+    logs that also carry ``gen_ai.*`` attributes — that collision
+    motivated Issue #11. When both shapes appear, the schema literal
+    wins.
+    """
+    target = Path(path)
+    if not target.is_file():
+        return 0.0
+    try:
+        with target.open("rb") as handle:
+            head = handle.read(scan_bytes).decode("utf-8", errors="replace")
+    except OSError:
+        return 0.0
+    if TRACE_FINGERPRINT in head:
+        return 0.95
+    has_spans = '"data"' in head and '"spans"' in head
+    has_otel = "gen_ai." in head
+    if has_spans and has_otel:
+        return 0.60
+    return 0.0

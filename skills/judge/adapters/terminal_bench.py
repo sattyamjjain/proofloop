@@ -121,6 +121,31 @@ def looks_like_terminal_bench(path: str, scan_bytes: int = 2048) -> bool:
     return detect(head)
 
 
+def detection_score(path: str, scan_bytes: int = 2048) -> float:
+    """Confidence score for the dispatch registry (0.0–1.0).
+
+    Tiers:
+    - 0.90 — explicit ``"terminal_bench"`` token in the head.
+    - 0.70 — ``"steps":`` co-occurs with ``"exit_code"`` or
+      ``"command"`` (canonical trajectory shape).
+    - 0.0 — neither condition.
+    """
+    target = Path(path)
+    if not target.is_file():
+        return 0.0
+    try:
+        with target.open("rb") as handle:
+            head = handle.read(scan_bytes)
+    except OSError:
+        return 0.0
+    text = head.decode("utf-8", errors="replace")
+    if '"terminal_bench"' in text:
+        return 0.90
+    if '"steps"' in text and ('"exit_code"' in text or '"command"' in text):
+        return 0.70
+    return 0.0
+
+
 def extract_lines(path: str) -> List[str]:
     """Flatten a Terminal-Bench trajectory JSON into Verdict-flavoured lines."""
     source = Path(path)

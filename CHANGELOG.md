@@ -5,6 +5,114 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-04-26
+
+Patch release. New adapter, EXPERIMENTAL clinical rubric, two
+adapter-fix items, two open-issue closures. Offline-first invariant
+preserved; no new runtime deps.
+
+### Added (2026-04-26 session, Z1–Z6 + O1 + O2)
+
+- **Z1 — Gemini 3.1 Pro Deep Research adapter**
+  (`skills/judge/adapters/gemini_deep_research.py`). Parses Deep
+  Research / Deep Research Max session JSON: flattens
+  `research_plan` → `[plan_step]`, `citations[]` →
+  `[citation:<url>] retrieved_at=...`, `verifier_notes` →
+  `[verifier_note]`, `assistant_synthesis` → `[assistant]`.
+  Registered as `gemini-deep-research` / `gemini-deep`. Auto-detected
+  via `deep_research_mode` flag or structural markers. Source signal:
+  [blog.google — Deep Research Max (2026-04-22)](https://blog.google/products/gemini/google-gemini-deep-research-max/).
+- **Z2 — EXPERIMENTAL clinical-agentic-workflow rubric**
+  (`skills/judge/rubrics/clinical-agentic-workflow.{md,weights.json,example.md}`).
+  Eight clinical concerns mapped onto Verdict's seven canonical
+  dimensions; PHI redaction guard activates only for this rubric and
+  deducts 2.0 from composite + emits a critical issue when SSN /
+  MRN-prefix / DOB-prefix literals appear. **DO NOT USE IN
+  PRODUCTION** — the dose-string false-positive class (Issue O3) is
+  open. Source signal:
+  [openai.com — ChatGPT for Clinicians (2026-04-25)](https://openai.com/index/chatgpt-for-clinicians/).
+- **Z3 — Inspect AI 0.3.x version-pin honesty**
+  (`skills/judge/adapters/inspect_ai_log.py`). Adds
+  `INSPECT_AI_SUPPORTED_RANGE = ">=0.3.180,<0.4.0"` constant +
+  `_check_inspect_ai_version()` returning a one-shot stderr warning
+  when the installed `inspect_ai.__version__` falls outside the
+  range. PyPI's latest as of 2026-04-26 is 0.3.214; 0.4.x is
+  unreleased. Source signal:
+  [PyPI inspect-ai](https://pypi.org/project/inspect-ai/).
+- **Z4 — Cloudflare AI Gateway eval-webhook integration**
+  (`skills/judge/integrations/cloudflare_ai_gateway.py`). Pure
+  dict-in / dict-out: accepts the gateway's eval-webhook payload,
+  builds a synthetic transcript from
+  `request.messages` + `response.choices[0].message`, runs Verdict's
+  heuristic scorer, maps the 1-10 composite onto Cloudflare's
+  `[0.0, 1.0]` band. No Cloudflare SDK dep. Source signal:
+  [blog.cloudflare.com — AI Gateway evals (2026-04-23)](https://blog.cloudflare.com/ai-gateway-evals/).
+- **Z5 — Claude Code v2.1.117 sandbox-aware self-score CI**
+  (`.github/workflows/self-score.yml` + `scripts/sandbox_caps_check.py`).
+  Workflow now declares `CLAUDE_SANDBOX_CAPS=bash:read,fs:read` and
+  invokes the new check script (stdlib-only) to verify the
+  declaration matches the workflow's expected caps. Declaration-only
+  check; runtime isolation is provided by the Claude Code runtime.
+  Source signal:
+  [code.claude.com changelog](https://code.claude.com/docs/en/changelog).
+- **O1 — Adapter detection collision fix**
+  (`skills/judge/adapters/__init__.py` + each collision-prone
+  adapter). After Y6 (v1.3.0) added OTel `gen_ai.*` attrs to
+  `mlflow_trace`, both `inspect_ai_log` and `mlflow_trace` could
+  fingerprint a trace carrying both shapes. Refactored
+  `detect_adapter` from first-match-wins boolean fingerprints to
+  score-based dispatch — each adapter now exposes
+  `detection_score(path) -> float` in `[0.0, 1.0]`, and the
+  registry returns the highest-scoring name. The MLflow schema
+  literal scores 0.95, beating Inspect's 0.70 on collision payloads.
+- **O2 — `/judge --explain` truncation cap**
+  (`skills/judge/scripts/explain.py`). New `--max-evidence-chars=N`
+  flag (default 4000) caps the Markdown render so the
+  `actions/verdict-comment-pr` step doesn't silently truncate against
+  GitHub's 65 KB PR comment limit. `--max-evidence-chars=0` disables
+  truncation entirely. New `--scorecard-url` flag injects a
+  templated link into the truncation footer.
+
+### Changed (2026-04-26 session)
+
+- Plugin / marketplace version → `1.3.2`.
+- Adapter registry gains `gemini-deep-research` / `gemini-deep`
+  (total 9 adapters).
+- Rubric count → 18 (`clinical-agentic-workflow` adds, `default` /
+  `code-review` / `frontend-design` / `documentation` / `testing` /
+  `security` / `content-writing` / `data-analysis` / `research` /
+  `devops` / `custom-template` / `code-review-aider-polyglot` /
+  `skill-compliance` / `model-spec-compliance` / `swe-bench-pro` /
+  `terminal-bench` / `owasp-mcp-top-10-beta`).
+- Self-score workflow declares sandbox capabilities explicitly.
+- `score.py` carries a new `_apply_phi_redaction_check()` helper
+  that activates only when the rubric is `clinical-agentic-workflow`.
+- `score.py` scorecard JSON gains `adjustments.phi_leak` field
+  (always present; 0.0 unless the redaction guard fired).
+
+### Tests (2026-04-26 session)
+
+- `tests/test_gemini_deep_research_adapter.py` (19), `test_clinical_rubric.py`
+  (16), `test_inspect_ai_version_check.py` (16), `test_cloudflare_ai_gateway.py`
+  (15), `test_sandbox_caps.py` (20), `test_adapter_registry.py` (14),
+  `test_judge_explain.py` gains 10 truncation-cap tests.
+- Total suite: **619 tests green** (506 → 619, +113 new).
+
+### Known issues
+
+- **O3** — clinical PHI-redaction false positives on dose strings
+  (e.g. `MR12345` next to `mg`). Mitigated heuristically via dose-
+  unit allow-list, not closed. Z2 rubric ships at EXPERIMENTAL
+  status; do NOT market publicly until O3 closes via real clinical
+  pilot calibration.
+
+### Honesty correction
+
+- This release contains no `inspect_ai 0.4.0` reference (verified by
+  `tests/test_inspect_ai_version_check.py::TestNoStaleVersionReferenceInChangelog`).
+  v1.3.0's adapter docstring said "0.3 stable release" without a
+  version-range pin — Z3 closes that gap.
+
 ## [1.3.1] - 2026-04-25
 
 Patch release. Two additive items, no breaking changes to v1.3.0's

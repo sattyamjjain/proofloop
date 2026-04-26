@@ -134,6 +134,70 @@ MAX_CONTAMINATION_PENALTY: float = 1.5
 # unrelated rubrics can cite Verified in prose without penalty.
 CONTAMINATION_RUBRICS: frozenset = frozenset({"swe-bench-pro"})
 
+# Clinical PHI-redaction patterns. Active only when the active rubric
+# is ``clinical-agentic-workflow`` (Issue O3 documents the false-
+# positive class). Stays narrow on purpose: each pattern only fires
+# when the line lacks a dose-unit token (mg, ml, IU, mcg, units), so
+# medication records like ``MR12345`` adjacent to a dose don't trip
+# the MRN regex.
+PHI_PATTERNS: List[re.Pattern] = [
+    # SSN-shaped 9-digit: 123-45-6789 or 123456789
+    re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
+    # MRN: explicit prefix variant (high precision)
+    re.compile(r"\bMRN[:\s]*\d{5,10}\b", re.IGNORECASE),
+    # DOB: explicit prefix variant
+    re.compile(r"\bDOB[:\s]*\d{1,4}[\-/]\d{1,2}[\-/]\d{1,4}\b", re.IGNORECASE),
+]
+PHI_DOSE_UNITS_RE: re.Pattern = re.compile(
+    r"\b\d+(?:\.\d+)?\s*(?:mg|ml|mcg|units|IU|kg|g|L)\b",
+    re.IGNORECASE,
+)
+PHI_RUBRICS: frozenset = frozenset({"clinical-agentic-workflow"})
+PHI_LEAK_PENALTY: float = 2.0
+
+
+def _apply_phi_redaction_check(
+    transcript_lines: List[str],
+    rubric_name: str,
+) -> Dict[str, Any]:
+    """Scan for unredacted PHI and return a deduction + critical-issue payload.
+
+    Returns a dict with two keys:
+    - ``deduction`` (float): subtract from composite when a leak is
+      detected. Always 0.0 unless *rubric_name* is in
+      :data:`PHI_RUBRICS`.
+    - ``critical_issues`` (list[str]): zero or one entries; a non-
+      empty list means at least one line contained a PHI literal.
+
+    The dose-token allow-list (see :data:`PHI_DOSE_UNITS_RE`) is the
+    O3 mitigation: lines whose context is clearly a medication-dose
+    string don't trip the MRN regex even when their digit run looks
+    like one. False positives still occur on compound dosing strings;
+    consumers must manual-review every flag.
+    """
+    if rubric_name not in PHI_RUBRICS:
+        return {"deduction": 0.0, "critical_issues": []}
+    matched_lines = 0
+    for line in transcript_lines:
+        if PHI_DOSE_UNITS_RE.search(line):
+            # Heuristic skip: line carries a dose unit, so a numeric
+            # match is overwhelmingly likely to be dosing not PHI.
+            continue
+        for pattern in PHI_PATTERNS:
+            if pattern.search(line):
+                matched_lines += 1
+                break
+    if not matched_lines:
+        return {"deduction": 0.0, "critical_issues": []}
+    return {
+        "deduction": PHI_LEAK_PENALTY,
+        "critical_issues": [
+            f"[critical] PHI leakage detected on {matched_lines} line(s); "
+            f"clinical-agentic-workflow rubric requires unredacted PHI to be "
+            f"handled before scoring (O3 false-positive class — manual review required)."
+        ],
+    }
+
 
 def _apply_contamination_penalty(
     transcript_lines: List[str],
@@ -1353,12 +1417,26 @@ def build_scorecard(
     if contamination_deduction > 0:
         final_composite = round(max(1.0, final_composite - contamination_deduction), 2)
 
+    # 4c. Clinical PHI-redaction guard (clinical-agentic-workflow only).
+    # EXPERIMENTAL — see Issue O3 about false-positive class on dosage
+    # strings matching the MRN regex.
+    phi_result = _apply_phi_redaction_check(transcript_lines, rubric_name)
+    phi_deduction = phi_result["deduction"]
+    phi_critical = phi_result["critical_issues"]
+    if phi_deduction > 0:
+        final_composite = round(max(1.0, final_composite - phi_deduction), 2)
+
     # 5. Grade (based on final adjusted score)
     grade, grade_label = assign_grade(final_composite)
 
     # 6. Summary artefacts
     one_liner = _generate_one_liner(skill_name, grade, final_composite, dimensions)
     critical_issues = _extract_critical_issues(dimensions)
+    # PHI-leak findings are explicit critical issues — not derived
+    # from per-dimension scores — so prepend them so reviewers see
+    # them first.
+    if phi_critical:
+        critical_issues = phi_critical + critical_issues
     recommendations = _generate_recommendations(dimensions)
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -1391,6 +1469,7 @@ def build_scorecard(
             "deduction": total_deduction,
             "bonus": total_bonus,
             "contamination": contamination_deduction,
+            "phi_leak": phi_deduction,
         },
         "summary": " ".join(summary_parts),
         "one_liner": one_liner,

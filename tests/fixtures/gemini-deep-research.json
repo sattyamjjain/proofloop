@@ -1,0 +1,42 @@
+{
+  "deep_research_mode": true,
+  "model": "gemini-3-1-pro",
+  "topic": "What is the FDA approval status of GLP-1 agonists for non-diabetic obesity?",
+  "research_plan": [
+    {"step": 1, "query": "FDA approvals GLP-1 obesity"},
+    {"step": 2, "query": "semaglutide tirzepatide obesity indication"},
+    {"step": 3, "query": "post-marketing safety GLP-1 weight loss"}
+  ],
+  "citations": [
+    {
+      "url": "https://www.fda.gov/news-events/press-announcements/fda-approves-new-drug-treatment-chronic-weight-management-first-2014",
+      "retrieved_at": "2026-04-26T08:14:02Z",
+      "section": "FDA approval (Wegovy 2021)"
+    },
+    {
+      "url": "https://www.nejm.org/doi/full/10.1056/NEJMoa2032183",
+      "retrieved_at": "2026-04-26T08:14:18Z",
+      "section": "STEP-1 trial primary results"
+    },
+    {
+      "url": "https://jamanetwork.com/journals/jama/fullarticle/2810542",
+      "retrieved_at": "2026-04-26T08:14:42Z",
+      "section": "Long-term cardiovascular outcomes"
+    },
+    {
+      "url": "https://www.fda.gov/drugs/drug-safety-and-availability/medications-containing-semaglutide-marketed-type-2-diabetes-or-weight-loss",
+      "retrieved_at": "2026-04-26T08:15:01Z",
+      "section": "Compounded-product warning"
+    },
+    {
+      "url": "https://www.cms.gov/medicare/coverage/coverage-glp-1",
+      "retrieved_at": "2026-04-26T08:15:24Z",
+      "section": "Medicare coverage caveats"
+    }
+  ],
+  "verifier_notes": [
+    {"text": "Cross-checked Wegovy approval date against FDA drug-approval database — matches 2021-06-04."},
+    {"text": "STEP-1 trial citation verified against PubMed PMID 33567185."}
+  ],
+  "assistant_synthesis": "GLP-1 receptor agonists are FDA-approved for chronic weight management in non-diabetic adults under specific indications: semaglutide 2.4mg (Wegovy, approved 2021) and tirzepatide (Zepbound, approved 2023). Approvals require BMI ≥ 30, or BMI ≥ 27 with at least one weight-related comorbidity. Long-term cardiovascular outcomes (SELECT trial, 2023) show a 20% reduction in MACE for high-risk patients. Compounded GLP-1 products carry an FDA warning. Coverage under Medicare Part D excludes weight-loss-only prescriptions per statute."
+}
