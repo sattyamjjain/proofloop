@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3] - 2026-04-26
+
+Docs-only patch. Brings `README.md` back into sync with the actual
+repo state after three quick releases (v1.3.0 / v1.3.1 / v1.3.2)
+in three days. No code changes; 619 tests green.
+
+### Changed
+
+- `README.md` "Why Verdict" comparison table: rubric count
+  `(11)` → `(18)`.
+- `README.md` Architecture tree:
+  - Adapters list expanded from 4 to all 9 (`gemini_cli`,
+    `gemini_deep_research`, `mlflow_trace`, `inspect_ai_log`,
+    `terminal_bench` were missing).
+  - Scripts list expanded from 5 to all 8 (`compare.py`,
+    `explain.py`, `watch.py` were missing).
+  - New `integrations/`, `exporters/`, `analyzers/` subtrees added
+    (lighteval shim, Cloudflare AI Gateway, OpenAI Evals exporter,
+    LLM second-opinion).
+  - Rubrics comment: `11 + security.weights.json` → `18 rubrics +
+    5 weight-override sidecars`.
+  - `commands/` line gains `/compare`.
+  - `scripts/` (top-level) gains `sandbox_caps_check.py`.
+- `README.md` Roadmap section: removed stale reference to "open
+  tracking issue: #2" (issue #2 was the v1.1.0 tracker, closed
+  long ago). Replaced with a pointer to the latest release and a
+  one-line note on the per-cycle tracker pattern.
+- Plugin / marketplace version → `1.3.3`.
+
 ## [1.3.2] - 2026-04-26
 
 Patch release. New adapter, EXPERIMENTAL clinical rubric, two

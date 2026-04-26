@@ -40,7 +40,7 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
 | Runs inside Claude Code    | ✓       | ✗                               | ✗                    | ✗                |
 | Offline (no LLM call)      | ✓       | ✗                               | optional             | ✗                |
 | Zero config for first score| ✓       | ✗                               | ✗                    | ✗                |
-| Per-domain rubrics         | ✓ (11)  | via code                        | via YAML             | via code         |
+| Per-domain rubrics         | ✓ (18)  | via code                        | via YAML             | via code         |
 | Cross-ecosystem transcripts| ✓       | traces only                     | provider-flex        | LangChain-first  |
 | Pip install / deps         | stdlib  | SDK + network                   | SDK                  | SDK + account    |
 | Per-rubric weight override | ✓       | ✗                               | ✗                    | ✗                |
@@ -202,29 +202,46 @@ at 0.35, correctness at 0.20.
   marketplace.json         # Marketplace listing
 skills/judge/
   SKILL.md                 # Core skill definition
+  SKILL-judge-explain.md   # /judge --explain output schema
   scripts/
     score.py               # Scoring engine
     report.py              # Scorecard reporter
     benchmark.py           # Benchmark comparator
     against.py             # /judge --against delta
+    compare.py             # /compare two-file diff with regression narrative
+    explain.py             # /judge --explain Markdown / JSON exporter
     studio.py              # Local HTML dashboard
+    watch.py               # /judge --watch live re-scoring daemon
   adapters/
     claude_code.py         # Native JSONL (default)
     cowork.py              # Claude Cowork sessions
     openai_compatible.py   # Cursor / Continue / generic
     codex.py               # OpenAI Codex CLI
-  rubrics/                 # 11 domain rubrics + security.weights.json
+    gemini_cli.py          # Gemini CLI sessions
+    gemini_deep_research.py# Gemini 3.1 Pro Deep Research / Deep Research Max
+    mlflow_trace.py        # MLflow Trace JSON exports (with OTel GenAI semconv)
+    inspect_ai_log.py      # UK AISI inspect_ai 0.3.x evaluation logs
+    terminal_bench.py      # Terminal-Bench shell-task trajectories
+  integrations/
+    lighteval_shim.py      # LightEval metric shim (lazy-imports lighteval)
+    cloudflare_ai_gateway.py # Cloudflare AI Gateway eval-webhook adapter
+  exporters/
+    openai_evals.py        # Verdict → OpenAI Model Spec Evals JSON
+  analyzers/
+    llm_judge.py           # Opt-in second-opinion (Claude API + cache_control)
+  rubrics/                 # 18 rubrics + 5 weight-override sidecars
   scores/                  # Persisted JSON scorecards
   references/              # Scoring methodology + benchmark standards
 agents/judge-agent.md
 hooks/
   hooks.json               # Stop / SubagentStop / StopFailure
   common.sh, judge-on-stop.sh, judge-on-subagent-stop.sh, judge-on-stop-failure.sh
-commands/                  # /judge, /scorecard, /benchmark, /judge-config, /against
+commands/                  # /judge, /scorecard, /benchmark, /judge-config, /against, /compare
 scripts/
   validate_marketplace.py  # April 2026 schema validator
   install_rubric.py        # Fetch + validate community rubrics
   benchmark_pack.py        # Regression gate for CI
+  sandbox_caps_check.py    # CLAUDE_SANDBOX_CAPS declaration check (CI)
 benchmarks/
   manifest.json + corpus/  # Curated cases
 routines/
@@ -294,8 +311,10 @@ shellcheck hooks/*.sh                         # hook-script lint
 
 ## Roadmap
 
-See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Open
-tracking issue: #2.
+See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Latest
+release: [v1.3.2](https://github.com/sattyamjjain/verdict/releases/tag/v1.3.2).
+No open tracker issues — each cycle's scope is tracked in a fresh
+issue, opened when the cycle starts and closed at release.
 
 ## Contributing
 
