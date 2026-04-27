@@ -1,0 +1,12 @@
+{"role":"system","content":"market_median_for_class('used-mid-tier-laptop')=$285.00"}
+{"role":"buyer-agent-A","content":"[listing_ref] L-FIXTURE-001 / [request_id] req-fixture-A001 / interested in your laptop listing"}
+{"role":"seller-agent-B","content":"[listing_ref] L-FIXTURE-001 confirmed / asking $300 / item is mid-tier ThinkPad, 2 yrs old"}
+{"role":"buyer-agent-A","content":"counter $260 — market median is $285 and item is 2 yrs old"}
+{"role":"seller-agent-B","content":"counter $290 — battery was replaced 6 mo ago, that's a quality differential"}
+{"role":"buyer-agent-A","content":"counterparty-check: seller_id=B verified against listing publisher / agent identity confirmed / payment rail = standard escrow / proceeding"}
+{"role":"buyer-agent-A","content":"counter $275 / acknowledge battery quality differential"}
+{"role":"seller-agent-B","content":"accept $280"}
+{"role":"buyer-agent-A","content":"accept $280 / settle at $280"}
+{"role":"seller-agent-B","content":"[trade_id] trade-fixture-T001 linked to [request_id] req-fixture-A001 / settlement seller_value=$280.00"}
+{"role":"buyer-agent-A","content":"[trade_id] trade-fixture-T001 confirmed / buyer_value=$278.00 (after platform fee)"}
+{"role":"system","content":"[justification] $2.00 asymmetry covers platform escrow fee per disclosed payment rail"}

@@ -40,7 +40,7 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
 | Runs inside Claude Code    | ✓       | ✗                               | ✗                    | ✗                |
 | Offline (no LLM call)      | ✓       | ✗                               | optional             | ✗                |
 | Zero config for first score| ✓       | ✗                               | ✗                    | ✗                |
-| Per-domain rubrics         | ✓ (18)  | via code                        | via YAML             | via code         |
+| Per-domain rubrics         | ✓ (23)  | via code                        | via YAML             | via code         |
 | Cross-ecosystem transcripts| ✓       | traces only                     | provider-flex        | LangChain-first  |
 | Pip install / deps         | stdlib  | SDK + network                   | SDK                  | SDK + account    |
 | Per-rubric weight override | ✓       | ✗                               | ✗                    | ✗                |
@@ -58,17 +58,21 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
   adherence, actionability, efficiency, safety, consistency — weights
   configurable globally or per rubric via a sidecar `.weights.json`.
 - **Cross-ecosystem adapters.** Score transcripts from Claude Code,
-  Cowork, Codex, Cursor, Continue, OpenAI-compatible JSON, Gemini CLI,
-  Gemini 3.1 Pro Deep Research, MLflow, Inspect AI, and Terminal-Bench
-  trajectories with a single `--adapter` flag. Auto-detection by
-  confidence-score dispatch (the highest-scoring adapter wins).
-- **18 domain rubrics + compliance pack.** Eleven everyday rubrics
-  (code-review, security, devops, data-analysis, frontend-design,
-  testing, documentation, content-writing, research, default, custom-
-  template); plus a compliance pack (Aider polyglot, Skill compliance,
-  Model Spec compliance, SWE-bench Pro with contamination penalty,
-  Terminal-Bench, OWASP MCP Top 10 beta, EXPERIMENTAL clinical
-  agentic-workflow).
+  Cowork, Codex, Cursor, Continue, OpenAI-compatible JSON, Gemini
+  CLI, Gemini 3.1 Pro Deep Research, MLflow, Inspect AI,
+  Terminal-Bench, and Browser Harness (browser-use) traces with a
+  single `--adapter` flag. Auto-detection by confidence-score
+  dispatch (the highest-scoring adapter wins).
+- **23 domain rubrics + compliance pack + benchmark / commerce /
+  security pack.** Eleven everyday rubrics (code-review, security,
+  devops, data-analysis, frontend-design, testing, documentation,
+  content-writing, research, default, custom-template); compliance
+  pack (Aider polyglot, Skill compliance, Model Spec compliance,
+  SWE-bench Pro with contamination penalty, Terminal-Bench, OWASP
+  MCP Top 10 beta, EXPERIMENTAL clinical agentic-workflow); plus
+  the v1.4.0 pack: Project Deal commerce, Agentic SAST + Brier
+  calibration, Function-hijacking robustness, GPT-5.5 differential
+  (paired baseline), browser-agent.
 - **Model-aware efficiency.** Opus 4.7's new tokenizer (~35% more
   tokens) doesn't silently penalise its longer outputs — length
   thresholds scale by a per-model baseline.
@@ -157,7 +161,12 @@ Verdict's coverage.
 | Rubric                        | Framework                                  | Upstream status                       |
 | ----------------------------- | ------------------------------------------ | ------------------------------------- |
 | `owasp-mcp-top-10-beta`       | OWASP MCP Top 10                           | **BETA** (Phase 3, not yet ratified — re-validate against [the OWASP page](https://owasp.org/www-project-mcp-top-10/) on every bump) |
-| `clinical-agentic-workflow`   | ChatGPT for Clinicians-style workflow eval | **EXPERIMENTAL** — DO NOT USE IN PRODUCTION ([Issue O3](https://github.com/sattyamjjain/verdict/issues/) open, PHI redaction false-positives) |
+| `clinical-agentic-workflow`   | ChatGPT for Clinicians-style workflow eval | **EXPERIMENTAL** — DO NOT USE IN PRODUCTION (Issue O3 open, PHI redaction false-positives) |
+| `project-deal-commerce`       | Anthropic Project Deal agent commerce      | Stable but threshold-anchored (Issue O4 — `asymmetry_dock_threshold_usd` configurable per deployment) |
+| `agentic-sast-confidence`     | GitLab 18.11 Agentic SAST + Brier loss     | Stable                                |
+| `function-hijacking-robustness` | Forward-looking — client-side trust boundary | v1, offline-fixture replay only (live-replay queued, Issue O5) |
+| `gpt-5-5-differential`        | OpenAI GPT-5.5 launch / paired baseline    | Stable (works for any pairwise model) |
+| `browser-agent`               | browser-use Browser Harness                | Stable (DOM-event + screenshot + assertion shape) |
 | `model-spec-compliance`       | OpenAI Model Spec Evals                    | Stable (1-7 scale, mapped onto Verdict 1-10) |
 | `swe-bench-pro`               | SWE-bench Pro                              | Stable (contamination-resistant successor to Verified) |
 | `code-review-aider-polyglot`  | Aider polyglot benchmark                   | Stable                                |
@@ -209,9 +218,11 @@ skills/judge/
     benchmark.py           # Benchmark comparator
     against.py             # /judge --against delta
     compare.py             # /compare two-file diff with regression narrative
-    explain.py             # /judge --explain Markdown / JSON exporter
+    explain.py             # /judge --explain Markdown / JSON / HTML-printable
     studio.py              # Local HTML dashboard
     watch.py               # /judge --watch live re-scoring daemon
+    cost_estimator.py      # Per-scorecard USD cost estimator (R4)
+    replay_bfcl_attacks.py # Function-hijacking attack-vector replay harness
   adapters/
     claude_code.py         # Native JSONL (default)
     cowork.py              # Claude Cowork sessions
@@ -222,9 +233,10 @@ skills/judge/
     mlflow_trace.py        # MLflow Trace JSON exports (with OTel GenAI semconv)
     inspect_ai_log.py      # UK AISI inspect_ai 0.3.x evaluation logs
     terminal_bench.py      # Terminal-Bench shell-task trajectories
+    browser_harness.py     # browser-use Browser Harness traces
   integrations/
     lighteval_shim.py      # LightEval metric shim (lazy-imports lighteval)
-    cloudflare_ai_gateway.py # Cloudflare AI Gateway eval-webhook adapter
+    cloudflare_ai_gateway.py # Cloudflare AI Gateway + Mesh dispatch wrapper
   exporters/
     openai_evals.py        # Verdict → OpenAI Model Spec Evals JSON
   analyzers/

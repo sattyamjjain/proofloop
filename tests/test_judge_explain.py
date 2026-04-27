@@ -346,6 +346,88 @@ class TestCliMaxEvidenceChars(unittest.TestCase):
                 card_path.unlink()
 
 
+class TestRenderHtmlPrintable(unittest.TestCase):
+    """R3: HTML-printable scorecard, no weasyprint dep."""
+
+    def test_starts_with_doctype(self) -> None:
+        html = explain.render_html_printable(_sample_card())
+        self.assertTrue(html.startswith("<!DOCTYPE html>"))
+
+    def test_contains_print_media_query(self) -> None:
+        html = explain.render_html_printable(_sample_card())
+        self.assertIn("@media print", html)
+
+    def test_each_dimension_appears(self) -> None:
+        html = explain.render_html_printable(_sample_card())
+        for dim in explain.DIMENSIONS:
+            self.assertIn(f">{dim}<", html)
+
+    def test_default_cover_title(self) -> None:
+        html = explain.render_html_printable(_sample_card(skill="my-skill"))
+        self.assertIn("my-skill — Verdict Scorecard", html)
+
+    def test_explicit_cover_title(self) -> None:
+        html = explain.render_html_printable(
+            _sample_card(), cover_title="Q4 Compliance Review",
+        )
+        self.assertIn("Q4 Compliance Review", html)
+
+    def test_signer_block_only_when_set(self) -> None:
+        no_sig = explain.render_html_printable(_sample_card())
+        with_sig = explain.render_html_printable(
+            _sample_card(), signer="Alice <alice@example.com>",
+        )
+        self.assertNotIn("Signature", no_sig)
+        self.assertIn("Signature", with_sig)
+        self.assertIn("Alice", with_sig)
+
+    def test_format_version_present(self) -> None:
+        html = explain.render_html_printable(_sample_card())
+        self.assertIn(explain.HTML_FORMAT_VERSION, html)
+
+    def test_html_escapes_special_chars(self) -> None:
+        card = _sample_card()
+        card["summary"] = "<script>alert('xss')</script> & friends"
+        html = explain.render_html_printable(card)
+        self.assertNotIn("<script>", html)
+        self.assertIn("&lt;script&gt;", html)
+
+    def test_llm_overlay_only_when_present(self) -> None:
+        no_llm = explain.render_html_printable(_sample_card(with_llm=False))
+        with_llm = explain.render_html_printable(_sample_card(with_llm=True))
+        self.assertNotIn("LLM 2nd opinion", no_llm)
+        self.assertIn("LLM 2nd opinion", with_llm)
+
+    def test_no_weasyprint_in_module_imports(self) -> None:
+        for name in list(sys.modules):
+            top = name.split(".", 1)[0]
+            self.assertFalse(
+                top.startswith("weasyprint"),
+                f"weasyprint loaded unexpectedly: {name}",
+            )
+
+    def test_cli_html_printable_writes_file(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tmp = Path(td)
+            card_path = _write_card(_sample_card())
+            try:
+                out_path = tmp / "scorecard.html"
+                rc = explain.main([
+                    "--scorecard", str(card_path),
+                    "--format", "html-printable",
+                    "--cover", "Test Title",
+                    "--signer", "QA Lead <qa@example.com>",
+                    "--out", str(out_path),
+                ])
+                self.assertEqual(rc, 0)
+                content = out_path.read_text(encoding="utf-8")
+                self.assertIn("<!DOCTYPE html>", content)
+                self.assertIn("Test Title", content)
+                self.assertIn("QA Lead", content)
+            finally:
+                card_path.unlink()
+
+
 class TestRoundTripFromBuildScorecard(unittest.TestCase):
     """End-to-end: build a real scorecard via score.py, then explain it."""
 

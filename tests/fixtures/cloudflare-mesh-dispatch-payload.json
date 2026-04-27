@@ -1,0 +1,21 @@
+{
+  "gateway_id": "verdict-prod",
+  "request_id": "01HXYZ56789",
+  "model": "claude-haiku-4-5",
+  "request": {
+    "messages": [
+      {"role": "user", "content": "Review this auth middleware change for security issues."}
+    ],
+    "model": "claude-haiku-4-5"
+  },
+  "response": {
+    "choices": [
+      {
+        "message": {
+          "role": "assistant",
+          "content": "The change replaces a hardcoded secret with an environment lookup — strong improvement. Recommend also adding a fallback path that fails closed when the env var is missing."
+        }
+      }
+    ]
+  }
+}
