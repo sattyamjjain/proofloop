@@ -179,7 +179,35 @@ correctness fixes, two open-issue closures:
 
 619 tests green (506 → 619, +113 new). No new runtime deps.
 
-### 2026-Q2 Cycle 5 and beyond — forward look
+### 2026-Q2 Cycle 5 (v1.4.0) — shipped 2026-04-27
+
+Minor release. Five new rubrics, one new adapter, two new
+integrations, three additive scorecard fields:
+
+- **AA1** Project Deal commerce rubric — anchors the
+  economic-asymmetry guard to Anthropic's published Project Deal
+  number (+$2.45/item buyer savings); threshold configurable per
+  deployment (Issue O4).
+- **AA2** Agentic SAST + Brier calibration — the calibration axis
+  closes a category gap none of the existing security rubrics cover.
+- **AA3** Function-hijacking robustness rubric — offline-fixture
+  replay only in v1.4.0; live-replay queued (Issue O5).
+- **AA4** GPT-5.5 differential rubric — paired-baseline comparison
+  helper, NOT a model-pricing registry.
+- **AA5** Cloudflare Mesh dispatch wrapper — Mesh-required headers
+  composed on top of v1.3.2's AI Gateway integration.
+- **R2** Browser Harness adapter + browser-agent rubric — DOM-event
+  + screenshot + assertion shape, with credential redaction at
+  extraction time.
+- **R3** HTML-printable scorecard variant of `/judge --explain` —
+  no weasyprint dep (Issue O6 closed).
+- **R4** Local-only cost estimator — per-scorecard USD telemetry
+  via stdlib pricing table; no SaaS coupling.
+
+740 tests green (619 → 740, +121). R1 (AgentBeats public
+leaderboard) deferred per ROADMAP §5.
+
+### 2026-Q2 Cycle 6 and beyond — forward look
 
 - LiveCodeBench rubric (targeting v1.4.0).
 - Official LMSYS Arena adapter pending data-licence clearance.

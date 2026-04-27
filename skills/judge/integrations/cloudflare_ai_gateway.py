@@ -73,6 +73,20 @@ DEFAULT_SKILL: str = "default"
 # can override via the payload's ``threshold`` field.
 DEFAULT_PASS_THRESHOLD: float = 7.0
 
+# Cloudflare Mesh — agent-perimeter product launched 2026-04-14
+# (https://www.cloudflare.com/press/press-releases/2026/cloudflare-launches-mesh-to-secure-the-ai-agent-lifecycle/).
+# Mesh routes agent traffic through a private fabric; eval webhooks
+# get attached agent-identity + trust-level headers so the perimeter
+# can authorise the call before forwarding. dispatch_via_mesh is a
+# **declarative wrapper** — it composes the headers and prepares the
+# payload; the actual HTTP transport is the caller's responsibility
+# (a Worker, an MCP shim, or a stdlib urllib client).
+MESH_HEADER_AGENT_ID: str = "x-mesh-agent-id"
+MESH_HEADER_TRUST_LEVEL: str = "x-mesh-trust-level"
+MESH_HEADER_EVAL_CLASS: str = "x-mesh-evaluation-class"
+DEFAULT_MESH_TRUST_LEVEL: str = "evaluator"
+DEFAULT_MESH_EVAL_CLASS: str = "verdict-judge-v1"
+
 
 def _build_synthetic_transcript_path(
     request: Any, response: Any, model: Optional[str], tmpdir: Path,
@@ -197,3 +211,81 @@ def verdict_as_eval_webhook(
         "rationale": rationale,
         "scorecard_url": scorecard_url,
     }
+
+
+def dispatch_via_mesh(
+    payload: Dict[str, Any],
+    mesh_endpoint: str,
+    agent_identity: str,
+    trust_level: str = DEFAULT_MESH_TRUST_LEVEL,
+    evaluation_class: str = DEFAULT_MESH_EVAL_CLASS,
+    rubric_dir: Optional[str] = None,
+    skill_name: Optional[str] = None,
+    threshold: Optional[float] = None,
+    scorecard_url_template: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Wrap :func:`verdict_as_eval_webhook` for Cloudflare Mesh dispatch.
+
+    Returns a dict with two top-level keys:
+
+    - ``request`` — ``{endpoint, headers, body}`` ready to ``urllib``
+      POST. The caller (a Worker, MCP shim, or stdlib client)
+      handles transport.
+    - ``result`` — the verdict scorecard the request body carries
+      (i.e. what :func:`verdict_as_eval_webhook` returned).
+
+    The wrapper attaches the Mesh-required headers:
+
+    - ``x-mesh-agent-id`` — caller identity Mesh enforces against
+      its policy.
+    - ``x-mesh-trust-level`` — caller's trust tier (evaluator,
+      observer, etc.). Defaults to ``"evaluator"``.
+    - ``x-mesh-evaluation-class`` — opaque tag Mesh policies can
+      route on. Defaults to ``"verdict-judge-v1"``.
+
+    No HTTP is performed — the function is **pure**: it composes
+    the request, runs Verdict locally to populate the body, and
+    returns both for the caller to dispatch. This keeps the
+    integration offline-first and side-effect-free in tests.
+    """
+    if not isinstance(payload, dict):
+        return {
+            "request": None,
+            "result": {
+                "score": 0.0,
+                "passed": False,
+                "rationale": "invalid payload: not a dict",
+                "scorecard_url": None,
+            },
+        }
+    if not mesh_endpoint or not agent_identity:
+        return {
+            "request": None,
+            "result": {
+                "score": 0.0,
+                "passed": False,
+                "rationale": (
+                    "mesh dispatch requires both mesh_endpoint and agent_identity"
+                ),
+                "scorecard_url": None,
+            },
+        }
+    result = verdict_as_eval_webhook(
+        payload,
+        rubric_dir=rubric_dir,
+        skill_name=skill_name,
+        threshold=threshold,
+        scorecard_url_template=scorecard_url_template,
+    )
+    request = {
+        "endpoint": mesh_endpoint,
+        "method": "POST",
+        "headers": {
+            "content-type": "application/json",
+            MESH_HEADER_AGENT_ID: agent_identity,
+            MESH_HEADER_TRUST_LEVEL: trust_level,
+            MESH_HEADER_EVAL_CLASS: evaluation_class,
+        },
+        "body": result,
+    }
+    return {"request": request, "result": result}

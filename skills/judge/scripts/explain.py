@@ -40,6 +40,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 EXPLAIN_FORMAT_VERSION: str = "explain.v1"
+HTML_FORMAT_VERSION: str = "explain.html.v1"
 
 # GitHub PR-comment hard cap is 65,536 chars; the Markdown render must
 # stay below that or the auto-comment step in `actions/verdict-comment-pr`
@@ -194,6 +195,258 @@ def _md_llm_overlay(entries: List[Dict[str, Any]]) -> str:
     return "### LLM second opinion\n\n" + "\n".join(bullets)
 
 
+def _html_escape(value: Any) -> str:
+    """Minimal HTML escaping. Stdlib-only, no html.escape import to keep module light."""
+    text = "" if value is None else str(value)
+    return (
+        text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+    )
+
+
+def render_html_printable(
+    card: Dict[str, Any],
+    cover_title: Optional[str] = None,
+    signer: Optional[str] = None,
+) -> str:
+    """Render a single-file HTML scorecard with @media print CSS.
+
+    Designed for browser "Print to PDF" workflows — produces a
+    publication-ready document without pulling weasyprint or any
+    other PDF library (per Issue O6).
+
+    Output structure (one HTML page, A4-friendly):
+
+    1. **Cover page** — title (from *cover_title* or skill+grade),
+       composite score, grade, model, timestamp, optional signer.
+    2. **Executive summary** — composite + top-3 strengths /
+       weaknesses, derived from the dimension scores.
+    3. **Per-dimension breakdown** — full table + justifications +
+       LLM overlay (when present).
+    4. **Adjustments + Critical Issues + Recommendations**.
+    5. **Methodology appendix** — rubric name, weights source,
+       transcript-line count, evidence stats.
+    6. **Signature block** (when *signer* is set).
+
+    The CSS includes ``@media print`` rules that lay out one section
+    per page and hide screen-only navigation. Stdlib only.
+    """
+    skill = card.get("skill", "?")
+    grade = card.get("grade", "?")
+    grade_label = card.get("grade_label", "")
+    composite = card.get("composite_score", "?")
+    rubric = card.get("rubric_used", "?")
+    model = card.get("model") or "(unknown)"
+    timestamp = card.get("timestamp", "?")
+    summary = (card.get("summary") or "").strip()
+    one_liner = (card.get("one_liner") or "").strip()
+    title = cover_title or f"{skill} — Verdict Scorecard"
+
+    entries = _ordered_dimension_entries(card)
+    strengths = sorted(entries, key=lambda e: -e.get("score", 0))[:3]
+    weaknesses = sorted(entries, key=lambda e: e.get("score", 0))[:3]
+
+    # Build per-dimension rows.
+    row_chunks: List[str] = []
+    for entry in entries:
+        justification = _html_escape(entry.get("justification", ""))
+        llm_block = ""
+        if "llm_score" in entry:
+            llm_block = (
+                f'<div class="llm-overlay">'
+                f'LLM 2nd opinion: <strong>{entry["llm_score"]}/10</strong> '
+                f'<em>{_html_escape(entry.get("llm_justification", ""))}</em>'
+                f'</div>'
+            )
+        row_chunks.append(
+            f'<tr>'
+            f'<td class="dim">{_html_escape(entry["name"])}</td>'
+            f'<td class="num">{entry.get("score", "?")}/10</td>'
+            f'<td class="num">{entry.get("weight", "?")}</td>'
+            f'<td class="num">{entry.get("weighted", "?")}</td>'
+            f'<td class="just">{justification}{llm_block}</td>'
+            f'</tr>'
+        )
+
+    adjustments = card.get("adjustments", {}) or {}
+    red_flags = list(card.get("red_flags", []) or [])
+    bonuses = list(card.get("bonuses", []) or [])
+    contamination = adjustments.get("contamination", 0.0) or 0.0
+    phi_leak = adjustments.get("phi_leak", 0.0) or 0.0
+    commerce = adjustments.get("commerce_asymmetry", {}) or {}
+    commerce_dock = commerce.get("deduction", 0.0) or 0.0
+
+    adj_items: List[str] = []
+    if red_flags:
+        adj_items.append(
+            f'<li><strong>Red flags</strong> '
+            f'(−{adjustments.get("deduction", 0.0)}): '
+            f'{_html_escape(", ".join(red_flags))}</li>'
+        )
+    if bonuses:
+        adj_items.append(
+            f'<li><strong>Bonuses</strong> '
+            f'(+{adjustments.get("bonus", 0.0)}): '
+            f'{_html_escape(", ".join(bonuses))}</li>'
+        )
+    if contamination:
+        adj_items.append(
+            f'<li><strong>Contamination penalty</strong> (−{contamination}): '
+            f'transcript referenced SWE-bench Verified literals</li>'
+        )
+    if phi_leak:
+        adj_items.append(
+            f'<li><strong>PHI-leak deduction</strong> (−{phi_leak}): '
+            f'unredacted PHI in transcript</li>'
+        )
+    if commerce_dock:
+        adj_items.append(
+            f'<li><strong>Commerce asymmetry</strong> (−{commerce_dock}): '
+            f'${commerce.get("asymmetry_usd", 0):.2f} USD economic '
+            f'asymmetry, unjustified</li>'
+        )
+
+    critical = list(card.get("critical_issues", []) or [])
+    recs = list(card.get("recommendations", []) or [])
+    transcript_lines = card.get("transcript_lines", "?")
+
+    signature_block = ""
+    if signer:
+        signature_block = (
+            f'<section class="signature page-break">'
+            f'<h2>Signature</h2>'
+            f'<p>Signed by: <strong>{_html_escape(signer)}</strong></p>'
+            f'<p>Date: <strong>{_html_escape(timestamp)}</strong></p>'
+            f'<p>Verdict format version: '
+            f'<code>{HTML_FORMAT_VERSION}</code></p>'
+            f'</section>'
+        )
+
+    rows = "\n".join(row_chunks)
+    adj_html = f'<ul>{"".join(adj_items)}</ul>' if adj_items else "<p>None.</p>"
+    critical_html = (
+        "<ul>" + "".join(f"<li>{_html_escape(c)}</li>" for c in critical) + "</ul>"
+        if critical else "<p>None.</p>"
+    )
+    recs_html = (
+        "<ul>" + "".join(f"<li>{_html_escape(r)}</li>" for r in recs) + "</ul>"
+        if recs else "<p>None.</p>"
+    )
+    strengths_html = "<ul>" + "".join(
+        f'<li>{_html_escape(e["name"])} ({e.get("score", "?")}/10)</li>'
+        for e in strengths
+    ) + "</ul>"
+    weaknesses_html = "<ul>" + "".join(
+        f'<li>{_html_escape(e["name"])} ({e.get("score", "?")}/10)</li>'
+        for e in weaknesses
+    ) + "</ul>"
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{_html_escape(title)}</title>
+<style>
+* {{ box-sizing: border-box; }}
+body {{
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    color: #111;
+    margin: 0;
+    padding: 2em;
+    line-height: 1.5;
+}}
+h1 {{ font-size: 2.4em; margin: 0 0 0.4em; }}
+h2 {{ font-size: 1.6em; margin: 1.6em 0 0.6em; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }}
+h3 {{ font-size: 1.2em; margin: 1.2em 0 0.4em; }}
+.cover {{ text-align: center; padding-top: 6em; }}
+.cover .composite {{ font-size: 5em; font-weight: 700; margin: 0.2em 0; }}
+.cover .grade {{ font-size: 2em; color: #555; }}
+.cover .meta {{ margin-top: 2em; color: #666; font-size: 0.9em; }}
+table {{ width: 100%; border-collapse: collapse; margin: 1em 0; }}
+th, td {{ padding: 0.5em 0.6em; border-bottom: 1px solid #eee; vertical-align: top; }}
+th {{ background: #f6f6f6; text-align: left; font-weight: 600; }}
+td.num {{ text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }}
+td.dim {{ font-weight: 600; text-transform: capitalize; }}
+td.just {{ font-size: 0.92em; color: #333; }}
+.llm-overlay {{ margin-top: 0.4em; padding-left: 0.6em; border-left: 3px solid #888; font-size: 0.88em; color: #555; }}
+.signature {{ margin-top: 4em; border-top: 1px solid #ccc; padding-top: 1em; }}
+.appendix {{ font-size: 0.9em; color: #444; }}
+.page-break {{ page-break-before: always; }}
+@media print {{
+    body {{ padding: 1.5cm; }}
+    .cover {{ page-break-after: always; padding-top: 6cm; }}
+    section {{ page-break-inside: avoid; }}
+    h2 {{ page-break-after: avoid; }}
+    table {{ page-break-inside: avoid; }}
+}}
+</style>
+</head>
+<body>
+<section class="cover">
+    <h1>{_html_escape(title)}</h1>
+    <div class="composite">{_html_escape(composite)}/10</div>
+    <div class="grade">Grade {_html_escape(grade)}{(" — " + _html_escape(grade_label)) if grade_label else ""}</div>
+    {f'<p style="margin-top:2em;font-style:italic;">{_html_escape(one_liner)}</p>' if one_liner else ""}
+    <div class="meta">
+        Skill: <code>{_html_escape(skill)}</code> · Rubric: <code>{_html_escape(rubric)}</code><br>
+        Model: <code>{_html_escape(model)}</code> · Generated: <code>{_html_escape(timestamp)}</code>
+    </div>
+</section>
+
+<section class="page-break">
+    <h2>Executive summary</h2>
+    {f"<p>{_html_escape(summary)}</p>" if summary else ""}
+    <h3>Top strengths</h3>
+    {strengths_html}
+    <h3>Areas for improvement</h3>
+    {weaknesses_html}
+</section>
+
+<section class="page-break">
+    <h2>Per-dimension breakdown</h2>
+    <table>
+        <thead>
+            <tr><th>Dimension</th><th>Score</th><th>Weight</th><th>Weighted</th><th>Justification</th></tr>
+        </thead>
+        <tbody>
+{rows}
+        </tbody>
+    </table>
+</section>
+
+<section>
+    <h2>Adjustments</h2>
+    {adj_html}
+    <h2>Critical issues</h2>
+    {critical_html}
+    <h2>Recommendations</h2>
+    {recs_html}
+</section>
+
+<section class="page-break appendix">
+    <h2>Methodology appendix</h2>
+    <p>Verdict scores agent transcripts on seven canonical dimensions
+       (correctness, completeness, adherence, actionability,
+       efficiency, safety, consistency). Per-rubric weight overrides
+       are applied via a sidecar <code>&lt;rubric&gt;.weights.json</code>.</p>
+    <ul>
+        <li>Rubric: <code>{_html_escape(rubric)}</code></li>
+        <li>Weights source: <code>{_html_escape(card.get("weights_source", "config"))}</code></li>
+        <li>Tokenizer baseline: <code>{_html_escape(card.get("tokenizer_baseline", 1.0))}</code></li>
+        <li>Transcript lines analysed: {_html_escape(transcript_lines)}</li>
+        <li>Verdict format version: <code>{HTML_FORMAT_VERSION}</code></li>
+    </ul>
+</section>
+
+{signature_block}
+
+</body>
+</html>
+"""
+
+
 def truncate_markdown(
     rendered: str,
     max_chars: int = DEFAULT_MAX_EVIDENCE_CHARS,
@@ -311,8 +564,23 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Path to a scorecard JSON file written by score.py.",
     )
     parser.add_argument(
-        "--format", choices=("md", "json"), default="md",
-        help="Output format. Default: md (PR-comment-friendly).",
+        "--format", choices=("md", "json", "html-printable"), default="md",
+        help=(
+            "Output format. md = PR-comment-friendly Markdown (default), "
+            "json = stable-schema explain.v1, html-printable = single-file "
+            "HTML with @media print CSS (use browser 'Print to PDF' to "
+            "generate a PDF; no weasyprint dep)."
+        ),
+    )
+    parser.add_argument(
+        "--cover",
+        help="Cover-page title for --format html-printable. Defaults to "
+             "'<skill> — Verdict Scorecard'.",
+    )
+    parser.add_argument(
+        "--signer",
+        help="Signature-block name for --format html-printable. Adds a "
+             "final 'Signature' page when present.",
     )
     parser.add_argument(
         "--out",
@@ -348,6 +616,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         rendered = truncate_markdown(
             rendered, args.max_evidence_chars, args.scorecard_url,
         )
+    elif args.format == "html-printable":
+        rendered = render_html_printable(card, args.cover, args.signer)
     else:
         rendered = render_json(card)
     if args.out:

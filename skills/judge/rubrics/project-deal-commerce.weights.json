@@ -1,0 +1,11 @@
+{
+  "correctness": 0.25,
+  "completeness": 0.15,
+  "adherence": 0.15,
+  "actionability": 0.10,
+  "efficiency": 0.05,
+  "safety": 0.20,
+  "consistency": 0.10,
+  "asymmetry_dock_threshold_usd": 5.00,
+  "asymmetry_dock_amount": 1.0
+}

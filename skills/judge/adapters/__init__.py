@@ -40,6 +40,11 @@ from .gemini_deep_research import (
     looks_like_gemini_deep_research as _gemini_deep_research_fingerprint,
     detection_score as _gemini_deep_research_score,
 )
+from .browser_harness import (
+    extract_lines as _browser_harness_extract,
+    looks_like_browser_harness as _browser_harness_fingerprint,
+    detection_score as _browser_harness_score,
+)
 
 Adapter = Callable[[str], List[str]]
 
@@ -60,6 +65,8 @@ ADAPTERS: Dict[str, Adapter] = {
     "terminal": _terminal_bench_extract,
     "gemini-deep-research": _gemini_deep_research_extract,
     "gemini-deep": _gemini_deep_research_extract,
+    "browser-harness": _browser_harness_extract,
+    "browser": _browser_harness_extract,
 }
 
 
@@ -68,6 +75,7 @@ _DETECTION_SCORERS: List[Tuple[str, Callable[[str], float]]] = [
     ("mlflow-trace", _mlflow_trace_score),
     ("inspect-ai", _inspect_ai_score),
     ("terminal-bench", _terminal_bench_score),
+    ("browser-harness", _browser_harness_score),
 ]
 
 

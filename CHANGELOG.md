@@ -5,6 +5,127 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-04-27
+
+Minor release. Five new rubrics, one new adapter, two new
+integrations / scripts, three additive scorecard fields. **740 tests
+green** (619 → 740, +121 new). Offline-first invariant preserved;
+no new runtime dependencies.
+
+### Added (2026-04-27 session, AA1–AA6 + R2 + R3 + R4)
+
+- **AA1 — Project Deal commerce rubric**
+  (`skills/judge/rubrics/project-deal-commerce.{md,weights.json,example.md}`).
+  Eight commerce concerns mapped onto the canonical seven dimensions;
+  per-deployment-tunable economic-asymmetry guard via the
+  `_apply_commerce_asymmetry_check` helper. Threshold defaults to
+  $5.00 / item with ~2× headroom over Anthropic's published Project
+  Deal asymmetry; configurable via the weights sidecar's
+  `asymmetry_dock_threshold_usd` and `asymmetry_dock_amount` keys.
+  New scorecard field: `adjustments.commerce_asymmetry`.
+  Source: [anthropic.com — Project Deal](https://www.anthropic.com/features/project-deal).
+- **AA2 — Agentic SAST + Brier calibration rubric**
+  (`skills/judge/rubrics/agentic-sast-confidence.{md,weights.json,example.md}`).
+  Eight SAST concerns including confidence-calibration measured as
+  Brier loss against ground-truth labels in the transcript. New
+  helper `_apply_brier_calibration` parses `[confidence:0.NN]` /
+  `[ground_truth:true|false]` pairs. New scorecard field:
+  `adjustments.brier_calibration`.
+  Source: [helpnetsecurity — GitLab 18.11 Agentic SAST](https://www.helpnetsecurity.com/2026/04/17/gitlab-18-11-agentic-ai/).
+- **AA3 — Function Hijacking robustness rubric**
+  (`skills/judge/rubrics/function-hijacking-robustness.{md,weights.json,example.md}`).
+  Eight client-side trust-boundary concerns. Ships with
+  `skills/judge/scripts/replay_bfcl_attacks.py --mode=offline-fixture`
+  for deterministic ASR aggregation in CI; `--mode=live-replay` is
+  declared but reserved for v1.4.x (see Issue O5).
+- **AA4 — GPT-5.5 differential rubric**
+  (`skills/judge/rubrics/gpt-5-5-differential.{md,weights.json}`)
+  + `_resolve_paired_baseline()` helper. Pairwise rubric: consume
+  two scorecards (baseline + candidate), produce per-dimension
+  delta + Cohen's d + regressed-dimension list. NOT a model-pricing
+  registry; works for any pairwise model comparison.
+  Source: [cnbc.com — OpenAI GPT-5.5 launch](https://www.cnbc.com/2026/04/23/openai-announces-latest-artificial-intelligence-model.html).
+- **AA5 — Cloudflare Mesh dispatch wrapper**
+  (`skills/judge/integrations/cloudflare_ai_gateway.py::dispatch_via_mesh`).
+  Pure dict-in / dict-out: composes the Mesh-required headers
+  (`x-mesh-agent-id`, `x-mesh-trust-level`, `x-mesh-evaluation-class`)
+  on top of `verdict_as_eval_webhook`. No HTTP performed; the
+  caller dispatches via Worker / MCP shim / urllib.
+  Source: [cloudflare.com — Mesh launch](https://www.cloudflare.com/press/press-releases/2026/cloudflare-launches-mesh-to-secure-the-ai-agent-lifecycle/).
+- **R2 — Browser Harness adapter + browser-agent rubric**
+  (`skills/judge/adapters/browser_harness.py`,
+  `skills/judge/rubrics/browser-agent.{md,weights.json}`,
+  `tests/fixtures/browser-harness-trace.json`). Flattens
+  `[navigate]` / `[click]` / `[fill]` / `[assertion]` /
+  `[screenshot]` events. Credential values in fill events are
+  redacted at extraction time (passwords, api_keys, secrets,
+  tokens, card numbers, CVVs). Registered as `browser-harness` /
+  `browser`; auto-detected via score-based dispatch.
+- **R3 — HTML-printable scorecard variant**
+  (`skills/judge/scripts/explain.py::render_html_printable`). New
+  `--format html-printable` emits a single-file HTML scorecard with
+  `@media print` CSS — browser "Print to PDF" generates a
+  publication-ready document without weasyprint or any other PDF
+  library. New CLI flags: `--cover`, `--signer`. Tagged
+  `format_version: "explain.html.v1"`.
+- **R4 — Local-only cost estimator**
+  (`skills/judge/scripts/cost_estimator.py`). Per-scorecard cost
+  estimate based on a stdlib-only USD-per-Mtok pricing table for
+  Opus 4.7, Sonnet 4.6, Haiku 4.5, GPT-5.5, GPT-5.5 Pro, Gemini
+  3.1 Pro. Direct estimate via `--input-tokens / --output-tokens /
+  --model` or scorecard-driven via `--scorecard <PATH>` (reads the
+  optional `llm_usage` block; returns zero when Verdict ran
+  heuristics only). Override the pricing table via
+  `--pricing-file PATH`. No SaaS coupling; no telemetry leaves the
+  host.
+
+### Changed (2026-04-27 session)
+
+- Plugin / marketplace version → `1.4.0`.
+- Adapter registry gains `browser-harness` / `browser`. Total: **10
+  adapters**.
+- Rubric count: **23** (5 new + 18 inherited).
+- Score-based adapter dispatch (`detection_score`) extended to the
+  new browser-harness adapter; `_DETECTION_SCORERS` list updated.
+- `score.py` scorecard JSON gains:
+  - `adjustments.commerce_asymmetry` (always present; zeroed when
+    rubric isn't `project-deal-commerce`).
+  - `adjustments.brier_calibration` (always present; null when
+    rubric isn't `agentic-sast-confidence`).
+
+### Tests (2026-04-27 session)
+
+- New test files: `test_project_deal_rubric.py` (13),
+  `test_agentic_sast_rubric.py` (14), `test_function_hijacking_rubric.py`
+  (8) + `test_replay_bfcl_attacks.py` (13),
+  `test_gpt_5_5_differential_rubric.py` (12),
+  `test_cloudflare_mesh_dispatch.py` (11),
+  `test_browser_harness_adapter.py` (20),
+  `test_cost_estimator.py` (18). Plus 11 new tests added to
+  `test_judge_explain.py` for HTML-printable output.
+- Total suite: **740 tests green** (+121 vs v1.3.3).
+
+### Honest deferrals
+
+- **R1** (AgentBeats public leaderboard) — SaaS pivot deferred per
+  ROADMAP §5.
+- **AA3 live-replay mode** — needs CI secrets + opt-in workflow;
+  queued for v1.4.x (Issue O5).
+- **Issue O3** (clinical PHI dose-string false-positives) remains
+  open; the clinical-agentic-workflow rubric stays at EXPERIMENTAL.
+
+### Known issues
+
+- **O4** — Project Deal commerce asymmetry threshold is anchored to
+  Anthropic's single Project Deal data point. The
+  `asymmetry_dock_threshold_usd` key in the weights sidecar makes
+  this configurable, but adopters with their own marketplace data
+  should calibrate before relying on the deduction in production.
+- **O5** — Function-hijacking live-replay path is not implemented
+  in v1.4.0. CI runs offline-fixture mode only.
+- **O6** — Closed by R3 (HTML-printable variant lands instead of a
+  PDF + weasyprint dep).
+
 ## [1.3.3] - 2026-04-26
 
 Docs-only patch. Brings `README.md` back into sync with the actual
