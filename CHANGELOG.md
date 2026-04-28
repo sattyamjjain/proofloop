@@ -5,6 +5,79 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-04-28
+
+Patch release. One new composite rubric, one extension to an
+existing rubric, two new CLI scripts. **800 tests green** (740 →
+800, +60 new). Offline-first invariant preserved; no new runtime
+dependencies.
+
+### Added (2026-04-28 session, BB1 + BB2 + S1 + S3)
+
+- **BB1 — Ship-readiness composite rubric**
+  (`skills/judge/rubrics/ship-readiness.{md,weights.json,example.md}`).
+  Seven binary ship-readiness floors mapped onto the canonical seven
+  dimensions: reliability-p99-on-replay (≥0.95), safety-refusal-floor
+  (≥0.95), cost-bound-honored (true), observability-completeness
+  (≥0.90), rollback-discipline (true), human-in-loop-honesty (true),
+  and regression-vs-prior-version (≤5%). Floors evaluated by the
+  new `_apply_ship_readiness_floors` helper; thresholds tunable via
+  the rubric's weights sidecar (`ship_floor_*` keys). New scorecard
+  field: `adjustments.ship_readiness` carries `ship_ready` (bool),
+  `failed_floors` (list[str]), and the parsed evidence dict. The
+  composite only moves when the transcript advocates merging despite
+  a failed floor — the rubric's "merge anyway" red flag, which caps
+  composite at ≤ 5.0 and emits a critical issue.
+- **BB2 — Perception-reality drift extension**
+  (project-deal-commerce only). New helper
+  `_compute_perception_reality_drift` parses
+  `perception_value=$N.NN` / `reality_value=$N.NN` markers and emits
+  `{perception_value, reality_value, drift_magnitude, drift_flag,
+  threshold}` into `adjustments.perception_reality_drift`. Threshold
+  configurable via the weights sidecar's `drift_flag_threshold` key.
+  Issue O8: single-data-point anchor (Anthropic's +$2.45/item buyer
+  savings) — informational; doesn't deduct.
+- **S1 — `verdict ship-gate` CLI**
+  (`skills/judge/scripts/ship_gate.py`). Pass/fail a release
+  scorecard against three checks: ship_readiness floors, composite
+  floor (default 7.0), and regression vs. baseline (default ≤ 5%).
+  Returns 0 on pass, 1 on fail, 2 on bad input. `--output sarif`
+  emits a SARIF v2.1.0 document the GitHub Actions security tab
+  consumes.
+- **S3 — `verdict judge-replay` CLI**
+  (`skills/judge/scripts/judge_replay.py`). Re-scores a transcript
+  with the currently-installed Verdict and asserts per-dimension
+  delta ≤ tolerance (default 0.5) and composite delta ≤ tolerance
+  (default 0.3) vs. a frozen baseline scorecard. Returns 0 on
+  within-tolerance, 1 on drift, 2 on bad input.
+
+### Tests
+
+- `tests/test_ship_readiness_rubric.py` — 18 tests covering rubric
+  files, floor parsing, threshold override, merge-anyway red flag,
+  and end-to-end scoring via `build_scorecard`.
+- `tests/test_perception_reality_drift.py` — 11 tests covering
+  rubric gating, threshold override, multi-marker summing, and
+  end-to-end emission of the drift block.
+- `tests/test_ship_gate.py` — 16 tests covering load, evaluate,
+  SARIF rendering, and CLI exit codes.
+- `tests/test_judge_replay.py` — 15 tests covering load, diff,
+  replay-self-stability, drift detection, and CLI exit codes.
+
+### Tracker hygiene
+
+- ROADMAP_2026.md gains `### 2026-Q2 Cycle 6 (v1.4.1)` section.
+- `.claude-plugin/plugin.json` and
+  `.claude-plugin/marketplace.json` bumped 1.4.0 → 1.4.1.
+- README.md rubric / script counts refreshed (23 → 24 rubrics,
+  10 adapters unchanged, 12 → 14 scripts).
+
+### Deferred
+
+- S2 (SaaS dashboard) deferred per ROADMAP §5 — no SaaS pivot.
+- BB3–BB6 (PaperArena / DeepSeek / Kimi / OfficeQA rubrics)
+  scoped out of v1.4.1 pending market-signal verification.
+
 ## [1.4.0] - 2026-04-27
 
 Minor release. Five new rubrics, one new adapter, two new
