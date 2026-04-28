@@ -40,7 +40,7 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
 | Runs inside Claude Code    | ✓       | ✗                               | ✗                    | ✗                |
 | Offline (no LLM call)      | ✓       | ✗                               | optional             | ✗                |
 | Zero config for first score| ✓       | ✗                               | ✗                    | ✗                |
-| Per-domain rubrics         | ✓ (23)  | via code                        | via YAML             | via code         |
+| Per-domain rubrics         | ✓ (24)  | via code                        | via YAML             | via code         |
 | Cross-ecosystem transcripts| ✓       | traces only                     | provider-flex        | LangChain-first  |
 | Pip install / deps         | stdlib  | SDK + network                   | SDK                  | SDK + account    |
 | Per-rubric weight override | ✓       | ✗                               | ✗                    | ✗                |
@@ -170,6 +170,7 @@ Verdict's coverage.
 | `model-spec-compliance`       | OpenAI Model Spec Evals                    | Stable (1-7 scale, mapped onto Verdict 1-10) |
 | `swe-bench-pro`               | SWE-bench Pro                              | Stable (contamination-resistant successor to Verified) |
 | `code-review-aider-polyglot`  | Aider polyglot benchmark                   | Stable                                |
+| `ship-readiness`              | Verdict release-readiness composite        | Stable (binary floors via the rubric weights sidecar — `ship_floor_*` keys configurable per deployment) |
 
 Beta and experimental rubrics carry a moving-target risk — the
 upstream framework's category names, ordering, or severity may
@@ -223,6 +224,8 @@ skills/judge/
     watch.py               # /judge --watch live re-scoring daemon
     cost_estimator.py      # Per-scorecard USD cost estimator (R4)
     replay_bfcl_attacks.py # Function-hijacking attack-vector replay harness
+    ship_gate.py           # Ship-readiness gate CLI + SARIF v2.1.0 export
+    judge_replay.py        # Re-score a transcript and assert vs. baseline
   adapters/
     claude_code.py         # Native JSONL (default)
     cowork.py              # Claude Cowork sessions
@@ -241,7 +244,7 @@ skills/judge/
     openai_evals.py        # Verdict → OpenAI Model Spec Evals JSON
   analyzers/
     llm_judge.py           # Opt-in second-opinion (Claude API + cache_control)
-  rubrics/                 # 18 rubrics + 5 weight-override sidecars
+  rubrics/                 # 24 rubrics + per-rubric weight-override sidecars
   scores/                  # Persisted JSON scorecards
   references/              # Scoring methodology + benchmark standards
 agents/judge-agent.md

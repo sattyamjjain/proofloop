@@ -207,7 +207,33 @@ integrations, three additive scorecard fields:
 740 tests green (619 → 740, +121). R1 (AgentBeats public
 leaderboard) deferred per ROADMAP §5.
 
-### 2026-Q2 Cycle 6 and beyond — forward look
+### 2026-Q2 Cycle 6 (v1.4.1) — shipped 2026-04-28
+
+Patch release. One new composite rubric, one drift extension to an
+existing rubric, two new CLI scripts:
+
+- **BB1** Ship-readiness composite rubric — seven binary floors
+  (reliability, refusal, cost, observability, rollback, honesty,
+  regression) evaluated alongside the canonical seven dimensions.
+  Composite only moves when a transcript advocates merging despite
+  a failed floor (the merge-anyway red flag).
+- **BB2** Perception-reality drift extension to project-deal-commerce
+  — informational drift between `perception_value` and
+  `reality_value` markers. Threshold configurable per deployment
+  (Issue O8 — single-data-point anchor, do not over-interpret).
+- **S1** `verdict ship-gate` CLI — pass/fail a scorecard against
+  ship_readiness floors, a composite floor, and a regression vs.
+  baseline. SARIF v2.1.0 export for the GitHub Actions security tab.
+- **S3** `verdict judge-replay` CLI — re-scores a transcript with
+  the current Verdict and asserts per-dimension stability vs. a
+  frozen baseline scorecard. Used to validate that a release doesn't
+  silently move scores on previously-judged transcripts.
+
+800 tests green (740 → 800, +60). S2 (SaaS dashboard) and BB3–BB6
+(PaperArena / DeepSeek / Kimi / OfficeQA rubrics) deferred per
+ROADMAP §5 / pending market-signal verification.
+
+### 2026-Q2 Cycle 7 and beyond — forward look
 
 - LiveCodeBench rubric (targeting v1.4.0).
 - Official LMSYS Arena adapter pending data-licence clearance.
