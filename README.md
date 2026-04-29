@@ -171,6 +171,8 @@ Verdict's coverage.
 | `model-spec-compliance`       | OpenAI Model Spec Evals                    | Stable (1-7 scale, mapped onto Verdict 1-10) |
 | `swe-bench-pro`               | SWE-bench Pro                              | Stable (contamination-resistant successor to Verified) |
 | `code-review-aider-polyglot`  | Aider polyglot benchmark                   | Stable                                |
+| `terminal-bench`              | Terminal-Bench shell-task trajectory eval  | Stable                                |
+| `skill-compliance`            | MLflow skill-compliance evaluation         | Stable (mirrors MLflow's offline)     |
 | `ship-readiness`              | Verdict release-readiness composite        | Stable (binary floors via the rubric weights sidecar — `ship_floor_*` keys configurable per deployment) |
 
 Beta and experimental rubrics carry a moving-target risk — the
