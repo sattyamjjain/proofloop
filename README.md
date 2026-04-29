@@ -63,16 +63,17 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
   Terminal-Bench, and Browser Harness (browser-use) traces with a
   single `--adapter` flag. Auto-detection by confidence-score
   dispatch (the highest-scoring adapter wins).
-- **23 domain rubrics + compliance pack + benchmark / commerce /
-  security pack.** Eleven everyday rubrics (code-review, security,
-  devops, data-analysis, frontend-design, testing, documentation,
-  content-writing, research, default, custom-template); compliance
-  pack (Aider polyglot, Skill compliance, Model Spec compliance,
-  SWE-bench Pro with contamination penalty, Terminal-Bench, OWASP
-  MCP Top 10 beta, EXPERIMENTAL clinical agentic-workflow); plus
-  the v1.4.0 pack: Project Deal commerce, Agentic SAST + Brier
-  calibration, Function-hijacking robustness, GPT-5.5 differential
-  (paired baseline), browser-agent.
+- **24 domain rubrics + compliance pack + benchmark / commerce /
+  security / ship-readiness pack.** Eleven everyday rubrics (code-
+  review, security, devops, data-analysis, frontend-design, testing,
+  documentation, content-writing, research, default, custom-template);
+  compliance pack (Aider polyglot, Skill compliance, Model Spec
+  compliance, SWE-bench Pro with contamination penalty, Terminal-
+  Bench, OWASP MCP Top 10 beta, EXPERIMENTAL clinical agentic-
+  workflow); the v1.4.0 pack (Project Deal commerce, Agentic SAST +
+  Brier calibration, Function-hijacking robustness, GPT-5.5
+  differential (paired baseline), browser-agent); and the v1.4.1
+  release-readiness rubric (ship-readiness with seven binary floors).
 - **Model-aware efficiency.** Opus 4.7's new tokenizer (~35% more
   tokens) doesn't silently penalise its longer outputs — length
   thresholds scale by a per-model baseline.
