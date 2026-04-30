@@ -40,7 +40,7 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
 | Runs inside Claude Code    | ✓       | ✗                               | ✗                    | ✗                |
 | Offline (no LLM call)      | ✓       | ✗                               | optional             | ✗                |
 | Zero config for first score| ✓       | ✗                               | ✗                    | ✗                |
-| Per-domain rubrics         | ✓ (24)  | via code                        | via YAML             | via code         |
+| Per-domain rubrics         | ✓ (27)  | via code                        | via YAML             | via code         |
 | Cross-ecosystem transcripts| ✓       | traces only                     | provider-flex        | LangChain-first  |
 | Pip install / deps         | stdlib  | SDK + network                   | SDK                  | SDK + account    |
 | Per-rubric weight override | ✓       | ✗                               | ✗                    | ✗                |
@@ -63,17 +63,22 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
   Terminal-Bench, and Browser Harness (browser-use) traces with a
   single `--adapter` flag. Auto-detection by confidence-score
   dispatch (the highest-scoring adapter wins).
-- **24 domain rubrics + compliance pack + benchmark / commerce /
-  security / ship-readiness pack.** Eleven everyday rubrics (code-
-  review, security, devops, data-analysis, frontend-design, testing,
-  documentation, content-writing, research, default, custom-template);
-  compliance pack (Aider polyglot, Skill compliance, Model Spec
-  compliance, SWE-bench Pro with contamination penalty, Terminal-
-  Bench, OWASP MCP Top 10 beta, EXPERIMENTAL clinical agentic-
-  workflow); the v1.4.0 pack (Project Deal commerce, Agentic SAST +
-  Brier calibration, Function-hijacking robustness, GPT-5.5
-  differential (paired baseline), browser-agent); and the v1.4.1
-  release-readiness rubric (ship-readiness with seven binary floors).
+- **27 domain rubrics + compliance pack + benchmark / commerce /
+  security / ship-readiness / hook-trust / EU-audit / routine
+  pack.** Eleven everyday rubrics (code-review, security, devops,
+  data-analysis, frontend-design, testing, documentation,
+  content-writing, research, default, custom-template); compliance
+  pack (Aider polyglot, Skill compliance, Model Spec compliance,
+  SWE-bench Pro with contamination penalty, Terminal-Bench, OWASP
+  MCP Top 10 beta, EXPERIMENTAL clinical agentic-workflow); the
+  v1.4.0 pack (Project Deal commerce, Agentic SAST + Brier
+  calibration, Function-hijacking robustness, GPT-5.5 differential
+  (paired baseline), browser-agent); the v1.4.1 release-readiness
+  rubric (ship-readiness with seven binary floors); and the v1.4.2
+  pack (tool-output-rewrite for Claude Code v2.1.121's hook-
+  rewrite trust boundary, eu-ai-act-audit-trail (NOT
+  counsel-reviewed — Issue O13), routine-execution for Anthropic
+  Routines research-preview transcripts).
 - **Model-aware efficiency.** Opus 4.7's new tokenizer (~35% more
   tokens) doesn't silently penalise its longer outputs — length
   thresholds scale by a per-model baseline.
@@ -174,6 +179,9 @@ Verdict's coverage.
 | `terminal-bench`              | Terminal-Bench shell-task trajectory eval  | Stable                                |
 | `skill-compliance`            | MLflow skill-compliance evaluation         | Stable (mirrors MLflow's offline)     |
 | `ship-readiness`              | Verdict release-readiness composite        | Stable (binary floors via the rubric weights sidecar — `ship_floor_*` keys configurable per deployment) |
+| `tool-output-rewrite`         | Claude Code v2.1.121 PostToolUse `updatedToolOutput` trust boundary | Stable (verified against published Claude Code v2.1.121 changelog — see Issue O12 for encoding-bypass mitigation) |
+| `eu-ai-act-audit-trail`       | EU AI Act Articles 19, 26 audit-trail evidence | **NOT counsel-reviewed** (Issue O13 open — disclaimer in rubric file; passing the rubric is NOT a determination of regulatory compliance) |
+| `routine-execution`           | Anthropic Routines (research preview) trajectory shape | Stable (Routines is research preview as of 2026-04-29, not GA — heuristic detection opt-in via `VERDICT_DETECT_ROUTINE_HEURISTIC=1`, Issue O15) |
 
 Beta and experimental rubrics carry a moving-target risk — the
 upstream framework's category names, ordering, or severity may
@@ -229,6 +237,13 @@ skills/judge/
     replay_bfcl_attacks.py # Function-hijacking attack-vector replay harness
     ship_gate.py           # Ship-readiness gate CLI + SARIF v2.1.0 export
     judge_replay.py        # Re-score a transcript and assert vs. baseline
+    eu_audit_export.py     # CC2 — EU AI Act Articles 19/26 CSV export
+    benchmark_gaming_detector.py # CC3 — Berkeley RDI exploit-signature detector
+    audit_export.py        # T1 — DPO-ready zip bundle (NOT LEGAL ADVICE)
+    bench_gaming_check.py  # T2 — pre-publication benchmark-gaming linter
+    hook_lint.py           # T3 — PostToolUse hook static analyzer
+    signatures/
+      berkeley-rdi-2026-04-26.json # Berkeley RDI exploit signatures (Issue O14)
   adapters/
     claude_code.py         # Native JSONL (default)
     cowork.py              # Claude Cowork sessions
@@ -247,7 +262,7 @@ skills/judge/
     openai_evals.py        # Verdict → OpenAI Model Spec Evals JSON
   analyzers/
     llm_judge.py           # Opt-in second-opinion (Claude API + cache_control)
-  rubrics/                 # 24 rubrics + per-rubric weight-override sidecars
+  rubrics/                 # 27 rubrics + per-rubric weight-override sidecars
   scores/                  # Persisted JSON scorecards
   references/              # Scoring methodology + benchmark standards
 agents/judge-agent.md

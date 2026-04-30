@@ -39,13 +39,38 @@ party reasoning from memory stitching.
 from __future__ import annotations
 
 import json
+import os
+import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 SESSION_BREAK_MARKER: str = "--- session break ---"
 MEMORY_PREFIX: str = "[system-memory] "
 MANAGED_MEMORY_PULL_PREFIX: str = "[managed-memory-pull] "
 MANAGED_MEMORY_PUSH_PREFIX: str = "[managed-memory-push] "
+
+# CC1 — Tool-output-rewrite tagging. Claude Code v2.1.121 (2026-04-29)
+# lets a PostToolUse hook return ``hookSpecificOutput.updatedToolOutput``
+# and the model sees the rewritten payload. This adapter tags such
+# rewrites with ``[hook-rewrote: <tool>] [hook-byte-delta: <ratio>]``
+# so the score.py CC1 helper can detect undisclosed rewrites,
+# rubber-stamps, and credential injection.
+HOOK_REWRITE_TAG: str = "[hook-rewrote: {tool}]"
+HOOK_BYTE_DELTA_TAG: str = "[hook-byte-delta: {ratio}]"
+
+# CC4 — Anthropic Routines (research preview) trajectory shape.
+# When a transcript carries an explicit ``[routine_trigger: <id>]``
+# marker OR (env opt-in) has no human turn in the first 5 lines,
+# the adapter prepends a ``[trajectory_kind: routine]`` sentinel
+# so the consistency analyzer can relax std_dev tolerances
+# (cron-triggered runs cluster differently from interactive ones).
+# See Issue O15 — the heuristic branch is opt-in by env to avoid
+# false-flagging multi-line interactive paste-ins.
+TRAJECTORY_KIND_ROUTINE: str = "[trajectory_kind: routine]"
+ROUTINE_DETECTION_ENV: str = "VERDICT_DETECT_ROUTINE_HEURISTIC"
+_ROUTINE_TRIGGER_RE: re.Pattern = re.compile(
+    r"\[routine_trigger:\s*([A-Za-z0-9_.-]+)\]", re.IGNORECASE,
+)
 
 _MEMORY_TOKENS = ("memory_block", "<memory>", "auto-memory", "claude_memory")
 _MANAGED_MEMORY_TOKENS = ("managed_memory_v1", "agent_memory", "parent_agent_id")
@@ -122,7 +147,92 @@ def _extract_from_record(record: dict, raw_line: str, in_memory: bool) -> List[s
         out = [prefix + line for line in out]
     elif in_memory:
         out = [MEMORY_PREFIX + line for line in out]
+    rewrite = _detect_hook_rewrite(record, raw_line)
+    if rewrite is not None:
+        tag = (
+            HOOK_REWRITE_TAG.format(tool=rewrite["tool"])
+            + " "
+            + HOOK_BYTE_DELTA_TAG.format(ratio=rewrite["byte_delta"])
+        )
+        # Surface the hookSpecificOutput.updatedToolOutput phrase verbatim
+        # so the score.py CC1 helper can also detect undisclosed paths
+        # (cases where future Claude Code revisions emit the field
+        # without the matching adapter-side disclosure tag).
+        out = [
+            tag + " hookSpecificOutput.updatedToolOutput "
+            + (rewrite["rewritten"] if not line else line)
+            for line in (out or [""])
+        ]
     return out
+
+
+def _detect_hook_rewrite(record: Dict[str, Any], raw_text: str) -> Optional[Dict[str, Any]]:
+    """Return rewrite metadata if *record* carries a v2.1.121 tool-output rewrite.
+
+    Looks for the canonical Claude Code v2.1.121 shape:
+    ``record["hookSpecificOutput"]["updatedToolOutput"]`` (or a flattened
+    ``"hookSpecificOutput.updatedToolOutput"`` substring in the raw text
+    as a defensive fallback). Returns ``{"tool", "byte_delta", "tool_use_id",
+    "rewritten"}`` or ``None``.
+
+    The byte-delta is computed against ``record["original_tool_output"]``
+    when available; absent that, returns ``1.0`` (no comparison possible)
+    and lets the score.py helper flag the gap downstream.
+    """
+    spec = record.get("hookSpecificOutput") if isinstance(record, dict) else None
+    rewritten = None
+    if isinstance(spec, dict):
+        rewritten = spec.get("updatedToolOutput")
+    if rewritten is None and "hookSpecificOutput.updatedToolOutput" in raw_text:
+        # Defensive: caller flattened the JSON; we can't recover the
+        # rewritten payload, but we still emit a disclosure.
+        rewritten = ""
+    if rewritten is None:
+        return None
+    rewritten_str = str(rewritten) if not isinstance(rewritten, str) else rewritten
+    tool = (
+        record.get("tool")
+        or record.get("tool_name")
+        or (spec.get("tool") if isinstance(spec, dict) else None)
+        or "unknown"
+    )
+    original = record.get("original_tool_output") or record.get("original")
+    if isinstance(original, str) and original:
+        ratio = len(rewritten_str) / max(1, len(original))
+    else:
+        ratio = 1.0
+    return {
+        "tool": str(tool),
+        "byte_delta": round(ratio, 3),
+        "tool_use_id": record.get("tool_use_id"),
+        "rewritten": rewritten_str,
+    }
+
+
+def _detect_routine_triggered(lines: List[str]) -> bool:
+    """Return True iff the transcript looks routine-triggered.
+
+    Two signals (CC4):
+
+    1. Any line carries ``[routine_trigger: <id>]`` — explicit, always honored.
+    2. (Heuristic) No line in the first 5 looks like a human-role turn —
+       env-gated via ``VERDICT_DETECT_ROUTINE_HEURISTIC=1`` to avoid
+       false-flagging multi-line interactive paste-ins. See Issue O15.
+    """
+    for line in lines:
+        if _ROUTINE_TRIGGER_RE.search(line):
+            return True
+    if os.environ.get(ROUTINE_DETECTION_ENV) != "1":
+        return False
+    # Heuristic branch: check the first 5 lines for any human-role marker.
+    head = lines[:5]
+    human_markers = ("user:", '"role":"user"', "[user]", "user>")
+    for line in head:
+        lowered = line.lower()
+        if any(marker in lowered for marker in human_markers):
+            return False
+    # Also bail if the head is empty.
+    return bool(head)
 
 
 def _extract_lines_from_file(path: Path) -> List[str]:
@@ -254,5 +364,11 @@ def extract_lines(path: str) -> List[str]:
         # Belt-and-braces: catch any managed-memory records whose content
         # field slipped through the primary tagging pass. The call is
         # idempotent — already-tagged lines pass through unchanged.
-        return parse_managed_agent_memory(combined)
-    return parse_managed_agent_memory(_extract_lines_from_file(source))
+        tagged = parse_managed_agent_memory(combined)
+        if _detect_routine_triggered(tagged):
+            tagged = [TRAJECTORY_KIND_ROUTINE] + tagged
+        return tagged
+    out = parse_managed_agent_memory(_extract_lines_from_file(source))
+    if _detect_routine_triggered(out):
+        out = [TRAJECTORY_KIND_ROUTINE] + out
+    return out
