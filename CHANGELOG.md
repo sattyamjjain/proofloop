@@ -5,6 +5,175 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-04-30
+
+Patch release. Three new rubrics, two new score-engine helpers,
+five new CLI scripts. **926 tests green** (800 → 926, +126 new).
+Offline-first invariant preserved; no new runtime dependencies.
+
+> ⚠️ **`eu-ai-act-audit-trail` is NOT counsel-reviewed.** Issue
+> O13 — passing the rubric is **NOT** a determination of EU AI
+> Act compliance. The disclaimer lives in the rubric file itself
+> (`skills/judge/rubrics/eu-ai-act-audit-trail.md`); read it
+> before bundling outputs into a regulator handover.
+
+### Added (2026-04-30 session, CC1–CC5 + T1–T3)
+
+- **CC1 — Tool-output-rewrite trust-boundary rubric**
+  (`skills/judge/rubrics/tool-output-rewrite.{md,weights.json,example.md}`).
+  Five evidence dimensions (hook-rewrite-disclosure, no-rubber-stamp,
+  no-credential-injection-on-rewrite, original-vs-rewritten-diff-bounded,
+  audit-link-to-hook-source) covering the brand-new
+  `hookSpecificOutput.updatedToolOutput` capability shipped in
+  Claude Code v2.1.121 (2026-04-29). New helper
+  `_detect_hook_rewrite_violations` in `score.py`. New scorecard
+  field: `adjustments.tool_output_rewrite`. Adapter
+  `claude_code.py` now tags hook-rewrite records with
+  `[hook-rewrote: <tool>] [hook-byte-delta: <ratio>]`.
+  Source: [code.claude.com — Claude Code v2.1.121 changelog (2026-04-29)](https://code.claude.com/docs/en/changelog).
+
+- **CC2 — EU AI Act Articles 19/26 audit-trail rubric**
+  (`skills/judge/rubrics/eu-ai-act-audit-trail.{md,weights.json,example.md}`).
+  Seven evidence dimensions (log-retention-attestation,
+  decision-logic-grounding, human-intervention-points,
+  data-source-provenance, tool-use-attribution,
+  no-shadow-decisioning, refusal-on-out-of-scope-data) plus an
+  `audit_trail_complete` aggregate flag. **NOT counsel-reviewed**
+  — the rubric file carries a NOT-LEGAL-ADVICE disclaimer in the
+  header; passing the rubric is not a substitute for counsel
+  review. New helper `_compute_eu_ai_act_audit_evidence` in
+  `score.py`. New scorecard field: `adjustments.eu_ai_act_audit`.
+  New script `eu_audit_export.py` produces a regulator-neutral
+  CSV from a scorecard + transcript pair. See Issue O13.
+  Sources: [helpnetsecurity.com (2026-04-16)](https://www.helpnetsecurity.com/2026/04/16/eu-ai-act-logging-requirements/),
+  [artificialintelligenceact.eu/article/19](https://artificialintelligenceact.eu/article/19/),
+  [artificialintelligenceact.eu/article/26](https://artificialintelligenceact.eu/article/26/).
+
+- **CC3 — Berkeley RDI benchmark-gaming detector**
+  (`skills/judge/scripts/benchmark_gaming_detector.py` + signature
+  pack at `signatures/berkeley-rdi-2026-04-26.json`). Pure-stdlib
+  detector that scans transcripts for the four exploit signatures
+  Berkeley RDI published (harness-trust-pytest-self-report,
+  reward-file-tamper, scoring-grep-target, short-circuit-trajectory).
+  Wired into `score.py` via `_apply_benchmark_gaming_penalty` —
+  active for `swe-bench-pro` / `terminal-bench` / `browser-agent`
+  rubrics. Each detected exploit deducts 0.50 composite. New
+  scorecard field: `adjustments.benchmark_gaming`. Berkeley's
+  list covers SWE-bench, WebArena, OSWorld, GAIA, Terminal-Bench,
+  FieldWorkArena, CAR-bench (the prompt's mention of tau-bench /
+  AgentBench was a partial inaccuracy corrected at integration).
+  See Issue O14 — signature pack will be refreshable via
+  `--signatures-from <url>` in v1.4.3.
+  Source: [rdi.berkeley.edu — How We Broke Top AI Agent Benchmarks (2026-04-26)](https://rdi.berkeley.edu/blog/trustworthy-benchmarks-cont/).
+
+- **CC4 — Routines (research preview) trajectory adapter + rubric**
+  (`skills/judge/rubrics/routine-execution.{md,weights.json}`).
+  `claude_code.py` adapter detects `[routine_trigger: <id>]`
+  markers (always honored) and (env-gated) "no human turn in
+  first 5 lines" heuristic — when either fires, prepends
+  `[trajectory_kind: routine]` sentinel. Score's consistency
+  analyzer now reads the sentinel and relaxes std_dev tolerance
+  buckets ~33% (cron-triggered runs cluster differently from
+  interactive ones). Anthropic Routines is **research preview as
+  of 2026-04-29**, NOT GA — rubric copy reflects that. Heuristic
+  detection is opt-in via `VERDICT_DETECT_ROUTINE_HEURISTIC=1`
+  per Issue O15.
+  Sources: [anthropic.com/news/routines](https://www.anthropic.com/news/routines),
+  [code.claude.com/docs/en/routines](https://code.claude.com/docs/en/routines).
+
+- **T1 — `verdict audit-export` CLI**
+  (`skills/judge/scripts/audit_export.py`). DPO-ready zip bundler
+  for fleet-wide scorecards: `manifest.csv` (Article 19/26
+  binary flags), `scorecards/*.json` (raw evidence),
+  `transcripts-redacted/*.jsonl` (best-effort PII redaction),
+  `methodology.md` (signal-to-Article mapping + disclaimer).
+  Refuses to bundle `clinical-agentic-workflow` transcripts per
+  Issue O16. Stdlib-only.
+
+- **T2 — `verdict bench gaming-check` CLI**
+  (`skills/judge/scripts/bench_gaming_check.py`). Thin user-
+  facing wrapper around CC3's detector. `--strict` mode adds a
+  configurable reasoning-turn floor (default 3). Returns 0 on
+  clean, 1 on exploit / short trajectory, 2 on bad input.
+  Intended for benchmark publishers / paper authors to lint a
+  trajectory before posting the number.
+
+- **T3 — `verdict hook lint` CLI**
+  (`skills/judge/scripts/hook_lint.py` + two example hooks under
+  `examples/hooks/`). Static-analyzer for `.sh` / `.bash` / `.py`
+  / `.js` / `.mjs` / `.ts` PostToolUse hook scripts. Four rules:
+  F1 (undisclosed mutation), F2 (missing source tag), F3 (error
+  suppression without justification), F4 (literal credential in
+  source). Strips comment-only lines so signal in commentary
+  doesn't false-flag. Stdlib-only.
+
+### Score-engine wiring
+
+- `_analyze_consistency` now takes optional `transcript_lines` so
+  it can detect the routine-trajectory sentinel and relax
+  tolerance buckets.
+- `_HOOK_SPECIFIC_OUTPUT_RE` matches both the flat dotted form
+  (`hookSpecificOutput.updatedToolOutput`) and the nested JSON
+  form (`"hookSpecificOutput":{"updatedToolOutput"`) so the CC1
+  detector works with both adapter-tagged and raw-JSON
+  transcripts.
+
+### Tests
+
+- `tests/test_tool_output_rewrite_rubric.py` — 14 tests
+- `tests/test_claude_code_hook_rewrite_tagging.py` — 15 tests
+- `tests/test_eu_ai_act_audit_rubric.py` — 13 tests
+- `tests/test_eu_audit_export.py` — 12 tests
+- `tests/test_benchmark_gaming_detector.py` — 12 tests
+- `tests/test_benchmark_gaming_penalty_e2e.py` — 9 tests
+- `tests/test_routine_trajectory_detection.py` — 9 tests
+- `tests/test_routine_rubric.py` — 8 tests
+- `tests/cli/test_audit_export.py` — 13 tests
+- `tests/cli/test_bench_gaming_check.py` — 6 tests
+- `tests/cli/test_hook_lint.py` — 15 tests
+
+### Tracker hygiene
+
+- ROADMAP_2026.md gains `### 2026-Q2 Cycle 7 (v1.4.2)` section.
+- `.claude-plugin/plugin.json` and
+  `.claude-plugin/marketplace.json` bumped 1.4.1 → 1.4.2.
+- README.md rubric count refreshed (24 → 27); script count
+  refreshed (12 → 17).
+
+### Open issues filed
+
+- O12 — encoding-bypass on the hook-rewrite detector. Fix
+  scheduled for v1.4.3 (schema-version-aware extractor).
+- O13 — `eu-ai-act-audit-trail` rubric is **not counsel-reviewed**.
+  Disclaimer is in the rubric file. Counsel review pending.
+- O14 — Berkeley RDI signature library can drift on next paper
+  revision. v1.4.3 will add `--signatures-from <url>`.
+- O15 — routine-trajectory detection heuristic gated behind
+  `VERDICT_DETECT_ROUTINE_HEURISTIC=1`. Promote to default in
+  v1.4.3 after sample-set evaluation.
+- O16 — `audit_export.py` PII redaction is best-effort regex.
+  CLI refuses `clinical-agentic-workflow`; hardened redactor
+  queued for v1.4.3.
+
+### Honest deltas vs prompt
+
+- Prompt claimed "scripts at 14"; actual was 12. Now 17.
+- Prompt claimed Anthropic Routines was "GA expansion (rolling)";
+  it is **research preview** as of 2026-04-29. Rubric copy and
+  changelog reflect that.
+- Prompt claimed Claude Code v2.1.121 shipped 2026-04-28; actual
+  ship date is 2026-04-29.
+- Prompt's Berkeley RDI benchmark list ("tau-bench, AgentBench")
+  did not match the actual paper's list (which covers SWE-bench,
+  WebArena, OSWorld, GAIA, Terminal-Bench, FieldWorkArena,
+  CAR-bench). Signature pack reflects the actual paper.
+- Prompt's "non-skippable" wrap-up included items outside this
+  release's scope (PyPI publish — Verdict is a Claude Code
+  plugin, not PyPI-distributed; Cowork marketplace re-rank — not
+  an in-repo action; counsel-reviewed disclaimer — Issue O13,
+  swap honored with NOT-LEGAL-ADVICE language in the rubric file
+  but not a counsel sign-off).
+
 ## [1.4.1] - 2026-04-28
 
 Patch release. One new composite rubric, one extension to an

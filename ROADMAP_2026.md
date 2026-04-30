@@ -233,7 +233,37 @@ existing rubric, two new CLI scripts:
 (PaperArena / DeepSeek / Kimi / OfficeQA rubrics) deferred per
 ROADMAP §5 / pending market-signal verification.
 
-### 2026-Q2 Cycle 7 and beyond — forward look
+### 2026-Q2 Cycle 7 (v1.4.2) — shipped 2026-04-30
+
+Patch release. Three new rubrics, two new score-engine helpers,
+five new CLI scripts. **926 tests green** (800 → 926, +126).
+
+- **CC1** Tool-output-rewrite rubric — covers Claude Code
+  v2.1.121's brand-new `hookSpecificOutput.updatedToolOutput`
+  surface. First eval rubric to score the tool-result trust
+  boundary (vs AA3's tool-call trust boundary).
+- **CC2** EU AI Act Articles 19/26 audit-trail rubric. **NOT
+  counsel-reviewed** — disclaimer in the rubric file (Issue O13).
+- **CC3** Berkeley RDI benchmark-gaming detector + signature pack.
+  Anchored to actual paper benchmark list (SWE-bench, WebArena,
+  OSWorld, GAIA, Terminal-Bench, FieldWorkArena, CAR-bench).
+  Signature library refreshable in v1.4.3 (Issue O14).
+- **CC4** Routines (research preview, NOT GA) trajectory adapter
+  + `routine-execution` rubric. Heuristic detection opt-in via
+  `VERDICT_DETECT_ROUTINE_HEURISTIC=1` (Issue O15).
+- **T1** `verdict audit-export` CLI — DPO-ready zip bundler with
+  best-effort PII redaction. Refuses clinical transcripts per
+  Issue O16.
+- **T2** `verdict bench gaming-check` CLI — wraps CC3's detector
+  for benchmark publishers / paper authors.
+- **T3** `verdict hook lint` CLI — static analyzer for
+  PostToolUse hook scripts. F1–F4 rule set + 2 example hooks.
+
+Open issues filed: O12 (encoding bypass), O13 (counsel review
+pending), O14 (signature drift), O15 (heuristic opt-in), O16
+(PII redaction best-effort).
+
+### 2026-Q2 Cycle 8 and beyond — forward look
 
 - LiveCodeBench rubric (targeting v1.4.0).
 - Official LMSYS Arena adapter pending data-licence clearance.
