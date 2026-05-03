@@ -1,0 +1,65 @@
+name: Bug report
+description: Report a defect in Verdict's behavior
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please include enough detail that
+        someone unfamiliar with your environment can reproduce it.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which v4.3 surface does this touch?
+      description: |
+        Verdict's plugin scope per CLAUDE.md §v4.3 Scope Contract.
+        Anything outside these is out-of-scope and belongs in
+        Discussions, not Issues.
+      options:
+        - "scope:plugin-core (skills/judge/, SKILL.md, manifest)"
+        - "scope:cowork-plugin (Cowork manifest / installation)"
+        - "scope:hooks (PreToolUse / PostToolUse / Stop / SubagentStop / StopFailure)"
+        - "scope:judge-command (/judge, /scorecard, /benchmark, /judge-config, /against, /compare)"
+        - "scope:scoring (score.py, rubrics, weights sidecars)"
+        - "Other / unsure (will be triaged)"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Verdict version
+      description: |
+        Output of `cat .claude-plugin/plugin.json | grep version` in
+        an installed copy, or the tag of the release you installed.
+      placeholder: "v2.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: |
+        Minimal commands or transcript fragment that triggers the
+        bug. Stdlib-only repros preferred.
+      placeholder: |
+        1. `python3 skills/judge/scripts/score.py --skill code-review --transcript ...`
+        2. Observed: ...
+        3. Expected: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, Claude Code or Cowork.
+      placeholder: |
+        - Python 3.11.5
+        - macOS 15.4
+        - Claude Code v2.1.121
+    validations:
+      required: false

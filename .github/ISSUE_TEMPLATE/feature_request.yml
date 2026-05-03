@@ -1,0 +1,65 @@
+name: Feature request
+description: Propose a change to Verdict's plugin behavior
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: read CLAUDE.md §v4.3 Scope Contract. Verdict
+        is a Claude Code / Cowork plugin only. New rubrics targeting
+        frontier-lab eval benches (SWE-bench, Terminal-Bench, GAIA,
+        OSWorld, MCP attack benches, EU AI Act, etc.) are
+        out-of-scope and should be filed in
+        [Discussions](https://github.com/sattyamjjain/verdict/discussions)
+        instead.
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which v4.3 surface does this touch?
+      description: |
+        Anything that doesn't fit one of these is out-of-scope —
+        please use Discussions, not Issues.
+      options:
+        - "scope:plugin-core (skills/judge/, SKILL.md, manifest)"
+        - "scope:cowork-plugin (Cowork manifest / installation)"
+        - "scope:hooks (PreToolUse / PostToolUse / Stop / SubagentStop / StopFailure)"
+        - "scope:judge-command (/judge, /scorecard, /benchmark, /judge-config, /against, /compare)"
+        - "scope:scoring (score.py, rubrics, weights sidecars)"
+        - "Other / unsure (will be triaged or redirected)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: |
+        The user-visible problem, not the proposed solution. Avoid
+        leading with the implementation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: |
+        Sketch the API / config / rubric change. If this is a new
+        rubric, link the upstream framework and confirm it's a
+        plugin-domain rubric (code-review / security / devops /
+        data-analysis / frontend / testing / documentation /
+        content-writing / research style), not an eval-bench rubric.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: |
+        What did you try first? Why isn't an existing rubric / weight
+        sidecar / config knob enough?
+    validations:
+      required: false
