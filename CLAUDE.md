@@ -13,6 +13,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 <!-- END AUTO-MANAGED -->
 
+<!-- MANUAL: v43-scope-contract -->
+## v4.3 Scope Contract (2026-05-03)
+
+Verdict is a **Claude Code / Cowork plugin only.** Per the 2026-05-03 v4.3 scope reset (runbook §scope-reset), the rubric and adapter inventory is pinned to plugin-domain quality scoring. Frontier-lab eval-bench scope (SWE-bench, Terminal-Bench, GAIA, OSWorld, MCP attack benches, etc.) is explicitly out of scope and will not be re-added without a runbook spec change.
+
+**In-scope rubrics (11):** `code-review`, `security`, `devops`, `data-analysis`, `frontend-design`, `testing`, `documentation`, `content-writing`, `research`, `default`, `custom-template`.
+
+**Out-of-scope, queued for v2.0.0 trim (16):** `agentic-sast-confidence`, `browser-agent`, `clinical-agentic-workflow`, `code-review-aider-polyglot`, `eu-ai-act-audit-trail`, `function-hijacking-robustness`, `gpt-5-5-differential`, `model-spec-compliance`, `owasp-mcp-top-10-beta`, `project-deal-commerce`, `routine-execution`, `ship-readiness`, `skill-compliance`, `swe-bench-pro`, `terminal-bench`, `tool-output-rewrite`.
+
+**In-scope adapters (4):** `claude_code`, `cowork`, `openai_compatible`, `codex`. Cross-ecosystem adapters (Gemini, MLflow, Inspect-AI, Terminal-Bench, browser-harness) are out of scope.
+
+**Core surfaces (do not regress):** 7-dimension scoring (correctness, completeness, adherence, actionability, efficiency, safety, consistency); auto-hooks (`Stop`, `SubagentStop`, `StopFailure`); `/judge`, `/scorecard`, `/benchmark`, `/judge-config`, `/against`, `/compare` slash commands; per-rubric `<name>.weights.json` sidecar overrides; threshold blocking via `judge-config.json`.
+
+**Enforcement:** `tests/test_v43_scope_contract.py` pins the rubric inventory. The test fails today (16 out-of-scope rubrics still present in v1.4.2) and will go green once the v2.0.0 trim PR removes them — the red CI is the forcing function for the cut.
+
+**Source of truth:** `~/Downloads/AboutMe/skill-references/daily-opportunity-radar/runbook.md` §scope-reset block (2026-05-03).
+
+<!-- END MANUAL -->
+
 <!-- AUTO-MANAGED: build-commands -->
 ## Build & Development Commands
 

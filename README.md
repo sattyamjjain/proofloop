@@ -40,7 +40,7 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
 | Runs inside Claude Code    | ✓       | ✗                               | ✗                    | ✗                |
 | Offline (no LLM call)      | ✓       | ✗                               | optional             | ✗                |
 | Zero config for first score| ✓       | ✗                               | ✗                    | ✗                |
-| Per-domain rubrics         | ✓ (27)  | via code                        | via YAML             | via code         |
+| Per-domain rubrics         | ✓ (11)  | via code                        | via YAML             | via code         |
 | Cross-ecosystem transcripts| ✓       | traces only                     | provider-flex        | LangChain-first  |
 | Pip install / deps         | stdlib  | SDK + network                   | SDK                  | SDK + account    |
 | Per-rubric weight override | ✓       | ✗                               | ✗                    | ✗                |
@@ -52,33 +52,17 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
 
 - **Dual-mode operation.** Automatic via hooks (`Stop`,
   `SubagentStop`, `StopFailure`) or manual via `/judge`.
-- **Dual-platform.** Claude Code and Claude Cowork, plus Routines-
-  triggered cloud sessions.
+- **Dual-platform.** Claude Code and Claude Cowork.
 - **7-dimension weighted scoring.** Correctness, completeness,
   adherence, actionability, efficiency, safety, consistency — weights
   configurable globally or per rubric via a sidecar `.weights.json`.
-- **Cross-ecosystem adapters.** Score transcripts from Claude Code,
-  Cowork, Codex, Cursor, Continue, OpenAI-compatible JSON, Gemini
-  CLI, Gemini 3.1 Pro Deep Research, MLflow, Inspect AI,
-  Terminal-Bench, and Browser Harness (browser-use) traces with a
-  single `--adapter` flag. Auto-detection by confidence-score
-  dispatch (the highest-scoring adapter wins).
-- **27 domain rubrics + compliance pack + benchmark / commerce /
-  security / ship-readiness / hook-trust / EU-audit / routine
-  pack.** Eleven everyday rubrics (code-review, security, devops,
-  data-analysis, frontend-design, testing, documentation,
-  content-writing, research, default, custom-template); compliance
-  pack (Aider polyglot, Skill compliance, Model Spec compliance,
-  SWE-bench Pro with contamination penalty, Terminal-Bench, OWASP
-  MCP Top 10 beta, EXPERIMENTAL clinical agentic-workflow); the
-  v1.4.0 pack (Project Deal commerce, Agentic SAST + Brier
-  calibration, Function-hijacking robustness, GPT-5.5 differential
-  (paired baseline), browser-agent); the v1.4.1 release-readiness
-  rubric (ship-readiness with seven binary floors); and the v1.4.2
-  pack (tool-output-rewrite for Claude Code v2.1.121's hook-
-  rewrite trust boundary, eu-ai-act-audit-trail (NOT
-  counsel-reviewed — Issue O13), routine-execution for Anthropic
-  Routines research-preview transcripts).
+- **Plugin-scope adapters.** Score transcripts from Claude Code,
+  Cowork, Codex, Cursor, Continue, and any OpenAI-compatible JSON
+  shape with a single `--adapter` flag.
+- **11 domain rubrics.** code-review, security, devops, data-analysis,
+  frontend-design, testing, documentation, content-writing, research,
+  default, custom-template. Per-rubric weight overrides via a sidecar
+  `<rubric>.weights.json`.
 - **Model-aware efficiency.** Opus 4.7's new tokenizer (~35% more
   tokens) doesn't silently penalise its longer outputs — length
   thresholds scale by a per-model baseline.
@@ -93,6 +77,15 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
   releases. Wired into CI.
 - **Stdlib only.** Python 3.9+, no third-party packages, installs
   instantly with zero supply-chain risk.
+
+> **v1.x → v2.0.0 migration.** v2.0.0 trimmed Verdict to its plugin
+> scope per the 2026-05-03 v4.3 reset: 16 frontier-lab eval-bench
+> rubrics, 6 cross-ecosystem adapters, and 7 bench-eval scripts were
+> removed. If you depended on `swe-bench-pro`, `terminal-bench`,
+> `clinical-agentic-workflow`, `eu-ai-act-audit-trail`,
+> `tool-output-rewrite`, etc., pin to `v1.4.2` or fork. See
+> [`CHANGELOG.md`](CHANGELOG.md) §[2.0.0] and
+> [`CLAUDE.md`](CLAUDE.md) §v4.3 Scope Contract.
 
 ---
 
@@ -158,38 +151,6 @@ python3 skills/judge/scripts/explain.py \
 
 ---
 
-## Compliance rubrics
-
-Rubrics that map external compliance frameworks onto Verdict's
-canonical dimensions. Status reflects the upstream framework, not
-Verdict's coverage.
-
-| Rubric                        | Framework                                  | Upstream status                       |
-| ----------------------------- | ------------------------------------------ | ------------------------------------- |
-| `owasp-mcp-top-10-beta`       | OWASP MCP Top 10                           | **BETA** (Phase 3, not yet ratified — re-validate against [the OWASP page](https://owasp.org/www-project-mcp-top-10/) on every bump) |
-| `clinical-agentic-workflow`   | ChatGPT for Clinicians-style workflow eval | **EXPERIMENTAL** — DO NOT USE IN PRODUCTION (Issue O3 open, PHI redaction false-positives) |
-| `project-deal-commerce`       | Anthropic Project Deal agent commerce      | Stable but threshold-anchored (Issue O4 — `asymmetry_dock_threshold_usd` configurable per deployment) |
-| `agentic-sast-confidence`     | GitLab 18.11 Agentic SAST + Brier loss     | Stable                                |
-| `function-hijacking-robustness` | Forward-looking — client-side trust boundary | v1, offline-fixture replay only (live-replay queued, Issue O5) |
-| `gpt-5-5-differential`        | OpenAI GPT-5.5 launch / paired baseline    | Stable (works for any pairwise model) |
-| `browser-agent`               | browser-use Browser Harness                | Stable (DOM-event + screenshot + assertion shape) |
-| `model-spec-compliance`       | OpenAI Model Spec Evals                    | Stable (1-7 scale, mapped onto Verdict 1-10) |
-| `swe-bench-pro`               | SWE-bench Pro                              | Stable (contamination-resistant successor to Verified) |
-| `code-review-aider-polyglot`  | Aider polyglot benchmark                   | Stable                                |
-| `terminal-bench`              | Terminal-Bench shell-task trajectory eval  | Stable                                |
-| `skill-compliance`            | MLflow skill-compliance evaluation         | Stable (mirrors MLflow's offline)     |
-| `ship-readiness`              | Verdict release-readiness composite        | Stable (binary floors via the rubric weights sidecar — `ship_floor_*` keys configurable per deployment) |
-| `tool-output-rewrite`         | Claude Code v2.1.121 PostToolUse `updatedToolOutput` trust boundary | Stable (verified against published Claude Code v2.1.121 changelog — see Issue O12 for encoding-bypass mitigation) |
-| `eu-ai-act-audit-trail`       | EU AI Act Articles 19, 26 audit-trail evidence | **NOT counsel-reviewed** (Issue O13 open — disclaimer in rubric file; passing the rubric is NOT a determination of regulatory compliance) |
-| `routine-execution`           | Anthropic Routines (research preview) trajectory shape | Stable (Routines is research preview as of 2026-04-29, not GA — heuristic detection opt-in via `VERDICT_DETECT_ROUTINE_HEURISTIC=1`, Issue O15) |
-
-Beta and experimental rubrics carry a moving-target risk — the
-upstream framework's category names, ordering, or severity may
-change before v1, and EXPERIMENTAL rubrics carry known false-
-positive classes that need real-pilot calibration before deploy.
-
----
-
 ## Scoring system
 
 7 weighted dimensions summing to 1.0. Weights live in
@@ -233,36 +194,16 @@ skills/judge/
     explain.py             # /judge --explain Markdown / JSON / HTML-printable
     studio.py              # Local HTML dashboard
     watch.py               # /judge --watch live re-scoring daemon
-    cost_estimator.py      # Per-scorecard USD cost estimator (R4)
-    replay_bfcl_attacks.py # Function-hijacking attack-vector replay harness
-    ship_gate.py           # Ship-readiness gate CLI + SARIF v2.1.0 export
-    judge_replay.py        # Re-score a transcript and assert vs. baseline
-    eu_audit_export.py     # CC2 — EU AI Act Articles 19/26 CSV export
-    benchmark_gaming_detector.py # CC3 — Berkeley RDI exploit-signature detector
-    audit_export.py        # T1 — DPO-ready zip bundle (NOT LEGAL ADVICE)
-    bench_gaming_check.py  # T2 — pre-publication benchmark-gaming linter
-    hook_lint.py           # T3 — PostToolUse hook static analyzer
-    signatures/
-      berkeley-rdi-2026-04-26.json # Berkeley RDI exploit signatures (Issue O14)
+    cost_estimator.py      # Per-scorecard USD cost estimator
+    hook_lint.py           # PostToolUse hook static analyzer
   adapters/
     claude_code.py         # Native JSONL (default)
     cowork.py              # Claude Cowork sessions
-    openai_compatible.py   # Cursor / Continue / generic
     codex.py               # OpenAI Codex CLI
-    gemini_cli.py          # Gemini CLI sessions
-    gemini_deep_research.py# Gemini 3.1 Pro Deep Research / Deep Research Max
-    mlflow_trace.py        # MLflow Trace JSON exports (with OTel GenAI semconv)
-    inspect_ai_log.py      # UK AISI inspect_ai 0.3.x evaluation logs
-    terminal_bench.py      # Terminal-Bench shell-task trajectories
-    browser_harness.py     # browser-use Browser Harness traces
-  integrations/
-    lighteval_shim.py      # LightEval metric shim (lazy-imports lighteval)
-    cloudflare_ai_gateway.py # Cloudflare AI Gateway + Mesh dispatch wrapper
-  exporters/
-    openai_evals.py        # Verdict → OpenAI Model Spec Evals JSON
+    openai_compatible.py   # Cursor / Continue / generic
   analyzers/
     llm_judge.py           # Opt-in second-opinion (Claude API + cache_control)
-  rubrics/                 # 27 rubrics + per-rubric weight-override sidecars
+  rubrics/                 # 11 plugin-domain rubrics + sidecar weights
   scores/                  # Persisted JSON scorecards
   references/              # Scoring methodology + benchmark standards
 agents/judge-agent.md
@@ -271,19 +212,12 @@ hooks/
   common.sh, judge-on-stop.sh, judge-on-subagent-stop.sh, judge-on-stop-failure.sh
 commands/                  # /judge, /scorecard, /benchmark, /judge-config, /against, /compare
 scripts/
-  validate_marketplace.py  # April 2026 schema validator
+  validate_marketplace.py  # Schema validator
   install_rubric.py        # Fetch + validate community rubrics
   benchmark_pack.py        # Regression gate for CI
   sandbox_caps_check.py    # CLAUDE_SANDBOX_CAPS declaration check (CI)
 benchmarks/
-  manifest.json + corpus/  # Curated cases
-routines/
-  weekly-team-digest.md    # Anthropic Routines prompt
-docs/
-  research-log.md          # Dated citations for external specs
-  followups.md             # Tasks awaiting human action
-  metrics.md               # Weekly launch + engineering metrics
-  launch/                  # Launch collateral (HN, Reddit, X, DMs, marketplace)
+  manifest.json + corpus/  # Regression-gate fixtures (NOT a public eval bench — see benchmarks/README.md)
 .github/workflows/
   ci.yml                   # Tests + validators + benchmark gate + shellcheck
 judge-config.json

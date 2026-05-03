@@ -17,14 +17,11 @@ When the user invokes `/judge`, evaluate the most recent skill or agent executio
 - `skill-name` (optional): The name of the skill to judge. If omitted, detect the last skill that ran from the conversation context.
 - `--rubric RUBRIC` (optional): Use a specific rubric file (e.g., `security`, `code-review`). If omitted, auto-detect the best rubric.
 - `--verbose` (optional): Show detailed per-dimension justifications.
-- `--adapter NAME` (optional): Transcript adapter for non-native ecosystems. One of `claude-code`, `cowork`, `openai-compatible`, `codex`, `cursor`, `continue`, `gemini-cli`.
+- `--adapter NAME` (optional): Transcript adapter for non-native ecosystems. One of `claude-code`, `cowork`, `openai-compatible`, `codex`, `cursor`, `continue`.
 - `--model ID` (optional): Model ID override (e.g., `claude-opus-4-7`). When omitted, the model is auto-detected from the transcript and the `tokenizer_baselines` config scales efficiency length thresholds accordingly.
 - `--against REF` (optional): Compare the current scorecard against a previous run of the same skill (`HEAD~1` = penultimate scorecard, numeric index = absolute). Delegates to `skills/judge/scripts/against.py` and exits non-zero on composite regression.
 - `--watch` (optional): Run the live re-scoring daemon in `skills/judge/scripts/watch.py`. Polls the scores directory every 2 s, prints a one-line diff header per change (`improved X, regressed Y, unchanged Z since last run`), and re-emits Verdict Studio to the `--output` HTML path. Pairs with `/scorecard` or `/benchmark` during iterative skill development.
 - `--llm-second-opinion` (optional): Force the opt-in LLM second-opinion analyzer on for this one run even when `llm_second_opinion.enabled = false` in `judge-config.json`. Requires `ANTHROPIC_API_KEY`. See `skills/judge/analyzers/llm_judge.py`.
-- `--export {openai-evals}` (optional): Emit a portable scorecard alongside the native Verdict output. Today supports `openai-evals` (OpenAI Model Spec Evals JSON). Pair with `--out <path>`.
-- `--out PATH` (optional): Destination file for `--export`. Ignored otherwise.
-- `--export-rescale` (optional): When exporting to `openai-evals`, rescale 1-10 Verdict scores into the 1-7 Model Spec bucket per the table in `skills/judge/rubrics/model-spec-compliance.md`. Off by default.
 - `--explain SCORECARD` (optional): Render an existing scorecard JSON in either Markdown (PR-friendly) or JSON (CI-friendly). Delegates to `skills/judge/scripts/explain.py`. Pair with `--format md|json` (default `md`) and optional `--out PATH`. Example: `/judge --explain skills/judge/scores/code-review_2026-04-25.json --format md`. See [`SKILL-judge-explain.md`](../skills/judge/SKILL-judge-explain.md) for the output schema.
 - **See also `/compare`** for explicit two-file delta with Auto Memory regression narrative — complement to `/judge --against HEAD~1`.
 

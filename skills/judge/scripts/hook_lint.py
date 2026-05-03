@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
 """verdict hook lint — static analyzer for PostToolUse hook scripts.
 
-Lints a hook script (``.sh`` / ``.py`` / ``.js``) that targets the
-Claude Code v2.1.121 ``PostToolUse`` lifecycle and may emit
-``hookSpecificOutput.updatedToolOutput``. Pairs with the CC1
-``tool-output-rewrite`` rubric — the rubric scores transcripts on
-the *output* shape; this lint scores the *hook source* on whether
-it produces that shape.
+Lints a hook script (``.sh`` / ``.py`` / ``.js`` / ``.ts``) that
+targets the Claude Code ``PostToolUse`` lifecycle and may emit
+``hookSpecificOutput.updatedToolOutput``. The lint flags safety-
+relevant patterns in the hook source itself.
 
 Findings:
 
 - **F1 — undisclosed-mutation** — the hook writes
   ``updatedToolOutput`` but never emits a ``[hook-rewrote: <tool>]``
-  marker. Adopters running the CC1 rubric will fail their
-  transcripts.
+  disclosure marker downstream tooling can pick up.
 - **F2 — missing-source-tag** — the hook emits
-  ``[hook-rewrote: ...]`` but no ``[hook-source: <path>]`` so the
-  CC1 audit-link dimension caps at ≤ 5.0.
+  ``[hook-rewrote: ...]`` but no ``[hook-source: <path>]`` so an
+  audit cannot trace the rewrite to its source.
 - **F3 — error-suppression-without-justification** — the hook
   flips ``error: true`` → ``error: false`` without an
   ``[error-suppressed-by-design: <reason>]`` marker.
@@ -204,7 +201,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         prog="hook_lint",
         description=(
             "Lint a Claude Code PostToolUse hook script for "
-            "tool-output-rewrite hygiene (CC1)."
+            "safety-relevant patterns in the source."
         ),
     )
     parser.add_argument("hook_path", help="Path to the hook script.")
