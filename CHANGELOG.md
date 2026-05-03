@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **v4.3 scope contract** (`CLAUDE.md` §v4.3 Scope Contract) — pins
+  Verdict to the Claude Code / Cowork plugin scope per the
+  2026-05-03 runbook §scope-reset block. Lists the 11 in-scope
+  rubrics (plugin-domain) and 16 out-of-scope rubrics (frontier-lab
+  cruft queued for v2.0.0 trim). Source of truth:
+  `~/Downloads/AboutMe/skill-references/daily-opportunity-radar/runbook.md`.
+- **Scope-contract regression test**
+  (`tests/test_v43_scope_contract.py`) — three checks: every
+  in-scope rubric has its `.md` file; no unclassified rubric is
+  present (forcing function for new additions); allowlist and
+  deprecation list are disjoint. Adding a new rubric file without
+  updating one of the lists fails the test. **929 tests green**
+  (926 → 929, +3).
+
+### Notes
+
+- This release does **not** trim the out-of-scope rubrics — that
+  ships in v2.0.0. The contract + test land first so the trim PR
+  is mechanical and reviewers have a written reference.
+
 ## [1.4.2] - 2026-04-30
 
 Patch release. Three new rubrics, two new score-engine helpers,
