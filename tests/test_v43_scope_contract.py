@@ -4,16 +4,13 @@
 Per the 2026-05-03 runbook §scope-reset block, Verdict is a
 Claude Code / Cowork plugin only. Frontier-lab eval-bench rubrics
 (SWE-bench, Terminal-Bench, GAIA, OSWorld, MCP attack benches,
-etc.) are explicitly out of scope and queued for the v2.0.0 trim.
+etc.) are explicitly out of scope.
 
-Adding a new rubric file requires either:
-  - adding it to ``IN_SCOPE_V43`` (plugin-domain quality scoring), or
-  - adding it to ``OUT_OF_SCOPE_V43`` (acknowledged frontier-lab
-    cruft awaiting deletion in v2.0.0).
-
-Failure of ``test_no_unclassified_rubrics`` is the forcing function
-that prevents SWE-bench / Terminal-Bench / etc. from being silently
-re-added to the plugin scope.
+This test pins the rubric inventory to ``IN_SCOPE_V43`` (11
+plugin-domain rubrics). It is intentionally **failing today** —
+v1.4.2 still ships 16 out-of-scope rubrics queued for the v2.0.0
+trim. The red CI is the forcing function that motivates the cut;
+once REMOVE-1 lands, the test goes green and stays green.
 
 Source of truth:
     ~/Downloads/AboutMe/skill-references/daily-opportunity-radar/runbook.md
@@ -31,6 +28,8 @@ RUBRICS_DIR = PROJECT_ROOT / "skills" / "judge" / "rubrics"
 # Plugin-scope rubrics (v4.3 contract). Each MUST exist as ``<name>.md``
 # in ``skills/judge/rubrics/``. May optionally have a
 # ``<name>.weights.json`` sidecar and a ``<name>.example.md`` example.
+# Adding a new rubric here is the only way to bring it into scope;
+# anything else fails ``test_no_out_of_scope_rubrics`` below.
 IN_SCOPE_V43: frozenset = frozenset({
     "code-review",
     "security",
@@ -43,29 +42,6 @@ IN_SCOPE_V43: frozenset = frozenset({
     "research",
     "default",
     "custom-template",
-})
-
-# Frontier-lab / eval-bench rubrics queued for removal in v2.0.0.
-# Adding to this list does NOT make a rubric in-scope — it just
-# acknowledges the file is present and pending trim under the
-# v4.3 scope reset.
-OUT_OF_SCOPE_V43: frozenset = frozenset({
-    "agentic-sast-confidence",
-    "browser-agent",
-    "clinical-agentic-workflow",
-    "code-review-aider-polyglot",
-    "eu-ai-act-audit-trail",
-    "function-hijacking-robustness",
-    "gpt-5-5-differential",
-    "model-spec-compliance",
-    "owasp-mcp-top-10-beta",
-    "project-deal-commerce",
-    "routine-execution",
-    "ship-readiness",
-    "skill-compliance",
-    "swe-bench-pro",
-    "terminal-bench",
-    "tool-output-rewrite",
 })
 
 _SIDECAR_SUFFIXES = (".weights.json", ".example.md", ".md")
@@ -99,43 +75,33 @@ class TestV43ScopeContract(unittest.TestCase):
             self.assertTrue(
                 (RUBRICS_DIR / f"{name}.md").is_file(),
                 msg=(
-                    f"v4.3 in-scope rubric '{name}' is missing its "
-                    f".md file. See CLAUDE.md §v4.3 Scope Contract."
+                    f"v4.3 scope reset (2026-05-03): in-scope rubric "
+                    f"'{name}' is missing its .md file. See "
+                    f"AboutMe/skill-references/daily-opportunity-radar/"
+                    f"runbook.md §scope-reset and CLAUDE.md "
+                    f"§v4.3 Scope Contract."
                 ),
             )
 
-    def test_no_unclassified_rubrics(self) -> None:
-        """Reject rubrics that are neither in-scope nor known out-of-scope.
+    def test_no_out_of_scope_rubrics(self) -> None:
+        """Reject every rubric that is not on the v4.3 allowlist.
 
-        This is the forcing function: if a new rubric file is added
-        without updating ``IN_SCOPE_V43`` or ``OUT_OF_SCOPE_V43``,
-        the test fails. Update the relevant frozenset above OR
-        revisit the v4.3 scope reset.
+        Fails today (16 frontier-lab rubrics still present in
+        v1.4.2); passes after the v2.0.0 trim PR removes them.
+        This is the forcing function for the cut.
         """
         present = _rubric_basenames(RUBRICS_DIR)
-        unclassified = present - IN_SCOPE_V43 - OUT_OF_SCOPE_V43
+        out_of_scope = sorted(present - IN_SCOPE_V43)
         self.assertEqual(
-            unclassified,
-            set(),
+            out_of_scope,
+            [],
             msg=(
-                f"Unclassified rubric(s) present: {sorted(unclassified)}. "
-                f"Either add to IN_SCOPE_V43 (plugin-domain) or "
-                f"OUT_OF_SCOPE_V43 (queued for v2.0.0 trim). "
-                f"See CLAUDE.md §v4.3 Scope Contract and the runbook "
-                f"§scope-reset block (2026-05-03)."
-            ),
-        )
-
-    def test_in_scope_and_out_of_scope_disjoint(self) -> None:
-        """A rubric cannot be both in-scope and out-of-scope."""
-        overlap = IN_SCOPE_V43 & OUT_OF_SCOPE_V43
-        self.assertEqual(
-            overlap,
-            frozenset(),
-            msg=(
-                f"Rubric(s) listed in BOTH IN_SCOPE_V43 and "
-                f"OUT_OF_SCOPE_V43: {sorted(overlap)}. Pick one."
-            ),
+                "v4.3 scope reset (2026-05-03): rubric(s) {0} are "
+                "out-of-scope for verdict-as-plugin. See "
+                "AboutMe/skill-references/daily-opportunity-radar/"
+                "runbook.md §scope-reset and CLAUDE.md §v4.3 "
+                "Scope Contract."
+            ).format(out_of_scope),
         )
 
 

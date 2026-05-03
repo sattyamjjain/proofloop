@@ -7,27 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> ⚠️ **CI is red on `main` until the v2.0.0 trim PR lands.** This
+> is intentional: `tests/test_v43_scope_contract.py` is the
+> forcing function for the v4.3 scope cut. See the §Added entry
+> below.
+
 ### Added
 
-- **v4.3 scope contract** (`CLAUDE.md` §v4.3 Scope Contract) — pins
-  Verdict to the Claude Code / Cowork plugin scope per the
+- **v4.3 scope contract** (`CLAUDE.md` §v4.3 Scope Contract) —
+  pins Verdict to the Claude Code / Cowork plugin scope per the
   2026-05-03 runbook §scope-reset block. Lists the 11 in-scope
   rubrics (plugin-domain) and 16 out-of-scope rubrics (frontier-lab
   cruft queued for v2.0.0 trim). Source of truth:
   `~/Downloads/AboutMe/skill-references/daily-opportunity-radar/runbook.md`.
 - **Scope-contract regression test**
-  (`tests/test_v43_scope_contract.py`) — three checks: every
-  in-scope rubric has its `.md` file; no unclassified rubric is
-  present (forcing function for new additions); allowlist and
-  deprecation list are disjoint. Adding a new rubric file without
-  updating one of the lists fails the test. **929 tests green**
-  (926 → 929, +3).
+  (`tests/test_v43_scope_contract.py`) — two checks: every
+  in-scope rubric has its `.md` file (passes today); no rubric
+  outside the allowlist is present (**fails today**, 16 rubrics
+  flagged). The failing test is the forcing function: it goes
+  green only after the v2.0.0 trim PR removes the out-of-scope
+  rubrics. Test failure messages cite the runbook path so
+  reviewers cannot revert the contract without surfacing the
+  scope-reset block.
 
 ### Notes
 
 - This release does **not** trim the out-of-scope rubrics — that
-  ships in v2.0.0. The contract + test land first so the trim PR
-  is mechanical and reviewers have a written reference.
+  ships in v2.0.0. The contract + (failing) test land first so
+  the trim PR is mechanical and reviewers have a written reference.
+- Test count: 926 → 928 unittest cases collected (+2 from
+  the new contract test). Of these, 1 is intentionally failing
+  (`test_no_out_of_scope_rubrics`); the other 927 remain green.
 
 ## [1.4.2] - 2026-04-30
 
