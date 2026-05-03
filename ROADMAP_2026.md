@@ -1,5 +1,14 @@
 # Verdict — Roadmap to Top 1% (April 2026)
 
+> ⚠️ **Historical document.** Sections below reference frontier-lab
+> rubrics, cross-ecosystem adapters, and bench-eval scripts that
+> were removed in v2.0.0 per the 2026-05-03 v4.3 scope reset
+> (see [`CLAUDE.md`](CLAUDE.md) §v4.3 Scope Contract). Items
+> marked `Y*`, `Z*`, `R2`, `BB1`/`BB2`, `CC*`, `T*` are out of
+> scope and will not be re-added without a runbook spec change.
+> Plugin-scope items (UX polish, threshold-blocking ergonomics,
+> per-rubric overrides) remain on the radar.
+
 **Starting point (Apr 2026):** v1.0.0 Claude Code plugin · 7-dimension scoring · 11 domain rubrics · 132 unit tests · stdlib-only Python 3.9+ · single-digit stars.
 **Goal:** 1,000+ GitHub stars within 90 days. Higher confidence than the other three repos because the category is genuinely empty.
 

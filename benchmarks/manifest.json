@@ -30,13 +30,6 @@
       "expected_composite_min": 7.5
     },
     {
-      "name": "routine-triggered-session",
-      "skill": "code-review",
-      "transcript": "corpus/routine-triggered.jsonl",
-      "expected_grade_min": "B",
-      "expected_composite_min": 7.5
-    },
-    {
       "name": "hallucination-flagged-and-corrected",
       "skill": "code-review",
       "transcript": "corpus/hallucination-flagged.jsonl",

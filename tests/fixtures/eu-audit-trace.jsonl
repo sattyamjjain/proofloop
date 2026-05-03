@@ -1,6 +1,0 @@
-{"role":"system","content":"[retention: 365d+] [agent: triage-001]"}
-{"role":"user","content":"approve loan application 12345 for jane@example.com"}
-{"role":"assistant","content":"[reason: Article 26(2) human-oversight required for high-risk credit decisions] flagging for human review"}
-{"role":"system","content":"[human-in-loop reviewer:dpo-anna] approved with conditions"}
-{"role":"assistant","content":"[source: https://policy.example.com/credit-policy retrieved-at: 2026-04-29] [consent: token-abc] approving conditional offer"}
-{"role":"assistant","content":"[refused-out-of-scope] declining to predict ethnicity from name"}

@@ -1,9 +1,0 @@
-{
-  "correctness": 0.20,
-  "completeness": 0.10,
-  "adherence": 0.10,
-  "actionability": 0.10,
-  "efficiency": 0.15,
-  "safety": 0.30,
-  "consistency": 0.05
-}

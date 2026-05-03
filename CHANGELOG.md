@@ -5,39 +5,100 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0] - 2026-05-03
 
-> ⚠️ **CI is red on `main` until the v2.0.0 trim PR lands.** This
-> is intentional: `tests/test_v43_scope_contract.py` is the
-> forcing function for the v4.3 scope cut. See the §Added entry
-> below.
+**BREAKING.** Trims Verdict to its plugin-only scope per the
+2026-05-03 v4.3 runbook §scope-reset block. 16 frontier-lab
+eval-bench rubrics, 6 cross-ecosystem adapters, and 7 bench-eval
+scripts were removed. If you depended on any of them, pin to
+`v1.4.2` or fork. See the migration note in
+[`README.md`](README.md) and the
+[`v4.3 Scope Contract`](CLAUDE.md#v43-scope-contract-2026-05-03)
+in `CLAUDE.md`.
+
+**Test count: 926 → 469** unittest cases (the 466 plugin-scope
+tests pass; the 3 v4.3 contract tests pass; ~457 frontier-lab
+tests were deleted alongside the rubrics they covered).
 
 ### Added
 
-- **v4.3 scope contract** (`CLAUDE.md` §v4.3 Scope Contract) —
-  pins Verdict to the Claude Code / Cowork plugin scope per the
-  2026-05-03 runbook §scope-reset block. Lists the 11 in-scope
-  rubrics (plugin-domain) and 16 out-of-scope rubrics (frontier-lab
-  cruft queued for v2.0.0 trim). Source of truth:
+- **`CLAUDE.md` §v4.3 Scope Contract** — pins the rubric and
+  adapter inventory. Source of truth:
   `~/Downloads/AboutMe/skill-references/daily-opportunity-radar/runbook.md`.
-- **Scope-contract regression test**
-  (`tests/test_v43_scope_contract.py`) — two checks: every
-  in-scope rubric has its `.md` file (passes today); no rubric
-  outside the allowlist is present (**fails today**, 16 rubrics
-  flagged). The failing test is the forcing function: it goes
-  green only after the v2.0.0 trim PR removes the out-of-scope
-  rubrics. Test failure messages cite the runbook path so
-  reviewers cannot revert the contract without surfacing the
-  scope-reset block.
+- **`tests/test_v43_scope_contract.py`** — two checks: every
+  in-scope rubric has its `.md` file; no rubric outside the
+  v4.3 allowlist is present. Forcing function for any future
+  re-add attempt.
+- **`tests/test_skill_md_conformance.py`** — pins
+  `skills/judge/SKILL.md` to the Claude Code skill spec
+  (frontmatter present, required keys, `allowed-tools` is a
+  constrained list, body ≤ 500 lines).
+- **`benchmarks/README.md`** — clarifies that the corpus is the
+  regression-gate fixture set, NOT a public eval bench. We do
+  not advertise leaderboard standing or accept SWE-bench /
+  Terminal-Bench / GAIA / OSWorld submissions.
 
-### Notes
+### Changed
 
-- This release does **not** trim the out-of-scope rubrics — that
-  ships in v2.0.0. The contract + (failing) test land first so
-  the trim PR is mechanical and reviewers have a written reference.
-- Test count: 926 → 928 unittest cases collected (+2 from
-  the new contract test). Of these, 1 is intentionally failing
-  (`test_no_out_of_scope_rubrics`); the other 927 remain green.
+- **`skills/judge/SKILL.md`** — added `allowed-tools: [Read,
+  Write, Edit, Bash]` to the frontmatter (least-privilege).
+  Bumped `version` to `2.0.0`.
+- **`README.md`** — rubric count `27 → 11`; deleted the
+  Compliance rubrics section; trimmed the Architecture tree;
+  trimmed the cross-ecosystem code blocks; added a
+  v1.x → v2.0.0 migration note.
+- **`.claude-plugin/plugin.json` and `marketplace.json`** —
+  bumped to `2.0.0`.
+- **`benchmarks/manifest.json`** — removed the
+  `routine-triggered-session` case (out-of-scope per v4.3);
+  benchmark gate now runs 7 cases (was 8).
+
+### Removed — Breaking changes
+
+**Rubrics (16):** `agentic-sast-confidence`, `browser-agent`,
+`clinical-agentic-workflow`, `code-review-aider-polyglot`,
+`eu-ai-act-audit-trail`, `function-hijacking-robustness`,
+`gpt-5-5-differential`, `model-spec-compliance`,
+`owasp-mcp-top-10-beta`, `project-deal-commerce`,
+`routine-execution`, `ship-readiness`, `skill-compliance`,
+`swe-bench-pro`, `terminal-bench`, `tool-output-rewrite`
+(plus their `.weights.json` and `.example.md` sidecars).
+
+**Scripts (7):** `audit_export.py`, `bench_gaming_check.py`,
+`benchmark_gaming_detector.py`, `eu_audit_export.py`,
+`judge_replay.py`, `replay_bfcl_attacks.py`, `ship_gate.py`.
+Plus the `signatures/berkeley-rdi-2026-04-26.json` exploit
+signature pack.
+
+**Adapters (6):** `browser_harness.py`, `gemini_cli.py`,
+`gemini_deep_research.py`, `inspect_ai_log.py`,
+`mlflow_trace.py`, `terminal_bench.py`. The cross-ecosystem
+`detect_adapter()` confidence scorer is also gone — pass
+`--adapter <name>` explicitly for non-Claude-Code shapes.
+
+**Integrations / exporters:**
+`skills/judge/integrations/cloudflare_ai_gateway.py`,
+`skills/judge/integrations/lighteval_shim.py`,
+`skills/judge/exporters/openai_evals.py`.
+
+**`score.py` helpers:** `_apply_brier_calibration`,
+`_apply_commerce_asymmetry_check`, `_apply_contamination_penalty`,
+`_apply_phi_redaction_check`, `_apply_ship_readiness_floors`,
+`_apply_benchmark_gaming_penalty`,
+`_compute_eu_ai_act_audit_evidence`,
+`_compute_perception_reality_drift`,
+`_detect_hook_rewrite_violations`, `_is_routine_trajectory`
+(plus their constants/regexes). The
+`scorecard.adjustments` object is now `{deduction, bonus}`
+only; downstream consumers reading `adjustments.contamination`,
+`.phi_leak`, `.ship_readiness`, `.tool_output_rewrite`,
+`.eu_ai_act_audit`, `.benchmark_gaming`, etc. must drop those
+references.
+
+**Tests deleted (~33 files):** every test that covered a
+removed rubric / script / adapter, plus the cross-ecosystem
+`test_adapter_registry.py` and the v1.2.0
+`test_rubric_packs.py`.
 
 ## [1.4.2] - 2026-04-30
 
