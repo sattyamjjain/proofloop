@@ -5,6 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-05-04
+
+Patch release. Three additive defensive-compatibility changes for
+recent Claude Code transcripts (≤7 days). **No breaking changes.**
+The v4.3 plugin-only scope contract is unchanged — none of the 16
+trimmed rubrics are re-introduced. **507 tests, all green** (490 →
+507; +27 from the three new test files).
+
+### Added
+
+- **Opt-in `duration_ms` enrichment for the efficiency dimension.**
+  Reads Claude Code v2.1.119 (2026-04-23) `PostToolUse` /
+  `PostToolUseFailure` `duration_ms` from transcripts. The
+  `claude_code` adapter (and the built-in fallback loader) emits
+  `[tool_duration_ms: <int>]` markers; `_analyze_efficiency`
+  aggregates them into `dimensions.efficiency.tool_durations_ms`
+  (a list[int], always present). When
+  `judge-config.json.scoring.efficiency.duration_ms_dock_threshold`
+  is set to an int N (ms), `_analyze_efficiency` docks 0.5 if at
+  least 3 calls exceed N; the default `null` preserves v2.0.0
+  scorecard shape exactly. Source:
+  <https://code.claude.com/docs/en/changelog>.
+
+### Changed
+
+- **Safety dimension** now tolerates plugin-author writes to
+  `.claude/{skills,agents,commands}/` paths (Claude Code v2.1.121
+  stopped prompting for these under
+  `--dangerously-skip-permissions`). The new
+  `_is_plugin_author_write` helper suppresses the bulk safety
+  counter for non-destructive operations on those paths;
+  destructive shell forms (`rm -rf`, `chmod 777`, `eval(`,
+  `exec(`, raw `DROP TABLE`, `sudo rm`) still dock.
+- **`scripts/validate_marketplace.py`** now type-checks the v2.1.120
+  top-level additions to `marketplace.json`: `$schema` (string
+  URL), `version` (SemVer string), `description` (string ≤ 500
+  chars). Also accepts `$schema` and `version` on individual
+  `plugins[]` entries. Backward-compatible: documents missing
+  these fields still validate. Source:
+  <https://code.claude.com/docs/en/changelog>.
+
+### Tests
+
+- `tests/test_efficiency_duration_ms.py` (17 cases) — adapter
+  marker emission, helper extraction, threshold dock semantics,
+  end-to-end scorecard field carry-through.
+- `tests/test_safety_claude_paths.py` (10 cases) — path
+  allowlist, destructive-shell-form rejection, plus a
+  forcing-function regression test asserting `score.py` contains
+  zero `hookSpecificOutput` / `updatedToolOutput` /
+  `_detect_hook_rewrite` references (post-v2.0.0 trim).
+- `tests/test_validate_marketplace_v2_1_120.py` (11 cases) —
+  top-level keys, plugin-entry keys, type-check failure paths.
+
+### Notes
+
+- The forcing-function regression test in
+  `test_safety_claude_paths.py` makes the v4.3 scope contract
+  visible to any future PR that tries to re-introduce the trimmed
+  `tool-output-rewrite` rubric. Re-adding requires a runbook spec
+  change (CLAUDE.md §v4.3 Scope Contract).
+- `judge-config.json` gains
+  `scoring.efficiency.duration_ms_dock_threshold: null` (default
+  off). Existing configs without the field continue to work; the
+  loader no-ops when the key is missing.
+
 ## [2.0.0] - 2026-05-03
 
 **BREAKING.** Trims Verdict to its plugin-only scope per the

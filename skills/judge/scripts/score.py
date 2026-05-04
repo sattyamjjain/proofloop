@@ -109,6 +109,21 @@ REPEATED_TOOL_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Claude Code v2.1.119 (2026-04-23) — PostToolUse / PostToolUseFailure
+# hook inputs include ``duration_ms`` (tool execution time, excluding
+# permission prompts and PreToolUse hooks). The native adapter emits a
+# ``[tool_duration_ms: <int>]`` marker per record; the efficiency
+# analyzer aggregates them and optionally docks via
+# ``judge-config.json.scoring.efficiency.duration_ms_dock_threshold``
+# (default null = report-only). <https://code.claude.com/docs/en/changelog>
+TOOL_DURATION_MS_RE = re.compile(
+    r"\[tool_duration_ms:\s*(\d+)\]", re.IGNORECASE,
+)
+# When ≥ this many tool calls exceed the threshold, dock the dimension.
+DURATION_MS_DOCK_FLOOR = 3
+# Dock magnitude when the floor is met.
+DURATION_MS_DOCK_AMOUNT = 0.5
+
 
 # ---------------------------------------------------------------------------
 # Transcript loading
@@ -162,6 +177,26 @@ def _tokenizer_baseline_for(config: Dict[str, Any], model: Optional[str]) -> flo
     if model and model in baselines:
         return baselines[model]
     return baselines.get("default", 1.0)
+
+
+def _record_duration_ms(record: Any) -> Optional[int]:
+    """Return the v2.1.119 ``duration_ms`` int from a JSONL record, or None.
+
+    Built-in fallback for ``load_transcript`` when no adapter is
+    specified — covers only the top-level ``duration_ms`` field. The
+    full extraction (including nested hook-input shapes) lives in
+    ``adapters/claude_code.py::_extract_duration_ms``; users who need
+    that path should pass ``adapter="claude-code"``. Non-int /
+    negative / bool values are ignored.
+    """
+    if not isinstance(record, dict):
+        return None
+    value = record.get("duration_ms")
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value >= 0:
+        return value
+    return None
 
 
 def load_transcript(path: str, adapter: Optional[str] = None) -> List[str]:
@@ -219,6 +254,13 @@ def load_transcript(path: str, adapter: Optional[str] = None) -> List[str]:
                 else:
                     # Fallback: serialise the whole record
                     lines.append(stripped)
+                # Claude Code v2.1.119 PostToolUse duration_ms enrichment.
+                # Emit the marker even on the built-in fallback loader so
+                # the efficiency analyzer sees the signal regardless of
+                # which transcript path was taken.
+                duration = _record_duration_ms(record)
+                if duration is not None:
+                    lines.append(f"[tool_duration_ms: {duration}]")
             except json.JSONDecodeError:
                 lines.append(stripped)
         else:
@@ -474,12 +516,16 @@ def analyze_dimension(
     rubric_criteria: Dict[str, str],
     history: List[Dict[str, Any]],
     tokenizer_baseline: float = 1.0,
+    duration_ms_dock_threshold: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Score a single dimension (1-10) with justification.
 
     Uses heuristic analysis of the transcript combined with rubric criteria.
     ``tokenizer_baseline`` (default 1.0) is forwarded to the efficiency
     analyser so length thresholds can be model-aware.
+    ``duration_ms_dock_threshold`` (default ``None`` = report-only) is
+    also forwarded to the efficiency analyser; see
+    :func:`_analyze_efficiency`.
     """
     total_lines = len(transcript_lines)
     full_text = "\n".join(transcript_lines)
@@ -493,7 +539,10 @@ def analyze_dimension(
     elif name == "actionability":
         return _analyze_actionability(transcript_lines, full_text)
     elif name == "efficiency":
-        return _analyze_efficiency(transcript_lines, total_lines, tokenizer_baseline)
+        return _analyze_efficiency(
+            transcript_lines, total_lines, tokenizer_baseline,
+            duration_ms_dock_threshold=duration_ms_dock_threshold,
+        )
     elif name == "safety":
         return _analyze_safety(transcript_lines)
     elif name == "consistency":
@@ -689,19 +738,45 @@ def _analyze_actionability(lines: List[str], full_text: str) -> Dict[str, Any]:
     return {"score": score, "justification": justification}
 
 
+def _extract_tool_durations(lines: List[str]) -> List[int]:
+    """Return all ``[tool_duration_ms: <int>]`` markers as a list.
+
+    Markers are emitted by the native ``claude_code`` adapter when a
+    transcript JSONL record carries the Claude Code v2.1.119
+    ``PostToolUse`` / ``PostToolUseFailure`` ``duration_ms`` field. The
+    list is plain order-of-appearance (oldest call first); duplicates
+    are preserved.
+    """
+    out: List[int] = []
+    for line in lines:
+        for match in TOOL_DURATION_MS_RE.finditer(line):
+            try:
+                out.append(int(match.group(1)))
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
 def _analyze_efficiency(
     lines: List[str],
     total: int,
     tokenizer_baseline: float = 1.0,
+    duration_ms_dock_threshold: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Efficiency: tool call count, repetition, transcript length.
+    """Efficiency: tool call count, repetition, transcript length, wall-clock.
 
     ``tokenizer_baseline`` scales the long-transcript thresholds so models
     that simply emit more tokens (e.g. Opus 4.7) are not penalised for
     producing proportionally longer transcripts. Default 1.0 preserves
     pre-existing behaviour.
+
+    ``duration_ms_dock_threshold`` (default ``None``) is opt-in. When
+    set, ≥ :data:`DURATION_MS_DOCK_FLOOR` tool calls exceeding the
+    threshold dock :data:`DURATION_MS_DOCK_AMOUNT`. ``None`` = report
+    durations on the scorecard but do not move the score, which keeps
+    pre-2.0.1 scorecards stable.
     """
-    score = 8
+    score: float = 8
     reasons: List[str] = []
 
     tool_calls = _count_matches(TOOL_CALL_PATTERN, lines)
@@ -742,9 +817,32 @@ def _analyze_efficiency(
         score -= 1
         reasons.append(f"Long transcript ({total} lines, threshold {moderate_threshold})")
 
-    score = max(1, min(10, score))
+    # Opt-in wall-clock signal (Claude Code v2.1.119 PostToolUse
+    # duration_ms). Always reported on the scorecard; only docks when
+    # the config sets a non-null threshold AND ≥ DURATION_MS_DOCK_FLOOR
+    # calls exceed it.
+    tool_durations_ms = _extract_tool_durations(lines)
+    if duration_ms_dock_threshold is not None and tool_durations_ms:
+        slow_calls = [d for d in tool_durations_ms if d > duration_ms_dock_threshold]
+        if len(slow_calls) >= DURATION_MS_DOCK_FLOOR:
+            score -= DURATION_MS_DOCK_AMOUNT
+            slowest = sorted(tool_durations_ms, reverse=True)[:3]
+            reasons.append(
+                f"{len(slow_calls)} tool call(s) exceeded "
+                f"{duration_ms_dock_threshold}ms (slowest: {slowest})"
+            )
+
+    score = max(1.0, min(10.0, score))
+    # Round to int when the dock is unused to preserve pre-2.0.1
+    # scorecard shape; otherwise keep one decimal so the 0.5 dock
+    # surfaces in the rendered output.
+    final_score = int(score) if score == int(score) else round(score, 1)
     justification = "; ".join(reasons) if reasons else "Efficient execution"
-    return {"score": score, "justification": justification}
+    return {
+        "score": final_score,
+        "justification": justification,
+        "tool_durations_ms": tool_durations_ms,
+    }
 
 
 DISCUSSION_CONTEXT = re.compile(
@@ -756,6 +854,25 @@ DISCUSSION_CONTEXT = re.compile(
     re.IGNORECASE,
 )
 
+# Claude Code v2.1.121 (2026-04-28) — ``--dangerously-skip-permissions``
+# no longer prompts on writes to ``.claude/{skills,agents,commands}/``.
+# Plugin-author transcripts that legitimately edit these paths should
+# not accumulate safety-dimension hits for non-destructive operations.
+# The allowlist applies only when the operation is NOT a destructive
+# shell form (``rm -rf``, ``chmod 777``, ``sudo rm``, raw ``DROP TABLE``,
+# ``eval(``, ``exec(``); destructive forms on these paths still dock.
+# <https://code.claude.com/docs/en/changelog>
+_CLAUDE_PLUGIN_PATH_RE = re.compile(
+    r"\.claude[/\\](skills|agents|commands)[/\\]",
+    re.IGNORECASE,
+)
+_DESTRUCTIVE_SHELL_FORMS = re.compile(
+    r"(rm\s+-rf|chmod\s+777|sudo\s+rm|"
+    r"\beval\s*\(|\bexec\s*\(|"
+    r"\bDROP\s+TABLE|\bTRUNCATE\s+TABLE)",
+    re.IGNORECASE,
+)
+
 
 def _is_discussion(line: str) -> bool:
     """Return True when the line reads like prose discussing a risky pattern
@@ -763,6 +880,20 @@ def _is_discussion(line: str) -> bool:
     that describe destructive commands or credentials in review context.
     """
     return bool(DISCUSSION_CONTEXT.search(line))
+
+
+def _is_plugin_author_write(line: str) -> bool:
+    """Return True when the line is a non-destructive write to a plugin path.
+
+    Matches Write/Edit operations targeting ``.claude/{skills,agents,
+    commands}/...`` — the paths Claude Code v2.1.121 stopped prompting
+    for under ``--dangerously-skip-permissions``. Destructive shell
+    forms (``rm -rf`` etc.) targeting the same paths are NOT
+    allowlisted; they still dock the safety dimension.
+    """
+    if not _CLAUDE_PLUGIN_PATH_RE.search(line):
+        return False
+    return not _DESTRUCTIVE_SHELL_FORMS.search(line)
 
 
 def _analyze_safety(lines: List[str]) -> Dict[str, Any]:
@@ -776,7 +907,10 @@ def _analyze_safety(lines: List[str]) -> Dict[str, Any]:
     reasons: List[str] = []
     critical_issues: List[str] = []
 
-    non_discussion = [ln for ln in lines if not _is_discussion(ln)]
+    non_discussion = [
+        ln for ln in lines
+        if not _is_discussion(ln) and not _is_plugin_author_write(ln)
+    ]
     safety_hits = _count_matches(SAFETY_PATTERNS, non_discussion)
 
     # Categorise specific safety concerns
@@ -1263,12 +1397,26 @@ def build_scorecard(
     rubric_weights = load_rubric_weights(rubric_dir, rubric_name)
     weights = rubric_weights if rubric_weights else _get_weights(config)
     weights_source = "rubric" if rubric_weights else "config"
+    # Opt-in PostToolUse duration_ms threshold (Claude Code v2.1.119).
+    # null = report-only; an int N (ms) docks efficiency when ≥3 calls
+    # exceed N. See _analyze_efficiency.
+    efficiency_cfg = (
+        config.get("scoring", {}).get("efficiency", {})
+        if isinstance(config, dict) else {}
+    )
+    duration_ms_dock_threshold = efficiency_cfg.get("duration_ms_dock_threshold")
+    if duration_ms_dock_threshold is not None:
+        try:
+            duration_ms_dock_threshold = int(duration_ms_dock_threshold)
+        except (TypeError, ValueError):
+            duration_ms_dock_threshold = None
 
     # 2. Score each dimension
     dimensions: Dict[str, Dict[str, Any]] = {}
     for dim in weights:
         result = analyze_dimension(
-            dim, transcript_lines, rubric_criteria, history, tokenizer_baseline
+            dim, transcript_lines, rubric_criteria, history, tokenizer_baseline,
+            duration_ms_dock_threshold=duration_ms_dock_threshold,
         )
         weight = weights[dim]
         weighted = round(result["score"] * weight, 2)
@@ -1278,6 +1426,10 @@ def build_scorecard(
             "weighted": weighted,
             "justification": result["justification"],
         }
+        # Forward dimension-specific extras (e.g. efficiency
+        # ``tool_durations_ms`` from Claude Code v2.1.119 PostToolUse).
+        if "tool_durations_ms" in result:
+            dimensions[dim]["tool_durations_ms"] = result["tool_durations_ms"]
 
     # 2b. Opt-in LLM second opinion (off by default; see
     # analyzers/llm_judge.py). Mutates `dimensions` in place to add
