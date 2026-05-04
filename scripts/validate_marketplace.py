@@ -11,6 +11,14 @@ the current working directory. Intended for CI gating and local dev.
 
 Schema source: <https://code.claude.com/docs/en/plugin-marketplaces>
 (retrieved 2026-04-18; see docs/research-log.md).
+
+Schema-evolution history (Claude Code releases that touched the
+marketplace.json / plugin.json shape):
+
+- 2.1.120 (2026-04-28) — ``claude plugin validate`` now accepts
+  ``$schema``, ``version``, ``description`` at the top level of
+  ``marketplace.json`` and ``$schema`` in ``plugin.json``.
+  <https://code.claude.com/docs/en/changelog>
 """
 from __future__ import annotations
 
@@ -38,6 +46,11 @@ RESERVED_NAMES: set = {
 VALID_SOURCE_TYPES: set = {"github", "url", "git-subdir", "npm"}
 KEBAB_CASE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 SHA_40 = re.compile(r"^[0-9a-f]{40}$")
+# Permissive SemVer (allows pre-release / build suffixes the spec accepts).
+SEMVER_RE = re.compile(
+    r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$"
+)
+MAX_DESCRIPTION_LEN = 500
 
 # ---------------------------------------------------------------------------
 # Validation
@@ -102,6 +115,41 @@ def _validate_plugin(plugin: Any, index: int, errors: List[str]) -> None:
         _error(errors, path, "keywords must be an array")
     if "strict" in plugin and not isinstance(plugin["strict"], bool):
         _error(errors, path, "strict must be a boolean")
+    # Claude Code 2.1.120 — $schema is now accepted on plugin entries too.
+    if "$schema" in plugin and not isinstance(plugin["$schema"], str):
+        _error(errors, path, "$schema must be a string URL")
+    if "version" in plugin:
+        version = plugin["version"]
+        if not isinstance(version, str) or not SEMVER_RE.match(version):
+            _error(errors, path, f"version {version!r} is not SemVer")
+
+
+def _validate_top_level_v2_1_120(data: dict, errors: List[str]) -> None:
+    """Type-check the v2.1.120 top-level additions (no-op when absent).
+
+    ``$schema``, ``version``, and ``description`` are now accepted by
+    ``claude plugin validate`` on ``marketplace.json``. We type-check
+    them when present so a typo like ``version: 1`` (int instead of
+    SemVer string) surfaces here rather than at install time. Absent
+    fields stay backward-compatible with pre-2.1.120 marketplace
+    documents.
+    """
+    if "$schema" in data and not isinstance(data["$schema"], str):
+        _error(errors, "$schema", "must be a string URL")
+    if "version" in data:
+        version = data["version"]
+        if not isinstance(version, str) or not SEMVER_RE.match(version):
+            _error(errors, "version", f"{version!r} is not SemVer")
+    if "description" in data:
+        description = data["description"]
+        if not isinstance(description, str):
+            _error(errors, "description", "must be a string")
+        elif len(description) > MAX_DESCRIPTION_LEN:
+            _error(
+                errors,
+                "description",
+                f"exceeds {MAX_DESCRIPTION_LEN} chars (got {len(description)})",
+            )
 
 
 def validate_marketplace(data: Any) -> List[str]:
@@ -145,6 +193,8 @@ def validate_marketplace(data: Any) -> List[str]:
     metadata = data.get("metadata")
     if metadata is not None and not isinstance(metadata, dict):
         _error(errors, "metadata", "must be an object if present")
+
+    _validate_top_level_v2_1_120(data, errors)
 
     return errors
 

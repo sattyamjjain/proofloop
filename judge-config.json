@@ -27,6 +27,10 @@
       "efficiency": 0.10,
       "safety": 0.10,
       "consistency": 0.05
+    },
+    "efficiency": {
+      "_comment": "Set duration_ms_dock_threshold to N (ms) to dock efficiency when >=3 tool calls exceed N (Claude Code v2.1.119 PostToolUse duration_ms). null = report-only.",
+      "duration_ms_dock_threshold": null
     }
   },
   "tokenizer_baselines": {

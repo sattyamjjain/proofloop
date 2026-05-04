@@ -49,6 +49,15 @@ MANAGED_MEMORY_PUSH_PREFIX: str = "[managed-memory-push] "
 
 _MEMORY_TOKENS = ("memory_block", "<memory>", "auto-memory", "claude_memory")
 _MANAGED_MEMORY_TOKENS = ("managed_memory_v1", "agent_memory", "parent_agent_id")
+
+# Claude Code v2.1.119 (2026-04-23) — PostToolUse / PostToolUseFailure
+# hook inputs include ``duration_ms``. Scope: tool execution time
+# excluding permission prompts and PreToolUse hooks. The adapter emits
+# ``[tool_duration_ms: <int>]`` adjacent to the record's normal text so
+# the score.py efficiency analyzer can aggregate without parsing the
+# raw JSONL shape itself. Source:
+# <https://code.claude.com/docs/en/changelog>
+TOOL_DURATION_MS_TAG: str = "[tool_duration_ms: {ms}]"
 _MANAGED_PULL_OPS = frozenset({
     "read", "pull", "fetch", "load", "get", "retrieve",
 })
@@ -122,7 +131,38 @@ def _extract_from_record(record: dict, raw_line: str, in_memory: bool) -> List[s
         out = [prefix + line for line in out]
     elif in_memory:
         out = [MEMORY_PREFIX + line for line in out]
+    duration_ms = _extract_duration_ms(record)
+    if duration_ms is not None:
+        tag = TOOL_DURATION_MS_TAG.format(ms=duration_ms)
+        # Append (not prepend) so the marker doesn't disrupt the
+        # primary text-extraction order downstream consumers depend on.
+        out.append(tag)
     return out
+
+
+def _extract_duration_ms(record: Dict[str, Any]) -> Any:
+    """Return the v2.1.119 ``duration_ms`` int if present, else ``None``.
+
+    Looks at the record top-level first (where the hook input is most
+    likely to live), then inside an optional ``hookSpecificOutput``
+    object (defensive — Claude Code sometimes nests hook payloads).
+    Non-int / negative values are ignored.
+    """
+    if not isinstance(record, dict):
+        return None
+    candidates = []
+    if "duration_ms" in record:
+        candidates.append(record.get("duration_ms"))
+    nested = record.get("hookSpecificOutput")
+    if isinstance(nested, dict) and "duration_ms" in nested:
+        candidates.append(nested.get("duration_ms"))
+    for value in candidates:
+        if isinstance(value, bool):
+            # bool is a subclass of int — exclude explicitly.
+            continue
+        if isinstance(value, int) and value >= 0:
+            return value
+    return None
 
 
 def _extract_lines_from_file(path: Path) -> List[str]:
