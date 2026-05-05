@@ -2,7 +2,7 @@
 name: judge
 displayName: "Verdict — Universal Quality Evaluator"
 description: "Evaluates the execution quality of any skill or agent using 7-dimension scoring with configurable rubrics"
-version: "2.0.0"
+version: "2.0.1"
 author: "Sattyam Jain"
 allowed-tools: [Read, Write, Edit, Bash]
 autoActivate:

@@ -27,6 +27,8 @@ jobs:
         run: python3 -m unittest discover tests/ -v
       - name: Validate marketplace.json
         run: python3 scripts/validate_marketplace.py
+      - name: README release anchor matches CHANGELOG
+        run: python3 scripts/check_readme_release_anchor.py
       - name: Benchmark pack (regression gate)
         run: python3 scripts/benchmark_pack.py
 

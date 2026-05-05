@@ -18,7 +18,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
-import validate_marketplace as vm  # noqa: E402
+import validate_marketplace as vm  # noqa: E402,F401
 
 
 def _minimal_marketplace(**overrides) -> dict:
@@ -118,6 +118,42 @@ class TestPluginEntrySchema(unittest.TestCase):
             any("version" in e for e in errors),
             msg=f"expected plugin version error in {errors}",
         )
+
+
+class TestClaudeCodeReleaseAuditLog(unittest.TestCase):
+    """Forcing function: don't silently drop the audit log comment block.
+
+    The block lists every Claude Code release that touched (or
+    explicitly did not touch) the marketplace.json / plugin.json
+    schema. A future cycle that prunes the comment would lose the
+    forward-looking sync visibility — this test surfaces the
+    deletion at PR time.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        path = PROJECT_ROOT / "scripts" / "validate_marketplace.py"
+        cls.source = path.read_text(encoding="utf-8")
+
+    def test_audit_log_lists_recent_releases(self) -> None:
+        for marker in (
+            "v2.1.119",
+            "v2.1.120",
+            "v2.1.121",
+            "v2.1.122",
+            "v2.1.123",
+        ):
+            self.assertIn(
+                marker,
+                self.source,
+                msg=(
+                    f"validate_marketplace.py audit log is missing "
+                    f"{marker}. The comment block at the top of the "
+                    f"file is the marketplace-schema sync visibility "
+                    f"surface; do not prune it without replacing the "
+                    f"oldest entries first."
+                ),
+            )
 
 
 if __name__ == "__main__":

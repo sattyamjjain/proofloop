@@ -11,15 +11,31 @@ the current working directory. Intended for CI gating and local dev.
 
 Schema source: <https://code.claude.com/docs/en/plugin-marketplaces>
 (retrieved 2026-04-18; see docs/research-log.md).
-
-Schema-evolution history (Claude Code releases that touched the
-marketplace.json / plugin.json shape):
-
-- 2.1.120 (2026-04-28) — ``claude plugin validate`` now accepts
-  ``$schema``, ``version``, ``description`` at the top level of
-  ``marketplace.json`` and ``$schema`` in ``plugin.json``.
-  <https://code.claude.com/docs/en/changelog>
 """
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Claude Code release audit log (most recent first)
+# ──────────────────────────────────────────────────────────────────────────────
+# v2.1.123 (2026-04-29) — OAuth 401 retry-loop fix when
+#   CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1. Marketplace-schema-irrelevant.
+#   No validator change required.
+# v2.1.122 (2026-04-28) — ANTHROPIC_BEDROCK_SERVICE_TIER env var; PR-URL
+#   paste in /resume; /mcp command updates. Marketplace-schema-irrelevant.
+#   No validator change required.
+# v2.1.121 (2026-04-28) — PostToolUse hooks updatedToolOutput now applies
+#   to ALL tools (was MCP-only); --dangerously-skip-permissions no longer
+#   prompts for writes to .claude/{skills,agents,commands}/; plugin prune
+#   cascade. Marketplace-schema-irrelevant; safety-dim allowlist landed
+#   in v2.0.1 score.py.
+# v2.1.120 (2026-04-28) — claude plugin validate accepts $schema, version,
+#   description at marketplace.json top level + $schema at plugin.json top
+#   level. Marketplace-schema-RELEVANT. Validator updated in v2.0.1
+#   (this file).
+# v2.1.119 (2026-04-23) — PostToolUse / PostToolUseFailure hook inputs
+#   gain duration_ms field. Marketplace-schema-irrelevant; efficiency-dim
+#   enrichment landed in v2.0.1 claude_code adapter + score.py.
+# Source: https://code.claude.com/docs/en/changelog
+# ──────────────────────────────────────────────────────────────────────────────
 from __future__ import annotations
 
 import json
