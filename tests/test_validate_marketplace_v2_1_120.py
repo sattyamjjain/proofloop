@@ -135,13 +135,13 @@ class TestClaudeCodeReleaseAuditLog(unittest.TestCase):
         path = PROJECT_ROOT / "scripts" / "validate_marketplace.py"
         cls.source = path.read_text(encoding="utf-8")
 
-    def test_audit_log_lists_recent_releases(self) -> None:
+    def test_audit_log_lists_most_recent_five(self) -> None:
         for marker in (
-            "v2.1.119",
-            "v2.1.120",
-            "v2.1.121",
             "v2.1.122",
             "v2.1.123",
+            "v2.1.124",
+            "v2.1.125",
+            "v2.1.126",
         ):
             self.assertIn(
                 marker,
@@ -150,8 +150,24 @@ class TestClaudeCodeReleaseAuditLog(unittest.TestCase):
                     f"validate_marketplace.py audit log is missing "
                     f"{marker}. The comment block at the top of the "
                     f"file is the marketplace-schema sync visibility "
-                    f"surface; do not prune it without replacing the "
-                    f"oldest entries first."
+                    f"surface; rotate when a new release lands but "
+                    f"never below the most recent five."
+                ),
+            )
+
+    def test_audit_log_pruned_oldest_three(self) -> None:
+        # v2.1.119 / v2.1.120 / v2.1.121 were rotated out in v2.0.2.
+        # The footer paragraph names them as "earlier audited entries
+        # pruned per the ≤5-release cap" — the markers themselves
+        # appear there. Anything earlier should be absent entirely.
+        for pruned in ("v2.1.118",):
+            self.assertNotIn(
+                pruned,
+                self.source,
+                msg=(
+                    f"validate_marketplace.py audit log still references "
+                    f"{pruned}. The block must stay at exactly the most "
+                    f"recent five and pruned-entries must not linger."
                 ),
             )
 

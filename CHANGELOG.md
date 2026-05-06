@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-05-06
+
+Patch release. Defensive-compatibility extension to the safety-
+dimension allowlist tracking Claude Code v2.1.126 (2026-05-01).
+**No breaking changes.** The v4.3 plugin-only scope contract is
+unchanged — none of the 16 trimmed rubrics are re-introduced.
+**538 tests, all green** (512 → 538; +26 from the new test file +
+one extended grep test).
+
+### Changed
+
+- **Safety-dim allowlist widened** to track Claude Code v2.1.126's
+  expansion of `--dangerously-skip-permissions`. The
+  `_is_plugin_author_write` helper in `score.py` now allowlists
+  non-destructive writes to:
+  - `.claude/` subtree (any depth — was `.claude/{skills,agents,
+    commands}/` only in v2.0.1)
+  - `.git/` subtree (`.git/hooks/`, `.git/config`, `.git/info/`)
+  - `.vscode/` subtree (`.vscode/settings.json`, `.vscode/launch.json`,
+    `.vscode/tasks.json`, etc.)
+  - Closed POSIX/zsh shell-config-file set: `.bashrc`,
+    `.bash_profile`, `.profile`, `.zshrc`, `.zprofile`, `.zlogin`,
+    `.zshenv`
+  Destructive shell forms (`rm -rf`, `chmod 777`, `sudo rm`,
+  `eval(`, `exec(`, raw `DROP TABLE` / `TRUNCATE TABLE`) on the
+  allowlisted paths still dock the safety dimension. The
+  shell-config-file set is intentionally **closed**: we do NOT glob
+  `.*rc`, which would tolerate writes to `.npmrc` (npm credentials)
+  or `.dockerrc` (registry creds).
+- **Claude Code release audit comment block** in
+  `scripts/validate_marketplace.py` rotated to the most-recent five
+  releases (newest first): v2.1.126 / v2.1.125 / v2.1.124 / v2.1.123
+  / v2.1.122. The earlier-audited v2.1.121 / v2.1.120 / v2.1.119
+  entries are referenced in the footer paragraph but pruned from
+  the per-release table (≤5-release cap).
+
+### Tests
+
+- `tests/test_safety_v2_1_126_paths.py` (25 cases) — 3 git
+  subtree, 3 vscode subtree, 7 closed shell-config-file, 4
+  destructive-precedence, 4 exfil-risk-not-excused, 4
+  end-to-end safety-analyzer integration.
+- `tests/test_validate_marketplace_v2_1_120.py` — extended grep
+  test now asserts the most-recent-five markers
+  (v2.1.122–v2.1.126) and pins the prune of pre-v2.1.122 entries.
+- `tests/test_safety_claude_paths.py` (10 cases from v2.0.1) —
+  remains green; the path-class widening is additive.
+
+### Notes
+
+- The shell-config-file set explicitly excludes `.fishrc` and
+  `.config/fish/config.fish`. The Anthropic v2.1.126 changelog text
+  reads "shell config files" without enumerating; verdict ships the
+  conservative POSIX/zsh login set. If a future Claude Code release
+  documents the explicit list and includes fish, widen here and
+  update the audit comment block.
+- The `.npmrc` / `.dockerrc` / `.aws/credentials` paths remain
+  unallowlisted by design. Verdict will dock writes to those files
+  even under `--dangerously-skip-permissions` — these are real
+  exfil-risk surfaces and not what the v2.1.126 expansion targeted.
+
 ## [2.0.1] - 2026-05-04
 
 Patch release. Three additive defensive-compatibility changes for

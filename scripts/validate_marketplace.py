@@ -14,26 +14,31 @@ Schema source: <https://code.claude.com/docs/en/plugin-marketplaces>
 """
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Claude Code release audit log (most recent first)
+# Claude Code release audit log (most recent five, newest first)
 # ──────────────────────────────────────────────────────────────────────────────
+# v2.1.126 (2026-05-01) — /model picker reads gateway /v1/models when
+#   ANTHROPIC_BASE_URL is set; claude project purge [path]; the
+#   --dangerously-skip-permissions allowlist now also covers .git/,
+#   .vscode/, and shell config files (was .claude/{skills,agents,commands}/
+#   only). Marketplace-schema-irrelevant. Safety-dim allowlist extension
+#   landed in v2.0.2 score.py.
+# v2.1.125 (2026-04-30/05-01) — alwaysLoad option for MCP server config;
+#   claude plugin prune for orphaned plugin deps; type-to-filter search
+#   box on /skills. Marketplace-schema-irrelevant.
+# v2.1.124 (2026-04-30) — broad update: faster MCP / plugin workflows;
+#   skill search box; richer hooks; improved terminal / fullscreen;
+#   better SDK + VSCode; stability fixes (memory leaks, resume crashes,
+#   OAuth, shell tools). Marketplace-schema-irrelevant.
 # v2.1.123 (2026-04-29) — OAuth 401 retry-loop fix when
-#   CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1. Marketplace-schema-irrelevant.
-#   No validator change required.
+#   CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1. Marketplace-schema-
+#   irrelevant. No validator change required.
 # v2.1.122 (2026-04-28) — ANTHROPIC_BEDROCK_SERVICE_TIER env var; PR-URL
-#   paste in /resume; /mcp command updates. Marketplace-schema-irrelevant.
-#   No validator change required.
-# v2.1.121 (2026-04-28) — PostToolUse hooks updatedToolOutput now applies
-#   to ALL tools (was MCP-only); --dangerously-skip-permissions no longer
-#   prompts for writes to .claude/{skills,agents,commands}/; plugin prune
-#   cascade. Marketplace-schema-irrelevant; safety-dim allowlist landed
-#   in v2.0.1 score.py.
-# v2.1.120 (2026-04-28) — claude plugin validate accepts $schema, version,
-#   description at marketplace.json top level + $schema at plugin.json top
-#   level. Marketplace-schema-RELEVANT. Validator updated in v2.0.1
-#   (this file).
-# v2.1.119 (2026-04-23) — PostToolUse / PostToolUseFailure hook inputs
-#   gain duration_ms field. Marketplace-schema-irrelevant; efficiency-dim
-#   enrichment landed in v2.0.1 claude_code adapter + score.py.
+#   paste in /resume; /mcp command updates. Marketplace-schema-
+#   irrelevant. No validator change required.
+# Earlier audited entries (v2.1.121 / v2.1.120 / v2.1.119) pruned per
+# the ≤5-release cap. v2.1.121 safety-allowlist + v2.1.120 marketplace
+# validator keys + v2.1.119 duration_ms enrichment all landed in v2.0.1
+# (CHANGELOG [2.0.1] - 2026-05-04).
 # Source: https://code.claude.com/docs/en/changelog
 # ──────────────────────────────────────────────────────────────────────────────
 from __future__ import annotations

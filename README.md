@@ -279,11 +279,17 @@ shellcheck hooks/*.sh                         # hook-script lint
 ## Roadmap
 
 See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Latest
-release: [v2.0.1](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.1)
-(additive: opt-in `duration_ms` enrichment + safety `.claude` path
-allowlist + marketplace validator v2.1.120 keys). The previous
-major, [v2.0.0](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.0),
-was a breaking trim to the v4.3 plugin-only scope — see
+release: [v2.0.2](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.2)
+(safety-dim allowlist tracks Claude Code v2.1.126 — `.git/`,
+`.vscode/`, and a closed POSIX/zsh shell-config-file set added to
+`_is_plugin_author_write`; destructive shell forms still dock).
+Previous releases:
+[v2.0.1](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.1)
+(opt-in `duration_ms` enrichment + safety `.claude` path
+allowlist + marketplace validator v2.1.120 keys), and the
+breaking
+[v2.0.0](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.0)
+trim to the v4.3 plugin-only scope — see
 [`CHANGELOG.md`](CHANGELOG.md#200---2026-05-03) and the
 [v1.x → v2.0.0 migration note](#features). No open tracker issues —
 each cycle's scope is tracked in a fresh issue, opened when the
