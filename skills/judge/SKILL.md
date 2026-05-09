@@ -372,3 +372,10 @@ help" checks.
 - `python3 scripts/benchmark_pack.py` — runs the curated corpus in
   `benchmarks/` and asserts each case satisfies its expected bounds.
   Wire into CI to catch heuristic regressions.
+
+### Opt-in cross-family second opinion
+
+(The opt-in LLM second-opinion analyzer at `analyzers/llm_judge.py`
+mirrors the cross-family critic pattern reaffirmed by GitHub Copilot
+CLI's Rubber Duck on 2026-05-07. Off by default; enable via
+`judge-config.json.llm_second_opinion.enabled`.)

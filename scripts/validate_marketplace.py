@@ -16,6 +16,23 @@ Schema source: <https://code.claude.com/docs/en/plugin-marketplaces>
 # ──────────────────────────────────────────────────────────────────────────────
 # Claude Code release audit log (most recent five, newest first)
 # ──────────────────────────────────────────────────────────────────────────────
+# v2.1.129 (≤2026-05-08) — worktree.baseRef setting (`fresh` | `head`);
+#   default flipped back to `fresh` (was local HEAD in v2.1.128); new
+#   sandbox.bwrapPath and sandbox.socatPath managed settings (Linux/WSL).
+#   Marketplace-schema-irrelevant.
+# v2.1.128 (≤2026-05-07) — gateway /v1/models discovery on /model picker
+#   is now opt-in via CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1 (was
+#   automatic in v2.1.126); Ctrl+R history picker defaults to searching
+#   all prompts across all projects (matches pre-v2.1.124 behavior);
+#   third-party deployments no longer see spinner tips that point at
+#   first-party Anthropic surfaces; skillOverrides setting now respects
+#   different visibility options; claude_code.pull_request.count OTel
+#   metric now counts PRs/MRs created via MCP tools.
+#   Marketplace-schema-irrelevant.
+# v2.1.127 (≤2026-05-03) — bridge release between v2.1.126 and v2.1.128
+#   per claudefa.st digest; no individually documented surface change
+#   that affects verdict's transcript-shape or safety-allowlist surfaces.
+#   Marketplace-schema-irrelevant.
 # v2.1.126 (2026-05-01) — /model picker reads gateway /v1/models when
 #   ANTHROPIC_BASE_URL is set; claude project purge [path]; the
 #   --dangerously-skip-permissions allowlist now also covers .git/,
@@ -25,20 +42,12 @@ Schema source: <https://code.claude.com/docs/en/plugin-marketplaces>
 # v2.1.125 (2026-04-30/05-01) — alwaysLoad option for MCP server config;
 #   claude plugin prune for orphaned plugin deps; type-to-filter search
 #   box on /skills. Marketplace-schema-irrelevant.
-# v2.1.124 (2026-04-30) — broad update: faster MCP / plugin workflows;
-#   skill search box; richer hooks; improved terminal / fullscreen;
-#   better SDK + VSCode; stability fixes (memory leaks, resume crashes,
-#   OAuth, shell tools). Marketplace-schema-irrelevant.
-# v2.1.123 (2026-04-29) — OAuth 401 retry-loop fix when
-#   CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1. Marketplace-schema-
-#   irrelevant. No validator change required.
-# v2.1.122 (2026-04-28) — ANTHROPIC_BEDROCK_SERVICE_TIER env var; PR-URL
-#   paste in /resume; /mcp command updates. Marketplace-schema-
-#   irrelevant. No validator change required.
-# Earlier audited entries (v2.1.121 / v2.1.120 / v2.1.119) pruned per
-# the ≤5-release cap. v2.1.121 safety-allowlist + v2.1.120 marketplace
-# validator keys + v2.1.119 duration_ms enrichment all landed in v2.0.1
-# (CHANGELOG [2.0.1] - 2026-05-04).
+# Earlier audited entries (v2.1.124 / v2.1.123 / v2.1.122 / v2.1.121 /
+# v2.1.120 / v2.1.119) pruned per the ≤5-release cap. v2.1.121
+# safety-allowlist + v2.1.120 marketplace validator keys + v2.1.119
+# duration_ms enrichment all landed in v2.0.1 (CHANGELOG [2.0.1] -
+# 2026-05-04). v2.1.122–v2.1.124 were marketplace-schema-irrelevant
+# bridge / stability releases.
 # Source: https://code.claude.com/docs/en/changelog
 # ──────────────────────────────────────────────────────────────────────────────
 from __future__ import annotations

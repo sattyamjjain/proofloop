@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Documentation
+
+- Added a "Cross-family second-opinion pattern note" to the
+  `skills/judge/analyzers/llm_judge.py` module docstring, citing
+  GitHub Copilot CLI's Rubber Duck (cross-family critic, expanded
+  model pairings shipped 2026-05-07) as independent corroboration
+  of the pattern this analyzer already implements. Off-by-default,
+  stdlib-only, opt-in via `judge-config.json.llm_second_opinion.enabled`.
+  Mirrored as a one-paragraph subsection in `skills/judge/SKILL.md`'s
+  v1.1.0 features block. New `tests/test_llm_judge_docstring_rubber_duck_citation.py`
+  pins the citation to the GitHub Changelog primary URL (no
+  aggregators). Source:
+  <https://github.blog/changelog/2026-05-07-rubber-duck-in-github-copilot-cli-now-supports-more-models/>.
+
+### Changed
+
+- Rotated the Claude Code release audit comment block in
+  `scripts/validate_marketplace.py` to the most-recent five
+  releases (newest first): v2.1.129 / v2.1.128 / v2.1.127 / v2.1.126 /
+  v2.1.125. Earlier per-row entries (v2.1.124 through v2.1.119) were
+  pruned from the table per the ≤5-release cap; the footer paragraph
+  preserves the audit history. None of v2.1.127 / v2.1.128 / v2.1.129
+  is marketplace-schema-relevant. Extended grep test pins the rotation.
+
+### Notes
+
+- No version stamp bump; `[Unreleased]` only. The next stamped
+  release will roll up these documentation + audit-block changes
+  alongside whatever code change motivates the cut.
+
 ## [2.0.2] - 2026-05-06
 
 Patch release. Defensive-compatibility extension to the safety-
