@@ -21,6 +21,15 @@ No ``anthropic`` pip package is imported. Callers who want to inject
 a custom client (mock in tests, hit a proxy in prod) can construct an
 ``AnthropicClient`` subclass or any object that implements
 ``messages_create(model: str, system: str, prompt: str, max_tokens: int) -> str``.
+
+Cross-family second-opinion pattern note (2026-05-09): GitHub
+Copilot CLI's Rubber Duck (cross-family critic, expanded model
+pairings shipped 2026-05-07) is the same pattern this analyzer
+implements: an opt-in second model from a different family reviews
+the first model's output. Verdict runs this off-by-default and
+stdlib-only; the critic is one signal among many, NOT a leaderboard
+verdict. Source:
+https://github.blog/changelog/2026-05-07-rubber-duck-in-github-copilot-cli-now-supports-more-models/
 """
 from __future__ import annotations
 

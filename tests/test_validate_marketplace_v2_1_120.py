@@ -136,12 +136,15 @@ class TestClaudeCodeReleaseAuditLog(unittest.TestCase):
         cls.source = path.read_text(encoding="utf-8")
 
     def test_audit_log_lists_most_recent_five(self) -> None:
+        # Most recent five per the post-v2.0.2 hygiene rotation
+        # (chore/2026-05-09): newest first is v2.1.129; oldest in the
+        # window is v2.1.125. Anything older is footer-only.
         for marker in (
-            "v2.1.122",
-            "v2.1.123",
-            "v2.1.124",
             "v2.1.125",
             "v2.1.126",
+            "v2.1.127",
+            "v2.1.128",
+            "v2.1.129",
         ):
             self.assertIn(
                 marker,
@@ -155,12 +158,30 @@ class TestClaudeCodeReleaseAuditLog(unittest.TestCase):
                 ),
             )
 
-    def test_audit_log_pruned_oldest_three(self) -> None:
-        # v2.1.119 / v2.1.120 / v2.1.121 were rotated out in v2.0.2.
-        # The footer paragraph names them as "earlier audited entries
-        # pruned per the ≤5-release cap" — the markers themselves
-        # appear there. Anything earlier should be absent entirely.
-        for pruned in ("v2.1.118",):
+    def test_audit_log_pruned_pre_v2_1_125_per_block_entries(self) -> None:
+        # v2.1.122 / v2.1.123 / v2.1.124 were rotated out of the per-row
+        # block. Their markers may appear in the footer summary line, so
+        # this test asserts they are NOT carried as their own per-row
+        # entries (regex anchors on the leading "# v2.1.12X (" shape used
+        # by every per-row entry). The footer note is plain prose and
+        # does not match this regex.
+        for pruned in ("v2.1.122", "v2.1.123", "v2.1.124"):
+            pattern = f"# {pruned} ("
+            self.assertNotIn(
+                pattern,
+                self.source,
+                msg=(
+                    f"validate_marketplace.py audit log still carries "
+                    f"a per-row entry for {pruned}. The block must stay "
+                    f"at exactly the most recent five per-row entries; "
+                    f"older releases belong in the footer summary line."
+                ),
+            )
+
+    def test_audit_log_pruned_pre_v2_1_122(self) -> None:
+        # Anything earlier than v2.1.122 should be absent entirely
+        # (the pre-v2.0.2 cohort was already rotated out before today).
+        for pruned in ("v2.1.118", "v2.1.117"):
             self.assertNotIn(
                 pruned,
                 self.source,
