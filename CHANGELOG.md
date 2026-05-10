@@ -37,6 +37,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   release will roll up these documentation + audit-block changes
   alongside whatever code change motivates the cut.
 
+### Dispositions of record (rejected proposals)
+
+- **DELEGATE-52 / `outcome_corruption` 8th dimension (2026-05-10):
+  REJECT.** A daily-prompt row proposed adding an 8th
+  `outcome_corruption` dimension to `/judge` anchored on arXiv
+  2604.15597 ("LLMs Corrupt Your Documents When You Delegate",
+  HN front page 2026-05-09 per the prompt). **Rationale for
+  rejection:** (1) Adding a dimension regresses the "7-dimension
+  scoring" core surface explicitly listed in
+  [`CLAUDE.md` §v4.3 Scope Contract](CLAUDE.md#v43-scope-contract-2026-05-03)
+  under "do not regress." (2) The proposed signal — plan / input /
+  trace tri-way diff with "≥2 of 3 oracles agree" fail-closed — is
+  runtime trace replay against a sandbox, not heuristic transcript
+  scoring. Verdict reads transcripts post-hoc with regex; oracle
+  comparison is a different layer (Wall 2 runtime / Wall 3 outcome
+  in the prompt's own framing). (3) The proposed `skills/judge/dimensions/`
+  directory + `OutcomeCorruptionDimension` class pattern contradicts
+  the documented design noted in the 2026-05-06 prompt
+  (analyzer functions inside `score.py`, not per-dim directory).
+  arXiv ID was not independently verified at disposition time; the
+  layer-mismatch rationale stands regardless of the paper's
+  existence. Same shape as prior REJECT-of-record entries:
+  BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
+  beta (2026-05-09).
+
 ## [2.0.2] - 2026-05-06
 
 Patch release. Defensive-compatibility extension to the safety-
