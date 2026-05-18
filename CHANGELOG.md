@@ -39,6 +39,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dispositions of record (rejected proposals)
 
+- **`metis_safety` 12th rubric + Cowork-vs-LangSmith adapter
+  "schema drift" check (2026-05-18): REJECT.** Two daily-prompt
+  rows proposed (a) adding a 12th `metis_safety.yaml` rubric to
+  `skills/judge/rubrics/` anchored on "Metis paper (arXiv
+  2605.10067)" and (b) verifying the Cowork transcript adapter
+  against a "post-LangChain-Interrupt schema" (LangSmith Engine,
+  May 13). **Rationale for rejection:** (1) The rubric inventory
+  is pinned at exactly 11 by
+  [`CLAUDE.md` §v4.3 Scope Contract](CLAUDE.md#v43-scope-contract-2026-05-03)
+  and enforced by `tests/test_v43_scope_contract.py`; a 12th
+  rubric file dropped in `skills/judge/rubrics/` makes that test
+  red on PR push. (2) Verdict's rubrics are `.md` files; there is
+  no YAML parser in `score.py` (stdlib-only invariant). (3) The
+  prompt's project-shape references — `pyproject.toml`,
+  `tests/rubrics/`, "Cowork plugin index" — do not exist in this
+  repo; tells the row was templated from a different repo's
+  conventions. (4) arXiv 2605.10067 was not independently
+  verified at disposition time; the contract + shape mismatches
+  stand regardless. (5) The Cowork adapter is unrelated to
+  LangSmith — Cowork is Anthropic's collaborative Claude product,
+  LangSmith is LangChain's tracing product; nothing in a
+  LangChain Interrupt release affects Cowork transcripts.
+  **Cowork sanity sweep performed anyway as a no-op check:**
+  `tests.test_adapters.TestCoworkAdapter` + `tests.test_adapter_fixtures.TestCoworkFixture`
+  green; `skills/judge/adapters/cowork.py` is a 19-line
+  delegation wrapper over `claude_code.extract_lines` (Cowork
+  emits the same JSONL shape as Claude Code), last touched in
+  commit `70ed8eb` (Phase 2); fixture `tests/fixtures/cowork.jsonl`
+  unchanged. **No drift detected; no patch required.** Same
+  shape as prior REJECT-of-record entries: BrowseComp-Plus
+  (2026-05-06), Managed Agents Outcomes rubric beta (2026-05-09),
+  DELEGATE-52 (2026-05-10).
+
 - **DELEGATE-52 / `outcome_corruption` 8th dimension (2026-05-10):
   REJECT.** A daily-prompt row proposed adding an 8th
   `outcome_corruption` dimension to `/judge` anchored on arXiv
