@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Documentation
 
+- Synced README architecture tree with the actual `scripts/`
+  inventory: added the missing `check_readme_release_anchor.py`
+  entry (shipped in PR #27 on 2026-05-05 as the CHANGELOG ↔ README
+  anchor forcing function but never reflected in the tree).
+  Surfaced by the 2026-05-20 README-sync audit. No behaviour
+  change; tree was 4-of-5; now reads 5-of-5.
+
 - Added a "Cross-family second-opinion pattern note" to the
   `skills/judge/analyzers/llm_judge.py` module docstring, citing
   GitHub Copilot CLI's Rubber Duck (cross-family critic, expanded

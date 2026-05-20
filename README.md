@@ -212,10 +212,11 @@ hooks/
   common.sh, judge-on-stop.sh, judge-on-subagent-stop.sh, judge-on-stop-failure.sh
 commands/                  # /judge, /scorecard, /benchmark, /judge-config, /against, /compare
 scripts/
-  validate_marketplace.py  # Schema validator
-  install_rubric.py        # Fetch + validate community rubrics
-  benchmark_pack.py        # Regression gate for CI
-  sandbox_caps_check.py    # CLAUDE_SANDBOX_CAPS declaration check (CI)
+  validate_marketplace.py        # Schema validator
+  install_rubric.py              # Fetch + validate community rubrics
+  benchmark_pack.py              # Regression gate for CI
+  sandbox_caps_check.py          # CLAUDE_SANDBOX_CAPS declaration check (CI)
+  check_readme_release_anchor.py # CHANGELOG ↔ README anchor forcing-function (CI)
 benchmarks/
   manifest.json + corpus/  # Regression-gate fixtures (NOT a public eval bench — see benchmarks/README.md)
 .github/workflows/
