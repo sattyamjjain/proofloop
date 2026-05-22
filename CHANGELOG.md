@@ -46,6 +46,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dispositions of record (rejected proposals)
 
+- **`held_out_consistency` test-gaming heuristic on the testing
+  rubric (2026-05-22): REJECT.** A daily-prompt row proposed
+  adding a stdlib-only `held_out_consistency` heuristic that
+  scans transcripts for (a) literal matches against quoted
+  test-input values and (b) lookup/branch tables sized
+  suspiciously to the visible test count, then docks
+  correctness/adherence on hit with a flag string "possible
+  test-gaming (visible-vs-held-out gap)", anchored on SpecBench
+  (arXiv 2605.21384). **Rationale for rejection:**
+  (1) **Mechanically identical to v2.0.0-removed helper.** The
+  pre-v2.0.0 `_apply_contamination_penalty` (deleted in commit
+  `98ab1c2`) had the exact same shape: `VERIFIED_FIXTURE_PATTERNS`
+  scanned for test-input literals, `CONTAMINATION_RUBRICS = frozenset({"swe-bench-pro"})`
+  rubric-gated the activation, and the helper returned a
+  deduction on hit. The v2.0.0 `### Removed — Breaking changes`
+  block explicitly listed `_apply_contamination_penalty` among
+  the trimmed helpers. Re-introducing the same mechanic under a
+  new name violates the spirit of the v4.3 contract even though
+  the rubric inventory stays at 11.
+  (2) **Wrong rubric target.** `skills/judge/rubrics/testing.md`
+  evaluates the quality of *test-generation skill outputs*
+  ("whether tests actually test what they claim to test"). The
+  proposal evaluates *whether a coding skill gamed its tests* —
+  a different category (outputs-of-coding-skill, not
+  outputs-of-testing-skill).
+  (3) **Mechanism doesn't fit sidecar shape.** `<rubric>.weights.json`
+  overrides dimension weights (e.g., `security.weights.json`
+  puts 0.35 on safety). Sidecars do not add new heuristics; they
+  re-weight the existing 7.
+  (4) **Repo-shape tells.** Prompt references `pyproject.toml`,
+  `Makefile`, and "push to main (solo maintainer)" — verdict has
+  no `pyproject.toml`, no `Makefile`, and every PR since
+  2026-05-03 has gone via PR + CI (branch protection makes
+  direct push impossible anyway). Same templated-from-different-repo
+  tells as the 2026-05-18 metis_safety REJECT.
+  (5) **Plumbing absent.** The heuristic needs structured access
+  to "solution code" vs "visible test inputs" inside a
+  transcript. Verdict's scorer reads `List[str]` of utterances;
+  there is no parser to separate code-under-test from test
+  inputs from discussion prose.
+  (6) **Unverifiable citation.** arXiv 2605.21384 (SpecBench)
+  was not independently verified at disposition time; the
+  contract + mechanism + shape mismatches stand regardless.
+  Same shape as prior REJECT-of-record entries: BrowseComp-Plus
+  (2026-05-06), Managed Agents Outcomes rubric beta (2026-05-09),
+  DELEGATE-52 (2026-05-10), metis_safety + LangSmith/Cowork
+  (2026-05-18).
+
 - **`metis_safety` 12th rubric + Cowork-vs-LangSmith adapter
   "schema drift" check (2026-05-18): REJECT.** Two daily-prompt
   rows proposed (a) adding a 12th `metis_safety.yaml` rubric to
