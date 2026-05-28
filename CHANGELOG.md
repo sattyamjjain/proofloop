@@ -150,6 +150,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
   beta (2026-05-09).
 
+## [2.0.3] - 2026-05-28
+
+Patch release. Adds an ABA-anchored task-hygiene lint to the
+benchmark pack so a suspect regression-gate corpus can be caught
+*before* its scores are consumed by CI.
+
+### Added
+
+- `scripts/bench_lint.py` — offline, stdlib-only hygiene lint for
+  the regression-gate manifest. Implements four rules adapted from
+  the Auto Benchmark Audit framework (Wang et al. 2026,
+  arXiv:2605.26079, "Automated Benchmark Auditing for AI Agents
+  and Large Language Models", v1 2026-05-25):
+
+    * **VBL001 SpecificationGap** — missing `name`/`skill`, or no
+      `expected_*` bound declared (case asserts nothing).
+    * **VBL002 EnvironmentCoupling** — absolute transcript path,
+      path escapes the manifest dir via `..`, transcript file
+      missing on disk, or declared `adapter` doesn't match the
+      file suffix.
+    * **VBL003 BrittleGrading** — single-point composite/grade/dim
+      bounds (`min == max`), or composite range narrower than 0.5.
+    * **VBL004 MissingGroundTruth** — transcript is 0-bytes or
+      contains zero non-blank lines.
+
+  Aggregate `bench_hygiene_score = 1 - flagged_cases / total_cases`.
+  Emits text (default), JSON (`--json`), or SARIF v2.1.0
+  (`--sarif PATH`). Exits 0 above threshold (default 0.85), 1 below,
+  2 on IO/arg failure. No LLM call — the offline heuristic is the
+  moat.
+
+- Ship-gate wire-up in `scripts/benchmark_pack.py`: new `--lint`
+  flag runs the hygiene pass *before* the regression suite and
+  aborts non-zero if `bench_hygiene_score` is below
+  `--hygiene-threshold` (default 0.85). `--sarif PATH` implies
+  `--lint` and writes the SARIF document. CI now surfaces "this
+  benchmark may not be trustworthy" instead of greenwashing a
+  suspect corpus. Legacy positional manifest argument preserved.
+
+### Tests
+
+- `tests/test_bench_lint.py` (21 tests): the shipped
+  `benchmarks/manifest.json` scores 1.0 and exits 0; each of the
+  four rule classes fires on an injected bad case; SARIF v2.1.0
+  envelope and rule inventory pinned; exit-code matrix verified
+  (0 above / 1 below / 2 IO-or-arg); `benchmark_pack --lint`
+  aborts before the regression suite when the corpus is dirty
+  and surfaces the VBL ruleId in stderr.
+
+### Notes
+
+- Verdict's benchmark pack scores *transcripts* against expected
+  score bounds, not *tasks* against ground-truth outputs. The four
+  ABA classes therefore apply by analogy, not literally; the lint
+  output and README both state this adaptation explicitly so
+  nobody reads it as a 1:1 ABA implementation. The 25.7%-of-tasks
+  flaw rate ABA reports across 168 benchmarks is the motivation
+  for catching the same shape of issue before scores ship.
+
+- O17 — `bench_lint.py` adapts ABA to a transcript-regression
+  manifest. If Verdict ever grows a true task benchmark (prompt +
+  expected output + grader), the four rules will need a literal
+  pass: spec gaps against the prompt text, env coupling against
+  the grader's external calls, brittle grading against
+  exact-match-only graders, missing ground truth against empty
+  expected outputs.
+
 ## [2.0.2] - 2026-05-06
 
 Patch release. Defensive-compatibility extension to the safety-

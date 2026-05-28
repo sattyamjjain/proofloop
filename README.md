@@ -75,6 +75,15 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
 - **Benchmark regression gate.** Curated transcript corpus plus
   `scripts/benchmark_pack.py` asserts no heuristic drift across
   releases. Wired into CI.
+- **Benchmark hygiene lint (ABA-anchored).** `scripts/bench_lint.py`
+  audits the regression-gate manifest itself for the four issue
+  classes described in [arXiv:2605.26079](https://arxiv.org/abs/2605.26079)
+  (Wang et al. 2026, *Automated Benchmark Auditing for AI Agents
+  and Large Language Models*). Surfaces a `bench_hygiene_score`,
+  text/JSON/SARIF output, and a `--lint` pre-flight gate on the
+  pack so a suspect corpus is caught before its scores ship. See
+  [§Benchmark hygiene lint](#benchmark-hygiene-lint-aba-anchored)
+  below.
 - **Stdlib only.** Python 3.9+, no third-party packages, installs
   instantly with zero supply-chain risk.
 
@@ -214,7 +223,8 @@ commands/                  # /judge, /scorecard, /benchmark, /judge-config, /aga
 scripts/
   validate_marketplace.py        # Schema validator
   install_rubric.py              # Fetch + validate community rubrics
-  benchmark_pack.py              # Regression gate for CI
+  benchmark_pack.py              # Regression gate for CI (now with --lint pre-flight)
+  bench_lint.py                  # ABA-anchored task-hygiene lint (arXiv:2605.26079)
   sandbox_caps_check.py          # CLAUDE_SANDBOX_CAPS declaration check (CI)
   check_readme_release_anchor.py # CHANGELOG ↔ README anchor forcing-function (CI)
 benchmarks/
@@ -274,17 +284,79 @@ or add new ones — the `default` key catches unknown models.
 python3 -m unittest discover tests/ -v        # full suite
 python3 scripts/validate_marketplace.py       # schema check
 python3 scripts/benchmark_pack.py             # regression gate
+python3 scripts/benchmark_pack.py --lint      # regression + ABA hygiene pre-flight
+python3 scripts/bench_lint.py                 # ABA hygiene lint alone
 shellcheck hooks/*.sh                         # hook-script lint
 ```
+
+## Benchmark hygiene lint (ABA-anchored)
+
+`scripts/bench_lint.py` audits the regression-gate manifest itself
+before any score is consumed. It adapts the four issue classes from
+[arXiv:2605.26079](https://arxiv.org/abs/2605.26079) (Wang et al.
+2026, *Automated Benchmark Auditing for AI Agents and Large
+Language Models*, v1 2026-05-25) to Verdict's transcript-regression
+shape. ABA found that **25.7% of tasks across 168 benchmarks**
+contained one of these issues, and that removing them moved model
+scores by ~9.6–9.9% — i.e., suspect bench plumbing changes the
+verdict. The lint catches the same shape of issue in our own pack
+*before* CI greenwashes a broken corpus.
+
+| Rule | Class | Triggers on |
+|------|-------|-------------|
+| **VBL001** | SpecificationGap | missing `name`/`skill`, or no `expected_*` bound declared (case asserts nothing) |
+| **VBL002** | EnvironmentCoupling | absolute transcript path, escapes manifest dir via `..`, transcript missing, or `adapter` ↔ file-suffix mismatch |
+| **VBL003** | BrittleGrading | single-point composite/grade/dim bounds (`min == max`), or composite range narrower than 0.5 |
+| **VBL004** | MissingGroundTruth | transcript is 0-bytes or contains only blank lines |
+
+```shell
+# Standalone (text by default)
+python3 scripts/bench_lint.py
+
+# JSON for piping into other tools
+python3 scripts/bench_lint.py --json | jq '.bench_hygiene_score'
+
+# SARIF v2.1.0 for CI surfacing (GitHub code-scanning, etc.)
+python3 scripts/bench_lint.py --sarif bench_lint.sarif --quiet
+
+# Custom threshold (default 0.85)
+python3 scripts/bench_lint.py --threshold 0.95
+
+# Wired into the regression gate as a pre-flight (aborts before any
+# score is consumed if the corpus is suspect)
+python3 scripts/benchmark_pack.py --lint --sarif bench_lint.sarif
+```
+
+Aggregate `bench_hygiene_score = 1 - flagged_cases / total_cases`.
+Exit codes: **0** above threshold, **1** below, **2** on IO / arg
+failure. Offline-only, stdlib-only — no LLM call (the heuristic is
+the moat; defaulting to LLM judging would push the trust boundary
+into a token-billed black box, which is exactly what we lint
+against).
+
+**Scope honesty.** Verdict's "benchmark pack" scores transcripts
+against expected score bounds, not tasks against ground-truth
+outputs (`benchmarks/manifest.json` is explicitly *not* a public
+eval bench — see `benchmarks/README.md`). The four ABA classes
+therefore apply *by analogy*, mapped to the regression-gate shape;
+the rule descriptions above and the lint's own help text make this
+adaptation explicit. If Verdict ever grows a true task benchmark,
+the rules will need a literal pass — tracked as **O17** in
+`CHANGELOG.md`.
 
 ## Roadmap
 
 See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Latest
-release: [v2.0.2](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.2)
+release: [v2.0.3](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.3)
+(ABA-anchored benchmark hygiene lint + ship-gate wire-up — flags
+spec gaps, env coupling, brittle grading, and missing ground truth
+in the regression-gate manifest *before* its scores ship; SARIF
+output for CI surfacing).
+Previous releases:
+[v2.0.2](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.2)
 (safety-dim allowlist tracks Claude Code v2.1.126 — `.git/`,
 `.vscode/`, and a closed POSIX/zsh shell-config-file set added to
-`_is_plugin_author_write`; destructive shell forms still dock).
-Previous releases:
+`_is_plugin_author_write`),
 [v2.0.1](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.1)
 (opt-in `duration_ms` enrichment + safety `.claude` path
 allowlist + marketplace validator v2.1.120 keys), and the

@@ -5,13 +5,22 @@ assert each case satisfies its expected bounds. Exits 1 on any failure.
 Used by CI to catch heuristic regressions before they ship. Stdlib-only.
 
 Usage:
-    python3 scripts/benchmark_pack.py [manifest_path]
+    python3 scripts/benchmark_pack.py [manifest_path] [--lint] [--sarif PATH]
+                                       [--hygiene-threshold FLOAT]
 
-If omitted, defaults to ``benchmarks/manifest.json`` relative to the
-project root.
+If omitted, the manifest defaults to ``benchmarks/manifest.json`` relative
+to the project root.
+
+``--lint`` runs the ABA-anchored hygiene lint as a pre-flight gate. If
+``bench_hygiene_score`` falls below ``--hygiene-threshold`` (default
+0.85), the run aborts before any score is consumed -- CI surfaces "this
+benchmark may not be trustworthy" instead of greenwashing a suspect
+corpus. ``--sarif PATH`` writes a SARIF v2.1.0 report of the lint
+findings to PATH.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import tempfile
@@ -25,6 +34,10 @@ CONFIG_PATH = PROJECT_ROOT / "judge-config.json"
 
 sys.path.insert(0, str(SCORE_PY.parent))
 import score  # noqa: E402  -- must follow sys.path manipulation
+
+# bench_lint lives in this same scripts/ directory.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import bench_lint  # noqa: E402
 
 # A→F in descending order so "grade_min: B" accepts A-, A, A+ but not B-
 GRADE_ORDER: List[str] = [
@@ -83,11 +96,92 @@ def _check(case: Dict[str, Any], scorecard: Dict[str, Any]) -> Tuple[bool, List[
     return not errors, errors
 
 
+def _parse_args(argv: List[str]) -> argparse.Namespace:
+    """Parse CLI arguments, keeping the legacy positional manifest path."""
+    parser = argparse.ArgumentParser(
+        prog="benchmark_pack",
+        description=(
+            "Run the regression-gate corpus through the scoring engine. "
+            "Add --lint for an ABA-anchored hygiene pre-flight gate."
+        ),
+    )
+    parser.add_argument(
+        "manifest",
+        nargs="?",
+        default=str(PROJECT_ROOT / "benchmarks" / "manifest.json"),
+        help="Path to manifest.json (default: benchmarks/manifest.json)",
+    )
+    parser.add_argument(
+        "--lint",
+        action="store_true",
+        help="Run bench_lint as a pre-flight gate before the regression suite.",
+    )
+    parser.add_argument(
+        "--sarif",
+        metavar="PATH",
+        help="Write SARIF v2.1.0 lint output to PATH (implies --lint).",
+    )
+    parser.add_argument(
+        "--hygiene-threshold",
+        type=float,
+        default=bench_lint.DEFAULT_THRESHOLD,
+        help=(
+            f"bench_hygiene_score threshold for --lint "
+            f"(default {bench_lint.DEFAULT_THRESHOLD})"
+        ),
+    )
+    return parser.parse_args(argv[1:])
+
+
+def _run_lint_gate(
+    manifest_path: Path, sarif_path: str | None, threshold: float
+) -> int:
+    """Run the hygiene lint as a pre-flight gate. Return an exit code."""
+    print(f"Pre-flight: bench_lint (ABA-anchored, threshold {threshold:.2f})...")
+    report = bench_lint.lint_manifest(manifest_path)
+    if sarif_path:
+        sarif = bench_lint.to_sarif(report)
+        Path(sarif_path).write_text(
+            json.dumps(sarif, indent=2) + "\n", encoding="utf-8"
+        )
+        print(f"  SARIF written to {sarif_path}")
+    score_val = report["bench_hygiene_score"]
+    flagged = report["flagged_cases"]
+    total = report["total_cases"]
+    if score_val < threshold:
+        print(
+            f"  ✗ bench_hygiene_score={score_val:.4f} below "
+            f"threshold {threshold:.2f} ({flagged}/{total} cases flagged) "
+            f"-- corpus may not be trustworthy",
+            file=sys.stderr,
+        )
+        for f in report["findings"]:
+            print(
+                f"    {f['rule_id']} [{f['case_name']}]: {f['message']}",
+                file=sys.stderr,
+            )
+        return 1
+    print(
+        f"  ✓ bench_hygiene_score={score_val:.4f} "
+        f"({flagged}/{total} cases flagged)"
+    )
+    return 0
+
+
 def main(argv: List[str]) -> int:
-    manifest_path = Path(argv[1]) if len(argv) > 1 else PROJECT_ROOT / "benchmarks" / "manifest.json"
+    """CLI entry point."""
+    args = _parse_args(argv)
+    manifest_path = Path(args.manifest)
     if not manifest_path.is_file():
         print(f"Error: manifest not found at {manifest_path}", file=sys.stderr)
         return 2
+
+    # --sarif implies --lint (no value running SARIF if we never linted).
+    run_lint = args.lint or bool(args.sarif)
+    if run_lint:
+        code = _run_lint_gate(manifest_path, args.sarif, args.hygiene_threshold)
+        if code != 0:
+            return code
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     cases = manifest.get("cases", [])
