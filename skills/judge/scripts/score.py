@@ -517,6 +517,7 @@ def analyze_dimension(
     history: List[Dict[str, Any]],
     tokenizer_baseline: float = 1.0,
     duration_ms_dock_threshold: Optional[int] = None,
+    verifier_collapse_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Score a single dimension (1-10) with justification.
 
@@ -526,6 +527,9 @@ def analyze_dimension(
     ``duration_ms_dock_threshold`` (default ``None`` = report-only) is
     also forwarded to the efficiency analyser; see
     :func:`_analyze_efficiency`.
+    ``verifier_collapse_config`` (default ``None`` = disabled) is
+    forwarded to the consistency analyser; see
+    :func:`_detect_verifier_collapse`.
     """
     total_lines = len(transcript_lines)
     full_text = "\n".join(transcript_lines)
@@ -546,7 +550,7 @@ def analyze_dimension(
     elif name == "safety":
         return _analyze_safety(transcript_lines)
     elif name == "consistency":
-        return _analyze_consistency(history)
+        return _analyze_consistency(history, verifier_collapse_config)
     else:
         return {"score": 5, "justification": f"Unknown dimension: {name}"}
 
@@ -1005,27 +1009,162 @@ def _analyze_safety(lines: List[str]) -> Dict[str, Any]:
     return {"score": score, "justification": justification}
 
 
-def _analyze_consistency(history: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _detect_verifier_collapse(
+    history: List[Dict[str, Any]],
+    vc_config: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Detect verifier collapse over a rolling window of recent scorecards.
+
+    Verifier collapse is the failure mode where a judge has flatlined at
+    the top of the scale — most recent scores fall in the top bucket
+    AND variance is near zero. This is distinct from "low variance" as
+    scored by :func:`_analyze_consistency`, which would otherwise
+    *reward* the failure mode with a low-std_dev bonus. The detector
+    here composes with that logic by adding an explicit dock when both
+    criteria hit, derived from Verdict's own consistency dimension plus
+    the project-anchor "Soft-SVeRL" signal.
+
+    Returns a dict with::
+
+        {
+            "flagged": bool,
+            "reason": str,           # short, one-line; empty when not flagged
+            "stats": {
+                "window": int,            # actual window evaluated
+                "min_samples": int,       # threshold for "enough signal"
+                "top_threshold": float,
+                "top_bucket_fraction": float,   # observed fraction in top bucket
+                "max_std_dev": float,
+                "std_dev": float,             # observed std dev over window
+            },
+        }
+
+    When ``vc_config`` is ``None`` or has ``enabled=False`` the detector
+    short-circuits with ``flagged=False`` and an empty reason. Pure
+    stdlib statistics — no LLM call.
+    """
+    if not vc_config or not vc_config.get("enabled", False):
+        return {"flagged": False, "reason": "", "stats": {}}
+
+    try:
+        window = int(vc_config.get("window", 10))
+        min_samples = int(vc_config.get("min_samples", 5))
+        top_threshold = float(vc_config.get("top_threshold", 8.5))
+        bucket_fraction = float(vc_config.get("top_bucket_fraction", 0.95))
+        max_std_dev = float(vc_config.get("max_std_dev", 0.3))
+    except (TypeError, ValueError):
+        # Malformed config: skip rather than crash the score path.
+        return {"flagged": False, "reason": "", "stats": {}}
+
+    composites = [
+        float(h["composite_score"])
+        for h in history
+        if isinstance(h, dict) and isinstance(h.get("composite_score"), (int, float))
+    ]
+    if not composites:
+        return {"flagged": False, "reason": "", "stats": {}}
+
+    # Rolling window: last <window> entries (oldest-first history, so
+    # take the tail).
+    sample = composites[-window:]
+    n = len(sample)
+    if n < min_samples:
+        return {
+            "flagged": False,
+            "reason": "",
+            "stats": {
+                "window": n,
+                "min_samples": min_samples,
+                "top_threshold": top_threshold,
+                "top_bucket_fraction": 0.0,
+                "max_std_dev": max_std_dev,
+                "std_dev": 0.0,
+            },
+        }
+
+    top_hits = sum(1 for c in sample if c >= top_threshold)
+    observed_fraction = top_hits / n
+    avg = sum(sample) / n
+    variance = sum((c - avg) ** 2 for c in sample) / n
+    std_dev = variance ** 0.5
+
+    flagged = (
+        observed_fraction >= bucket_fraction
+        and std_dev < max_std_dev
+    )
+
+    reason = ""
+    if flagged:
+        reason = (
+            f"verifier collapse: {top_hits}/{n} of recent composites "
+            f">= {top_threshold:.1f} (fraction {observed_fraction:.2f} "
+            f">= {bucket_fraction:.2f}) and std_dev {std_dev:.2f} "
+            f"< {max_std_dev:.2f}"
+        )
+
+    return {
+        "flagged": flagged,
+        "reason": reason,
+        "stats": {
+            "window": n,
+            "min_samples": min_samples,
+            "top_threshold": top_threshold,
+            "top_bucket_fraction": round(observed_fraction, 4),
+            "max_std_dev": max_std_dev,
+            "std_dev": round(std_dev, 4),
+        },
+    }
+
+
+def _analyze_consistency(
+    history: List[Dict[str, Any]],
+    verifier_collapse_config: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Consistency: compare to historical scores.
 
     Returns a neutral 5 (mid-range, non-inflating) when no prior history
     exists rather than the previous 7, which biased first-run composites
     upward. See DEEP_ANALYSIS §12.3.
+
+    When ``verifier_collapse_config`` is provided **and** has
+    ``enabled: True``, the verifier-collapse detector runs after the
+    variance-based score is computed. If collapse is detected, the
+    dimension is docked by ``consistency_dock`` (default 3 from
+    ``judge-config.json.verifier_collapse``), the dock cancelling the
+    existing "+1 highly-consistent" bonus path — without this
+    composition, a collapsed verifier would otherwise be *rewarded* by
+    the low-variance branch. When the detector runs the returned dict
+    gains ``verifier_collapse`` (bool) and, on a hit,
+    ``verifier_collapse_reason`` / ``verifier_collapse_stats``. When
+    the detector is disabled or the config is absent the key is
+    omitted entirely so CI consumers can distinguish "ran and saw
+    nothing" from "did not run".
     """
+    vc_enabled = bool(
+        verifier_collapse_config
+        and verifier_collapse_config.get("enabled")
+    )
+
     if not history:
-        return {
+        result: Dict[str, Any] = {
             "score": 5,
             "justification": "No prior history for comparison (neutral score)",
         }
+        if vc_enabled:
+            result["verifier_collapse"] = False
+        return result
 
     past_composites = [
         h.get("composite_score", 5.0) for h in history if "composite_score" in h
     ]
     if not past_composites:
-        return {
+        result = {
             "score": 5,
             "justification": "No comparable historical composites found",
         }
+        if vc_enabled:
+            result["verifier_collapse"] = False
+        return result
 
     avg = sum(past_composites) / len(past_composites)
     latest = past_composites[-1] if past_composites else avg
@@ -1054,8 +1193,33 @@ def _analyze_consistency(history: List[Dict[str, Any]]) -> Dict[str, Any]:
         f"n={len(past_composites)}"
     )
 
+    result = {}
+    if vc_enabled:
+        # Verifier-collapse detector. Composes with the variance
+        # reasoning above so a collapsed verifier nets to a dock
+        # rather than the +1 low-std_dev bonus.
+        collapse = _detect_verifier_collapse(history, verifier_collapse_config)
+        result["verifier_collapse"] = collapse["flagged"]
+        if collapse["flagged"]:
+            try:
+                dock = int(
+                    (verifier_collapse_config or {}).get("consistency_dock", 3)
+                )
+            except (TypeError, ValueError):
+                dock = 3
+            score -= dock
+            reasons.append(collapse["reason"])
+            result["verifier_collapse_reason"] = collapse["reason"]
+            result["verifier_collapse_stats"] = collapse["stats"]
+        elif collapse["stats"]:
+            # Surface stats even when not flagged so explain.py can
+            # show the near-miss context without a separate path.
+            result["verifier_collapse_stats"] = collapse["stats"]
+
     score = max(1, min(10, score))
-    return {"score": score, "justification": "; ".join(reasons)}
+    result["score"] = score
+    result["justification"] = "; ".join(reasons)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -1454,12 +1618,20 @@ def build_scorecard(
         except (TypeError, ValueError):
             duration_ms_dock_threshold = None
 
+    # Verifier-collapse detector block (off by default; opt-in via
+    # judge-config.json.verifier_collapse.enabled). Pure stdlib stats
+    # over the rolling window of recent scorecards for this skill.
+    verifier_collapse_cfg = (
+        config.get("verifier_collapse") if isinstance(config, dict) else None
+    )
+
     # 2. Score each dimension
     dimensions: Dict[str, Dict[str, Any]] = {}
     for dim in weights:
         result = analyze_dimension(
             dim, transcript_lines, rubric_criteria, history, tokenizer_baseline,
             duration_ms_dock_threshold=duration_ms_dock_threshold,
+            verifier_collapse_config=verifier_collapse_cfg,
         )
         weight = weights[dim]
         weighted = round(result["score"] * weight, 2)
@@ -1473,6 +1645,16 @@ def build_scorecard(
         # ``tool_durations_ms`` from Claude Code v2.1.119 PostToolUse).
         if "tool_durations_ms" in result:
             dimensions[dim]["tool_durations_ms"] = result["tool_durations_ms"]
+        # Forward verifier-collapse extras from the consistency
+        # analyser so explain.py and the ship-gate can surface them
+        # without re-running the detector.
+        for key in (
+            "verifier_collapse",
+            "verifier_collapse_reason",
+            "verifier_collapse_stats",
+        ):
+            if key in result:
+                dimensions[dim][key] = result[key]
 
     # 2b. Opt-in LLM second opinion (off by default; see
     # analyzers/llm_judge.py). Mutates `dimensions` in place to add
@@ -1540,6 +1722,15 @@ def build_scorecard(
         "tokenizer_baseline": tokenizer_baseline,
         "weights_source": weights_source,
     }
+
+    # Mirror the consistency-dim verifier_collapse flag at the top
+    # level so CI scripts can grep one place (the dim entry remains
+    # the source of truth for the reason and the stats).
+    consistency_dim = dimensions.get("consistency", {}) or {}
+    if consistency_dim.get("verifier_collapse"):
+        scorecard["verifier_collapse"] = True
+    elif "verifier_collapse" in consistency_dim:
+        scorecard["verifier_collapse"] = False
 
     # 5. Persist
     saved_path = save_score(scorecard, scores_dir)

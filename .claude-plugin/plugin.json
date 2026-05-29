@@ -1,6 +1,6 @@
 {
   "name": "verdict",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "displayName": "Verdict — Universal Skill & Agent Quality Judge",
   "description": "The first universal judge for Claude Code & Cowork. Auto-evaluates skill and agent execution quality with 7-dimension scoring, configurable rubrics, and dual-mode operation (auto hooks + manual /judge command).",
   "author": {
