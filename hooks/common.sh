@@ -120,3 +120,13 @@ get_threshold() {
   local config_path="$1"
   jq -r '.auto_judge.threshold // 5.0' "$config_path" 2>/dev/null
 }
+
+# Get the verifier-collapse gate mode from config.
+# Returns "warn" (default), "fail", or "off".
+#   warn -- emit stderr warning, exit code unchanged
+#   fail -- emit stderr "BLOCKED" line and exit 2 from the caller
+#   off  -- ignore the flag entirely
+get_verifier_collapse_gate_mode() {
+  local config_path="$1"
+  jq -r '.verifier_collapse.gate_mode // "warn"' "$config_path" 2>/dev/null
+}

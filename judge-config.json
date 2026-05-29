@@ -44,5 +44,16 @@
     "model": "claude-haiku-4-5",
     "budget_tokens": null,
     "task_budget_tokens": null
+  },
+  "verifier_collapse": {
+    "_comment": "Detect verifier collapse over the rolling window of recent scorecards for the same skill. Flags when >= top_bucket_fraction of the last <window> composites are in the top bucket AND stdev < max_std_dev. Pure offline statistics over scores/; no LLM call. gate_mode: 'warn' (stderr only) | 'fail' (hook exit 2).",
+    "enabled": true,
+    "window": 10,
+    "min_samples": 5,
+    "top_threshold": 8.5,
+    "top_bucket_fraction": 0.95,
+    "max_std_dev": 0.3,
+    "consistency_dock": 3,
+    "gate_mode": "warn"
   }
 }

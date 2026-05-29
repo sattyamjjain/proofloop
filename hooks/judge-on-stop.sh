@@ -54,6 +54,28 @@ if [ -n "$SCORE" ] && [ -n "$THRESHOLD" ]; then
   fi
 fi
 
+# Verifier-collapse gate (offline heuristic; see judge-config.json
+# .verifier_collapse). gate_mode "warn" -- stderr only; "fail" --
+# exit 2 like a threshold breach; "off" -- ignore entirely.
+COLLAPSE=$(echo "$SCORECARD" | jq -r '.verifier_collapse // false' 2>/dev/null)
+if [ "$COLLAPSE" = "true" ]; then
+  GATE_MODE=$(get_verifier_collapse_gate_mode "$CONFIG_PATH")
+  REASON=$(echo "$SCORECARD" | jq -r '.dimensions.consistency.verifier_collapse_reason // "verifier collapse detected"' 2>/dev/null)
+  case "$GATE_MODE" in
+    fail)
+      echo "Verdict BLOCKED: verifier collapse detected for $SKILL_NAME — $REASON" >&2
+      echo "Tip: set judge-config.json.verifier_collapse.gate_mode to \"warn\" to demote to a warning." >&2
+      exit 2
+      ;;
+    off)
+      ;;  # silent
+    *)
+      echo "Verdict WARNING: verifier collapse detected for $SKILL_NAME — $REASON" >&2
+      echo "Tip: set judge-config.json.verifier_collapse.gate_mode to \"fail\" to block on this signal." >&2
+      ;;
+  esac
+fi
+
 # PASS: Output score as additional context
 cat <<EOF
 {

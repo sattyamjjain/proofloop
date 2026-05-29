@@ -82,6 +82,25 @@ This is the default rubric applied when no domain-specific rubric is matched. It
 | 3-4   | Noticeable shifts in quality or tone. Some sections are significantly weaker than others. |
 | 1-2   | Wildly inconsistent. Output feels like it was assembled from disparate sources. |
 
+**Verifier-collapse detector (v2.0.4+, offline heuristic).** When the
+rolling window of recent scorecards for the same skill shows the
+judge has flatlined at the top of the scale, the dimension is docked
+separately from the variance-based criteria above. Specifically, when
+the fraction of recent composites in the top bucket
+(`>= top_threshold`, default 8.5) crosses
+`top_bucket_fraction` (default 0.95) **and** `std_dev` falls below
+`max_std_dev` (default 0.3) — over at least `min_samples` (default 5)
+out of the last `window` (default 10) scorecards — `verifier_collapse`
+is set to `true` and the consistency score is docked by
+`consistency_dock` (default 3). This composition prevents the
+existing low-variance branch from rewarding a collapsed verifier (it
+would otherwise grant a `+1` "highly consistent" bonus to the same
+data that triggers the dock). Pure stdlib statistics; no LLM call.
+Configurable via `judge-config.json.verifier_collapse` (set
+`enabled: false` to disable). Derived from Verdict's own consistency
+dimension plus the Soft-SVeRL project anchor — distinct from
+variance-based consistency, not a sibling analogy.
+
 ## Red Flags (Auto-Deductions)
 - Output contains hallucinated facts or fabricated references
 - Output contradicts itself within the same response

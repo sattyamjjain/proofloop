@@ -124,6 +124,10 @@
       "type": "string",
       "enum": ["config", "rubric"],
       "description": "Whether the weights came from the global config or a per-rubric <rubric>.weights.json sidecar."
+    },
+    "verifier_collapse": {
+      "type": "boolean",
+      "description": "Top-level mirror of dimensions.consistency.verifier_collapse. Present only when the verifier-collapse detector ran (judge-config.json.verifier_collapse.enabled=true). True = the rolling window of recent scorecards for this skill showed flatline-at-top behaviour; see the consistency dim entry for reason and stats."
     }
   },
   "$defs": {
@@ -145,6 +149,19 @@
         "llm_justification": {
           "type": ["string", "null"],
           "description": "Justification produced by the LLM second-opinion analyzer. Present alongside llm_score."
+        },
+        "verifier_collapse": {
+          "type": "boolean",
+          "description": "Present on the consistency dim entry when the verifier-collapse detector ran. True = the rolling window of recent scorecards for this skill showed flatline-at-top behaviour, distinct from low-variance consistency."
+        },
+        "verifier_collapse_reason": {
+          "type": "string",
+          "description": "One-line human-readable explanation of why verifier_collapse=true. Empty/absent when not flagged."
+        },
+        "verifier_collapse_stats": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Numeric context for the verifier-collapse signal: rolling window size, top_bucket_fraction, observed std_dev, configured thresholds. Surfaced even on near-misses so explain output can show why a collapse was/wasn't flagged."
         }
       }
     }

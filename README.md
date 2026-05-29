@@ -344,15 +344,72 @@ adaptation explicit. If Verdict ever grows a true task benchmark,
 the rules will need a literal pass — tracked as **O17** in
 `CHANGELOG.md`.
 
+## Verifier-collapse detector
+
+`_analyze_consistency` already compares each run against the rolling
+history of recent scorecards for the same skill — but the existing
+low-variance branch *rewards* `std_dev <= 0.8` with a `+1` "highly
+consistent" bonus. That branch silently rewards the failure mode
+where a judge has flatlined at the top of the scale.
+
+The verifier-collapse detector (`v2.0.4+`, offline, stdlib-only)
+composes with that path. Over the rolling window of recent
+scorecards for the same skill, it flags `verifier_collapse=true`
+when **both**:
+
+| Condition | Default |
+|-----------|---------|
+| fraction of composites `>= top_threshold` exceeds `top_bucket_fraction` | `>= 8.5` for `>= 95%` of cards |
+| `std_dev` of those composites falls below `max_std_dev` | `< 0.3` (tighter than the existing 0.8 "highly consistent" cutoff) |
+| at least `min_samples` of the last `window` cards available | `5 of 10` |
+
+On a hit, the consistency dimension is docked by `consistency_dock`
+(default `3`) — wide enough to net out the existing `+1` low-variance
+bonus that the same data would otherwise trigger. The boolean is
+mirrored at the scorecard top level for one-jq-query CI consumption,
+surfaced in the `/judge --explain` Markdown as a `⚠️ Verifier
+collapse detected` callout above the dimension table, and added to
+the `explain.v1` JSON payload at both top-level (`verifier_collapse`)
+and per-dimension (`dimensions.consistency.verifier_collapse` +
+`verifier_collapse_reason` + `verifier_collapse_stats`) levels.
+
+```shell
+# Disable the detector entirely:
+jq '.verifier_collapse.enabled = false' judge-config.json > tmp && mv tmp judge-config.json
+
+# Demote the ship-gate from blocking to a stderr warning (default):
+jq '.verifier_collapse.gate_mode = "warn"' judge-config.json > tmp && mv tmp judge-config.json
+
+# Block the Stop hook (exit 2) when a collapse is detected:
+jq '.verifier_collapse.gate_mode = "fail"' judge-config.json > tmp && mv tmp judge-config.json
+```
+
+The `judge-on-stop.sh` ship-gate honours `gate_mode` ∈
+`{"warn", "fail", "off"}` and emits
+`Verdict {WARNING,BLOCKED}: verifier collapse detected for <skill>`
+on stderr.
+
+**Anchor.** The signal is derived from Verdict's own consistency
+dimension plus the **Soft-SVeRL** project anchor — distinct from
+variance-based consistency, not a sibling-benchmark analogy. The
+heuristic is offline statistics, default-on, and never calls an
+LLM; this complements (does not replace) the opt-in LLM
+second-opinion analyzer.
+
 ## Roadmap
 
 See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Latest
-release: [v2.0.3](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.3)
+release: [v2.0.4](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.4)
+(verifier-collapse detector — flags judges that have flatlined at
+the top of the scale over the rolling scorecard window, docks the
+consistency dim, surfaces in `/judge --explain` + the Stop-hook
+ship-gate; offline stdlib-only, default-on).
+Previous releases:
+[v2.0.3](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.3)
 (ABA-anchored benchmark hygiene lint + ship-gate wire-up — flags
 spec gaps, env coupling, brittle grading, and missing ground truth
 in the regression-gate manifest *before* its scores ship; SARIF
-output for CI surfacing).
-Previous releases:
+output for CI surfacing),
 [v2.0.2](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.2)
 (safety-dim allowlist tracks Claude Code v2.1.126 — `.git/`,
 `.vscode/`, and a closed POSIX/zsh shell-config-file set added to

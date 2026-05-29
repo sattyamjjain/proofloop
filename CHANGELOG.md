@@ -150,6 +150,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
   beta (2026-05-09).
 
+## [2.0.4] - 2026-05-29
+
+Patch release. Adds a stdlib-only verifier-collapse detector to the
+consistency dimension and wires the resulting flag into both the
+`/judge --explain` output (Markdown + `explain.v1` JSON) and the
+Stop-hook ship-gate. Closes a latent bug in
+`_analyze_consistency`: the prior low-variance branch would
+*reward* a flatlined verifier with a `+1` "highly consistent"
+bonus — the new detector composes with that path so collapsed
+verifiers net to a dock instead.
+
+### Added
+
+- `skills/judge/scripts/score.py::_detect_verifier_collapse` —
+  offline statistics over the rolling window of recent scorecards
+  for the same skill. Flags `verifier_collapse=true` when, over at
+  least `min_samples` of the last `window` cards (defaults 5/10):
+    * fraction of composites `>= top_threshold` (default 8.5)
+      crosses `top_bucket_fraction` (default 0.95), **and**
+    * `std_dev` of composites `< max_std_dev` (default 0.3 —
+      tighter than the existing 0.8 "highly consistent" cutoff).
+
+  On a hit, `_analyze_consistency` docks the dimension by
+  `consistency_dock` (default 3) and appends a one-line reason.
+  The dock is wide enough to net out the existing low-variance
+  `+1` bonus that the same data would otherwise trigger.
+
+- `dimensions.consistency.verifier_collapse` /
+  `verifier_collapse_reason` / `verifier_collapse_stats` on the
+  scorecard, mirrored at the scorecard top level as
+  `verifier_collapse: bool` for one-jq-query CI consumption.
+
+- `judge-config.json.verifier_collapse` block (enabled by default;
+  set `enabled: false` to disable). Knobs: `window`, `min_samples`,
+  `top_threshold`, `top_bucket_fraction`, `max_std_dev`,
+  `consistency_dock`, `gate_mode`.
+
+- `explain.v1` JSON surfaces `verifier_collapse` (top-level) plus
+  per-dimension `verifier_collapse` / `verifier_collapse_reason` /
+  `verifier_collapse_stats` on the consistency entry. The Markdown
+  renderer adds a "⚠️ Verifier collapse detected" callout above
+  the dimension table, anchored on Verdict's own consistency
+  dimension plus the Soft-SVeRL project anchor (no sibling
+  benchmark analogies, per the G13 cross-pollination rule).
+
+- `hooks/judge-on-stop.sh` honours
+  `judge-config.json.verifier_collapse.gate_mode`:
+    * `warn` (default) — stderr `Verdict WARNING: verifier collapse
+      detected for $SKILL_NAME — $REASON`, exit code unchanged.
+    * `fail` — stderr `Verdict BLOCKED: ...` + `exit 2` (same shape
+      as the existing threshold-breach gate).
+    * `off` — silent.
+
+- `schemas/scorecard.v1.schema.json` now declares the new optional
+  fields (top-level `verifier_collapse` plus the three new
+  per-dimension keys). Backward-compatible additive extension; no
+  required-field change.
+
+### Tests
+
+- `tests/test_verifier_collapse.py` (new): clean varied history
+  produces no flag; collapsed history (10× 9.5) flags + docks the
+  consistency dim; below-`min_samples` produces no flag;
+  `enabled: false` produces no flag; explain.v1 JSON carries
+  top-level + per-dim fields; Markdown renderer emits the callout
+  with the Soft-SVeRL anchor; hook gate-mode `warn` exits 0,
+  `fail` exits 2, `off` is silent.
+
+### Notes
+
+- The detector is **offline-only** (pure stdlib statistics over
+  `scores/`) and is the default-on companion to the off-by-default
+  LLM second-opinion analyzer. LLM judging is not made the default
+  by this change — the offline heuristic is the moat.
+
+- The signal is **derived from Verdict's own consistency dimension
+  plus the Soft-SVeRL project anchor**. Sibling-benchmark analogies
+  were considered and dropped per the G13 anti-cross-pollination
+  rule; no external evaluation suites are named in code, docs, or
+  CHANGELOG for this change.
+
 ## [2.0.3] - 2026-05-28
 
 Patch release. Adds an ABA-anchored task-hygiene lint to the

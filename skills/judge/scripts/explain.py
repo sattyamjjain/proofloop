@@ -125,6 +125,16 @@ def render_json(card: Dict[str, Any]) -> str:
             out_entry["llm_score"] = entry["llm_score"]
         if "llm_justification" in entry:
             out_entry["llm_justification"] = entry["llm_justification"]
+        # Surface the verifier-collapse signal from the consistency
+        # dimension into explain.v1 so PR-side consumers can act on
+        # it without re-running the detector.
+        for key in (
+            "verifier_collapse",
+            "verifier_collapse_reason",
+            "verifier_collapse_stats",
+        ):
+            if key in entry:
+                out_entry[key] = entry[key]
         dims_out.append(out_entry)
 
     adjustments_in = card.get("adjustments", {}) or {}
@@ -159,6 +169,13 @@ def render_json(card: Dict[str, Any]) -> str:
         "recommendations": list(card.get("recommendations", []) or []),
         "evidence": _evidence_block(card),
     }
+    # Mirror the top-level verifier_collapse flag (when present) so
+    # CI scripts can detect it with a single `.verifier_collapse` jq
+    # query without descending into the dimensions array. The
+    # consistency dim entry above remains the source of truth for
+    # the reason and the stats.
+    if "verifier_collapse" in card:
+        payload["verifier_collapse"] = bool(card.get("verifier_collapse"))
     return json.dumps(payload, indent=2, ensure_ascii=False)
 
 
@@ -476,6 +493,46 @@ def truncate_markdown(
     return rendered[:body_budget].rstrip() + footer
 
 
+def _md_verifier_collapse_callout(card: Dict[str, Any]) -> Optional[str]:
+    """Render a "⚠️ Verifier collapse detected" callout when flagged.
+
+    Returns ``None`` when the scorecard does not carry a flag, so the
+    caller can skip the section. The callout pulls the reason and
+    stats from the consistency dim entry (the source of truth) and
+    surfaces both the human-readable reason and the rolling-window
+    stats that drove it.
+    """
+    if not card.get("verifier_collapse"):
+        return None
+    consistency = (card.get("dimensions") or {}).get("consistency") or {}
+    reason = consistency.get("verifier_collapse_reason") or (
+        "Verifier collapse detected over the recent scorecard window "
+        "(see judge-config.json.verifier_collapse)."
+    )
+    stats = consistency.get("verifier_collapse_stats") or {}
+    lines = [
+        "## ⚠️ Verifier collapse detected",
+        "",
+        "The consistency dimension was docked because the rolling "
+        "window of recent scorecards for this skill shows the "
+        "judge/verifier has flatlined at the top of the scale — a "
+        "failure mode distinct from low score variance, derived from "
+        "Verdict's own consistency dimension plus the Soft-SVeRL "
+        "signal.",
+        "",
+        f"- **Reason:** {reason}",
+    ]
+    if stats:
+        lines.append(
+            f"- **Stats:** window n={stats.get('window', '?')}, "
+            f"top_bucket_fraction={stats.get('top_bucket_fraction', '?')} "
+            f"(threshold {stats.get('max_std_dev', '?')} for std_dev, "
+            f"actual {stats.get('std_dev', '?')}; "
+            f"top_threshold={stats.get('top_threshold', '?')})"
+        )
+    return "\n".join(lines)
+
+
 def render_markdown(card: Dict[str, Any]) -> str:
     """Render a PR-comment-friendly Markdown explanation."""
     skill = card.get("skill", "?")
@@ -501,8 +558,14 @@ def render_markdown(card: Dict[str, Any]) -> str:
         header += f"\n\n_{summary}_"
 
     entries = _ordered_dimension_entries(card)
-    sections: List[str] = [header, "## Per-dimension breakdown",
-                           _md_dimension_table(entries)]
+    sections: List[str] = [header]
+    callout = _md_verifier_collapse_callout(card)
+    if callout:
+        sections.append(callout)
+    sections.extend([
+        "## Per-dimension breakdown",
+        _md_dimension_table(entries),
+    ])
 
     overlay = _md_llm_overlay(entries)
     if overlay:
