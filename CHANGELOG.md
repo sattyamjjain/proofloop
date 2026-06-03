@@ -46,6 +46,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dispositions of record (rejected proposals)
 
+- **`ProcessScorerJudge` PRM-free step-by-step process scorer with
+  LGS/CGS modes (2026-05-29): REJECT.** A task proposed adding a
+  `ProcessScorerJudge` under `src/judges/` that scores a reasoning
+  trajectory step-by-step using a scorer model's token likelihood
+  rather than a trained PRM: "LGS mode" picks the next step among
+  *k* candidates by the scorer model's likelihood; "CGS mode"
+  scores by contrast between a strong and weak scorer prompt. It
+  asked for a config flag selecting PRM-free process scoring vs the
+  existing outcome judge, tests, README + CHANGELOG, a version
+  bump, and `feat/process-scorer-judge` → push to main, with the
+  test/lint/typecheck runner to be found via `package.json scripts
+  / pyproject / Makefile`. **Rationale for rejection:**
+  (1) **Module surface does not exist.** The task's own suggested
+  grep — `rg "class .*Judge|def judge|src/judges" src` — errors
+  with `IO error ... src: No such file or directory`. There is no
+  `src/` tree, no `class BaseJudge`/`class .*Judge` hierarchy, and
+  no `def judge` interface anywhere in the repo
+  (`rg "class .*Judge\b|BaseJudge|ProcessScorer" --type py` is
+  empty). Verdict's "judge" is `skills/judge/SKILL.md` plus a
+  stdlib heuristic `skills/judge/scripts/score.py` exposing
+  module-level functions (`build_scorecard`, `analyze_dimension`,
+  `compute_composite`) — not an object-oriented judge surface a
+  new subclass could conform to. There is no base-judge signature
+  to capture.
+  (2) **LLM-on-the-hot-path inverts the core invariant.** Both LGS
+  (pick a step by the scorer model's token likelihood) and CGS
+  (strong-vs-weak scorer-prompt contrast) *are* model calls as the
+  scoring mechanism. Verdict is heuristic-first and stdlib-only;
+  the LLM second opinion (`analyzers/llm_judge.py`) is **opt-in and
+  off by default** (`judge-config.json.llm_second_opinion.enabled =
+  false`, `urllib`-only, token-budget-capped). Making a scorer
+  model the judge contradicts the invariant reaffirmed in the
+  v2.0.3 (bench-lint) and v2.0.4 (verifier-collapse) ships:
+  "offline heuristic is the moat; LLM judging stays opt-in."
+  (3) **Scores models, not executions.** A step-by-step
+  reasoning-trajectory process scorer (PRM territory) evaluates a
+  model's *reasoning chain*. Verdict scores *skill / agent
+  execution quality* against rubrics — "verdict scores executions,
+  not models" is a stated product boundary. Process reward models,
+  like the frontier-lab eval-bench scope (SWE-bench, Terminal-Bench,
+  GAIA, OSWorld), are exactly what the 2026-05-03 v4.3 scope reset
+  froze out; re-adding them needs a runbook spec change first
+  ([`CLAUDE.md` §v4.3 Scope Contract](CLAUDE.md#v43-scope-contract-2026-05-03),
+  enforced by `tests/test_v43_scope_contract.py`).
+  (4) **Repo-shape tells.** The task references `src/judges`,
+  `package.json scripts`, `pyproject`, and a `Makefile`-style
+  typecheck runner. Verdict has none of these — no `src/`, no
+  `package.json`, no `pyproject.toml`, no `Makefile`, no
+  `setup.py`; the actual runner is
+  `python3 -m unittest discover tests/` (per `.github/workflows/ci.yml`).
+  Same templated-from-a-different-repo signature as the
+  2026-05-18 `metis_safety` REJECT and the 2026-05-22
+  `held_out_consistency` REJECT (both flagged `pyproject.toml` /
+  `Makefile` / `src/` references absent from this repo).
+  (5) **No anchor verified, and it would not matter.** LGS/CGS
+  ("likelihood-guided" / "contrast-guided" search) and "PRM-free
+  process scoring" were presented without a citation; no source was
+  independently verified at disposition time. The module-surface,
+  invariant, and scope mismatches in (1)–(4) stand regardless of
+  whether such a method exists in the literature. Same shape as
+  prior REJECT-of-record entries: BrowseComp-Plus (2026-05-06),
+  Managed Agents Outcomes rubric beta (2026-05-09), DELEGATE-52
+  (2026-05-10), metis_safety + LangSmith/Cowork (2026-05-18),
+  held_out_consistency (2026-05-22).
+
 - **`held_out_consistency` test-gaming heuristic on the testing
   rubric (2026-05-22): REJECT.** A daily-prompt row proposed
   adding a stdlib-only `held_out_consistency` heuristic that
