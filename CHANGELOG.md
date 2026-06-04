@@ -46,6 +46,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dispositions of record (rejected proposals)
 
+- **`reward-hack` 12th domain rubric + RHB grader-gaming detector
+  (2026-06-04): REJECT.** A task proposed adding a `reward-hack`
+  rubric that scores an agent trajectory on four deterministic
+  grader-gaming signatures from the "RHB exploit classes" —
+  (a) verification-step-skipped, (b) answer-read-from-task-adjacent
+  metadata, (c) grader/assertion tampered or disabled, (d)
+  test-specific logic added to pass a check — emitting per-signature
+  flags + an aggregate reward-hack score, pure heuristic, wired into
+  the ship-gate (non-zero exit over threshold) and `--explain`, with
+  a weights sidecar, fixtures, README + CHANGELOG, a version bump
+  `v2.0.2 → v2.1.0`, branch `feat/reward-hack-rubric` → push to
+  main. **Rationale for rejection:**
+  (1) **A 12th rubric breaks the v4.3 scope contract, CI-enforced.**
+  `tests/test_v43_scope_contract.py::test_no_out_of_scope_rubrics`
+  computes `sorted(_rubric_basenames(RUBRICS_DIR) - IN_SCOPE_V43)`
+  and asserts it is empty. `IN_SCOPE_V43` is a frozenset of exactly
+  11 plugin-domain rubric names. Dropping `reward-hack.md` into
+  `skills/judge/rubrics/` makes `out_of_scope == ['reward-hack']`
+  and the test goes red on push. The only way to green it is to add
+  `reward-hack` to `IN_SCOPE_V43`, whose source of truth is the
+  external runbook §scope-reset (2026-05-03); per
+  [`CLAUDE.md` §v4.3 Scope Contract](CLAUDE.md#v43-scope-contract-2026-05-03),
+  "anything outside the 11 in-scope rubrics … needs a runbook spec
+  change first." Editing the allowlist to wave a new rubric through
+  defeats the forcing function rather than honouring it. This is the
+  same blocker as the 2026-05-18 `metis_safety` 12th-rubric REJECT.
+  (2) **Out-of-scope domain.** RHB (reward-hacking benchmark) /
+  agent grader-gaming detection is agent-safety eval-bench territory
+  — the same family as the v2.0.0-trimmed `function-hijacking-robustness`
+  and `owasp-mcp-top-10-beta` rubrics and the "MCP attack benches,
+  etc." the v4.3 reset explicitly froze out. The 11 in-scope rubrics
+  each score *quality of work in a domain* (code-review, security,
+  devops, …); reward-hack is a cross-cutting *trajectory-integrity
+  gate*, not a work domain — so even setting scope aside it is the
+  wrong shape for a domain rubric (closer to the existing
+  `detect_red_flags` adjustments in `score.py`).
+  (3) **Repo-shape tells.** The task reads `skills/judge/score.py`
+  (the real path is `skills/judge/scripts/score.py`), greps
+  `pyproject` for the version and runs `pytest` (no `pyproject.toml`,
+  no `pytest`; version lives in `.claude-plugin/{plugin,marketplace}.json`
+  + `SKILL.md`, runner is `python3 -m unittest discover tests/`),
+  invokes a `verdict ship-gate` CLI (none exists; the ship-gate is
+  `hooks/judge-on-stop.sh`), and bumps `v2.0.2 → v2.1.0` when HEAD
+  is already **v2.0.4** (the base version is stale). Same
+  templated-from-a-different-repo signature as the `metis_safety`
+  (2026-05-18), `held_out_consistency` (2026-05-22), and
+  `ProcessScorerJudge` (2026-05-29) REJECTs.
+  (4) **Anchor not verified, and it would not matter.** The "RHB
+  exploit classes" were cited without a verifiable source; none was
+  independently confirmed at disposition time. The scope-contract
+  break in (1) and the domain mismatch in (2) stand regardless. Note
+  that two invariants the `ProcessScorerJudge` proposal broke are
+  here respected — the detector would be stdlib-only / no-LLM and
+  would score executions, not models — so a future runbook spec
+  change could bring reward-hack into scope deliberately (as a 12th
+  rubric, or better as a red-flag signal in `score.py`); until that
+  runbook change lands, the CI contract is the gate. Same shape as
+  prior REJECT-of-record entries: BrowseComp-Plus (2026-05-06),
+  Managed Agents Outcomes rubric beta (2026-05-09), DELEGATE-52
+  (2026-05-10), metis_safety + LangSmith/Cowork (2026-05-18),
+  held_out_consistency (2026-05-22), ProcessScorerJudge (2026-05-29).
+
 - **`ProcessScorerJudge` PRM-free step-by-step process scorer with
   LGS/CGS modes (2026-05-29): REJECT.** A task proposed adding a
   `ProcessScorerJudge` under `src/judges/` that scores a reasoning
