@@ -128,6 +128,37 @@
     "verifier_collapse": {
       "type": "boolean",
       "description": "Top-level mirror of dimensions.consistency.verifier_collapse. Present only when the verifier-collapse detector ran (judge-config.json.verifier_collapse.enabled=true). True = the rolling window of recent scorecards for this skill showed flatline-at-top behaviour; see the consistency dim entry for reason and stats."
+    },
+    "self_preference_risk": {
+      "type": "boolean",
+      "description": "Present only when the opt-in LLM second opinion ran (judge-config.json.llm_second_opinion.enabled=true). True = the configured judge model shares a vendor family with the model that produced the transcript, so the second opinion is structurally biased upward (self-preference; MT-Bench arXiv:2306.05685). See same_family_guard for the families and any auto-preferred cross-family judge."
+    },
+    "same_family_guard": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Detail for self_preference_risk. Present only when the LLM second opinion ran.",
+      "properties": {
+        "executing_family": {
+          "type": ["string", "null"],
+          "description": "Vendor family of the model that produced the transcript (anthropic/openai/google/meta), or null when unrecognised."
+        },
+        "judge_family": {
+          "type": ["string", "null"],
+          "description": "Vendor family of the configured second-opinion judge model, or null when unrecognised."
+        },
+        "judge_model": {
+          "type": ["string", "null"],
+          "description": "The configured judge model ID considered by the guard."
+        },
+        "auto_preferred": {
+          "type": "boolean",
+          "description": "True when a cross-family alternate_judge_models entry was substituted for the configured judge to mitigate self-preference."
+        },
+        "preferred_model": {
+          "type": ["string", "null"],
+          "description": "The cross-family judge model ID actually used for the second-opinion call when auto_preferred=true; null otherwise."
+        }
+      }
     }
   },
   "$defs": {

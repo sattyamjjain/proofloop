@@ -84,6 +84,13 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
   pack so a suspect corpus is caught before its scores ship. See
   [§Benchmark hygiene lint](#benchmark-hygiene-lint-aba-anchored)
   below.
+- **Same-family judge guard.** When the opt-in LLM second opinion is
+  enabled, Verdict checks whether the judge model shares a vendor
+  family with the model that produced the transcript. A match sets
+  `self_preference_risk: true` and warns on the console (Claude judging
+  Claude inflates scores); a configured cross-family judge is
+  auto-preferred. See [§Same-family judge guard](#same-family-judge-guard)
+  below.
 - **Stdlib only.** Python 3.9+, no third-party packages, installs
   instantly with zero supply-chain risk.
 
@@ -396,10 +403,50 @@ heuristic is offline statistics, default-on, and never calls an
 LLM; this complements (does not replace) the opt-in LLM
 second-opinion analyzer.
 
+## Same-family judge guard
+
+The opt-in LLM second opinion
+(`judge-config.json.llm_second_opinion.enabled = true`) is only as
+trustworthy as the judge. An LLM judge systematically over-scores
+outputs from its own model family, so when the second-opinion judge
+shares a family with the model that produced the transcript, the score
+is biased upward and Verdict says so.
+
+Before the call, `same_family_guard` (in
+`skills/judge/analyzers/llm_judge.py`) buckets the executing model
+(from `score.detect_model_from_transcript`) and the configured judge
+model into vendor families (`anthropic` / `openai` / `google` /
+`meta`). On a same-family match it:
+
+1. sets `self_preference_risk: true` on the scorecard (mirrored in the
+   `same_family_guard` object with both families), and emits
+   `Verdict WARNING: judge and executing model share a family …` on
+   stderr; and
+2. if `llm_second_opinion.alternate_judge_models` names a cross-family
+   judge, **auto-prefers** it for the call (reachable via the injected
+   client / proxy path the analyzer already documents).
+
+In the stock configuration the second opinion is Claude judging
+Claude, so the guard fires on every enabled run — that is the honest
+signal, not a bug. The guard is offline and stdlib-only; it asserts a
+clash only when both families are recognised (an unknown model never
+fabricates a risk).
+
+**Design rationale.** Self-preference in LLM-as-judge is measured, not
+hypothetical: pairwise judges favour their own family by double-digit
+win-rate margins ([arXiv:2306.05685](https://arxiv.org/abs/2306.05685),
+MT-Bench — GPT-4 +10pp, Claude-v1 +25pp self-win-rate), and merely
+re-labelling an output as the judge's own work swings its scores by
++23–93pp ([arXiv:2606.05976](https://arxiv.org/abs/2606.05976),
+role-relabel). Verdict keeps the judge framed as a third-party
+"second-opinion judge" (never first-person), flags the residual
+same-family risk, and prefers a cross-family judge when one is
+configured.
+
 ## Roadmap
 
 See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Latest
-release: [v2.0.4](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.4)
+release: [v2.0.5](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.5)
 (verifier-collapse detector — flags judges that have flatlined at
 the top of the scale over the rolling scorecard window, docks the
 consistency dim, surfaces in `/judge --explain` + the Stop-hook
