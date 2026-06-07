@@ -40,10 +40,12 @@
     "claude-haiku-4-5": 1.0
   },
   "llm_second_opinion": {
+    "_comment": "alternate_judge_models: cross-family judge IDs (e.g. gpt-4o, gemini-2.5-pro) reachable via an injected client / proxy. When the configured judge shares a model family with the executing model, the same-family self-preference guard warns and auto-prefers the first cross-family entry here for the second-opinion call.",
     "enabled": false,
     "model": "claude-haiku-4-5",
     "budget_tokens": null,
-    "task_budget_tokens": null
+    "task_budget_tokens": null,
+    "alternate_judge_models": []
   },
   "verifier_collapse": {
     "_comment": "Detect verifier collapse over the rolling window of recent scorecards for the same skill. Flags when >= top_bucket_fraction of the last <window> composites are in the top bucket AND stdev < max_std_dev. Pure offline statistics over scores/; no LLM call. gate_mode: 'warn' (stderr only) | 'fail' (hook exit 2).",

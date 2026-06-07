@@ -1453,12 +1453,16 @@ def _llm_second_opinion_config(config: Dict[str, Any]) -> Dict[str, Any]:
             "model": "claude-haiku-4-5",
             "budget_tokens": None,
             "task_budget_tokens": None,
+            "alternate_judge_models": [],
         }
+    raw_alts = block.get("alternate_judge_models")
+    alternates = [str(m) for m in raw_alts] if isinstance(raw_alts, list) else []
     return {
         "enabled": bool(block.get("enabled", False)),
         "model": str(block.get("model", "claude-haiku-4-5")),
         "budget_tokens": block.get("budget_tokens"),
         "task_budget_tokens": block.get("task_budget_tokens"),
+        "alternate_judge_models": alternates,
     }
 
 
@@ -1469,17 +1473,28 @@ def _maybe_llm_second_opinion(
     rubric_name: str,
     dimensions: Dict[str, Dict[str, Any]],
     client: Optional[Any] = None,
-) -> None:
+    detected_model: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
     """Merge LLM second-opinion scores into ``dimensions`` in place.
 
-    No-op when the config block has ``enabled=false`` (the default).
-    Failures (missing API key, HTTP error, unparseable response) are
-    logged to stderr and swallowed — Verdict must stay offline-first,
-    so a busted LLM path can never fail the whole scorecard.
+    No-op (returns ``None``) when the config block has ``enabled=false``
+    (the default). Failures (missing API key, HTTP error, unparseable
+    response) are logged to stderr and swallowed — Verdict must stay
+    offline-first, so a busted LLM path can never fail the whole
+    scorecard.
+
+    When enabled, runs the same-family self-preference guard
+    (``llm_judge.same_family_guard``) comparing *detected_model* (the
+    model that produced the transcript) against the configured judge
+    model. On a same-family hit it warns on stderr and, when a
+    cross-family ``alternate_judge_models`` entry is configured,
+    auto-prefers it for the second-opinion call. Returns the guard
+    summary dict so ``build_scorecard`` can surface
+    ``self_preference_risk`` on the scorecard.
     """
     cfg = _llm_second_opinion_config(config)
     if not cfg["enabled"]:
-        return
+        return None
 
     # Local import so the module only pulls llm_judge when actually
     # needed, keeping cold-start costs (and test import times) down.
@@ -1488,11 +1503,35 @@ def _maybe_llm_second_opinion(
         from analyzers.llm_judge import (  # type: ignore
             AnthropicClient,
             LLMJudgeError,
+            model_family,
+            same_family_guard,
             score_with_llm,
         )
     except ImportError as exc:
         print(f"Warning: LLM second opinion unavailable — {exc}", file=sys.stderr)
-        return
+        return None
+
+    # Same-family self-preference guard. Runs before the call so an
+    # auto-preferred cross-family judge is the model actually invoked.
+    guard = same_family_guard(
+        detected_model, cfg["model"], cfg.get("alternate_judge_models"),
+    )
+    judge_model = cfg["model"]
+    if guard["self_preference_risk"]:
+        print(
+            f"Verdict WARNING: {guard['reason']} "
+            f"(executing={guard['executing_family']}, "
+            f"judge={guard['judge_family']}:{cfg['model']})",
+            file=sys.stderr,
+        )
+        if guard["auto_preferred"] and guard["preferred_model"]:
+            judge_model = guard["preferred_model"]
+            print(
+                f"Verdict: auto-preferring cross-family second-opinion "
+                f"judge {judge_model} ({guard['judge_family']} → "
+                f"{model_family(judge_model)}).",
+                file=sys.stderr,
+            )
 
     # If no client was injected, construct the default with the
     # configured task_budget_tokens so the beta header flows through.
@@ -1504,27 +1543,29 @@ def _maybe_llm_second_opinion(
             )
         except LLMJudgeError as exc:
             print(f"Warning: LLM second opinion unavailable — {exc}", file=sys.stderr)
-            return
+            return guard
 
     rubric_envelope = {"name": rubric_name, "criteria": rubric_criteria}
     try:
         llm_scores = score_with_llm(
             transcript=transcript_lines,
             rubric=rubric_envelope,
-            model=cfg["model"],
+            model=judge_model,
             client=effective_client,
         )
     except LLMJudgeError as exc:
         print(f"Warning: LLM second opinion failed — {exc}", file=sys.stderr)
-        return
+        return guard
     except Exception as exc:  # pragma: no cover — last-ditch defensive
         print(f"Warning: LLM second opinion crashed — {exc}", file=sys.stderr)
-        return
+        return guard
 
     for dim, (score_val, justification) in llm_scores.items():
         if dim in dimensions:
             dimensions[dim]["llm_score"] = score_val
             dimensions[dim]["llm_justification"] = justification
+
+    return guard
 
 
 def save_score(scorecard: Dict[str, Any], scores_dir: str) -> str:
@@ -1659,9 +1700,9 @@ def build_scorecard(
     # 2b. Opt-in LLM second opinion (off by default; see
     # analyzers/llm_judge.py). Mutates `dimensions` in place to add
     # `llm_score` / `llm_justification` alongside the heuristic entries.
-    _maybe_llm_second_opinion(
+    llm_guard = _maybe_llm_second_opinion(
         config, transcript_lines, rubric_criteria, rubric_name, dimensions,
-        client=llm_client,
+        client=llm_client, detected_model=detected_model,
     )
 
     # 3. Composite score
@@ -1731,6 +1772,21 @@ def build_scorecard(
         scorecard["verifier_collapse"] = True
     elif "verifier_collapse" in consistency_dim:
         scorecard["verifier_collapse"] = False
+
+    # Surface the same-family self-preference guard at the top level
+    # (present only when the LLM second opinion ran, i.e. enabled).
+    # `self_preference_risk` is the one-jq-query CI flag; the
+    # `same_family_guard` object carries the families and any
+    # auto-preferred cross-family judge for explainability.
+    if llm_guard is not None:
+        scorecard["self_preference_risk"] = bool(llm_guard["self_preference_risk"])
+        scorecard["same_family_guard"] = {
+            "executing_family": llm_guard["executing_family"],
+            "judge_family": llm_guard["judge_family"],
+            "judge_model": llm_guard["judge_model"],
+            "auto_preferred": llm_guard["auto_preferred"],
+            "preferred_model": llm_guard["preferred_model"],
+        }
 
     # 5. Persist
     saved_path = save_score(scorecard, scores_dir)

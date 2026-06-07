@@ -53,6 +53,9 @@ __all__ = [
     "parse_scores",
     "resolve_cache_ttl_from_env",
     "build_cached_system_block",
+    "model_family",
+    "same_family_guard",
+    "SELF_PREFERENCE_WARNING",
 ]
 
 DIMENSIONS: List[str] = [
@@ -336,6 +339,119 @@ def _rubric_criteria_summary(rubric: Dict[str, Any]) -> str:
             excerpt = excerpt[:600] + " ..."
         lines.append(f"- {dim}: {excerpt}")
     return "\n".join(lines) if lines else "(no per-dimension criteria provided)"
+
+
+# ---------------------------------------------------------------------------
+# Same-family self-preference guard
+# ---------------------------------------------------------------------------
+#
+# An LLM judge scores its own family's outputs higher than a neutral
+# observer would. The effect is measured, not hypothetical:
+#   * MT-Bench (arXiv:2306.05685): GPT-4 self-win-rate +10pp, Claude-v1
+#     +25pp vs. human-aligned baselines.
+#   * Role-relabel attacks (arXiv:2606.05976): framing the same output
+#     as the judge's own work swings scores +23-93pp.
+# So when Verdict's second-opinion judge shares a model family with the
+# model that produced the transcript, the second opinion is structurally
+# biased *upward* and should be flagged (and, where a cross-family judge
+# is configured, swapped out).
+#
+# Verdict's executing-model detector (`score.detect_model_from_transcript`)
+# only recognises `claude-*` today, and the default judge is Claude — so
+# in the stock configuration this guard fires on every enabled run, which
+# is the honest signal: Claude-judging-Claude is self-preference-prone.
+# Cross-family judging is reachable via the documented injected-client /
+# proxy path (see module docstring) — `alternate_judge_models` names the
+# preferred cross-family judge IDs for that path.
+
+# Prefix → family buckets. Longest-prefix-wins is unnecessary because the
+# prefixes below are disjoint; we lowercase and strip a leading vendor
+# slug (``anthropic/claude-...``) before matching.
+_FAMILY_PREFIXES: List[Tuple[str, Tuple[str, ...]]] = [
+    ("anthropic", ("claude", "anthropic")),
+    ("openai", ("gpt", "o1", "o3", "o4", "chatgpt", "openai", "text-davinci", "davinci")),
+    ("google", ("gemini", "palm", "bison", "google", "gemma")),
+    ("meta", ("llama", "codellama", "meta")),
+]
+
+SELF_PREFERENCE_WARNING = (
+    "judge and executing model share a family; self-preference bias "
+    "inflates scores (MT-Bench: GPT-4 +10%, Claude-v1 +25% self-win-rate)"
+)
+
+
+def model_family(model_id: Optional[str]) -> Optional[str]:
+    """Bucket a model ID into a vendor family, or ``None`` if unknown.
+
+    Matching is case-insensitive and tolerant of a leading vendor slug
+    (``anthropic/claude-haiku-4-5`` → ``anthropic``). Returns one of
+    ``{"anthropic", "openai", "google", "meta"}`` or ``None`` when the
+    ID matches no known prefix (callers treat unknown as "can't compare,
+    no risk asserted").
+    """
+    if not model_id or not isinstance(model_id, str):
+        return None
+    name = model_id.strip().lower()
+    # Drop a leading ``vendor/`` or ``vendor:`` slug if present.
+    for sep in ("/", ":"):
+        if sep in name:
+            name = name.split(sep, 1)[1]
+    for family, prefixes in _FAMILY_PREFIXES:
+        if name.startswith(prefixes):
+            return family
+    return None
+
+
+def same_family_guard(
+    executing_model: Optional[str],
+    judge_model: Optional[str],
+    alternate_judge_models: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Assess self-preference risk between executing and judge models.
+
+    Returns a summary dict:
+
+    ``self_preference_risk``
+        ``True`` when both families are known and equal.
+    ``executing_family`` / ``judge_family``
+        The resolved buckets (or ``None`` when unknown).
+    ``judge_model``
+        The judge model considered (echoed for the scorecard).
+    ``reason``
+        :data:`SELF_PREFERENCE_WARNING` when at risk, else ``""``.
+    ``preferred_model``
+        The first entry of *alternate_judge_models* whose family is
+        known and differs from the executing family — set only when at
+        risk and such an alternate exists. ``None`` otherwise.
+    ``auto_preferred``
+        ``True`` when ``preferred_model`` was selected (the caller should
+        route the second-opinion call to it instead of *judge_model*).
+
+    Risk is asserted only when *both* families are known; an unknown
+    executing or judge model yields ``self_preference_risk=False`` (we
+    never fabricate a clash we can't substantiate).
+    """
+    exec_family = model_family(executing_model)
+    judge_family = model_family(judge_model)
+    at_risk = bool(exec_family and judge_family and exec_family == judge_family)
+
+    preferred_model: Optional[str] = None
+    if at_risk:
+        for alt in alternate_judge_models or []:
+            alt_family = model_family(alt)
+            if alt_family and alt_family != exec_family:
+                preferred_model = alt
+                break
+
+    return {
+        "self_preference_risk": at_risk,
+        "executing_family": exec_family,
+        "judge_family": judge_family,
+        "judge_model": judge_model,
+        "reason": SELF_PREFERENCE_WARNING if at_risk else "",
+        "preferred_model": preferred_model,
+        "auto_preferred": preferred_model is not None,
+    }
 
 
 SYSTEM_PROMPT = (

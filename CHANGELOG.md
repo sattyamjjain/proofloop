@@ -277,6 +277,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
   beta (2026-05-09).
 
+## [2.0.5] - 2026-06-07
+
+Patch release. Adds a stdlib-only **same-family judge guard** plus a
+`self_preference_risk` scorecard flag to the opt-in LLM second-opinion
+analyzer.
+
+### Added
+
+- **Same-family judge guard** (`skills/judge/analyzers/llm_judge.py`):
+  new `model_family()` (prefix-buckets a model ID into
+  anthropic/openai/google/meta) and `same_family_guard()`. Before the
+  opt-in second opinion runs, the guard compares the executing model
+  (from `score.detect_model_from_transcript`) against the configured
+  judge model. On a same-family match it (a) sets
+  `self_preference_risk: true` on the scorecard and emits a
+  `Verdict WARNING:` line on stderr citing the measured effect
+  (MT-Bench: GPT-4 +10%, Claude-v1 +25% self-win-rate), and (b) when a
+  cross-family `llm_second_opinion.alternate_judge_models` entry is
+  configured, auto-prefers it for the call (reachable via the
+  documented injected-client / proxy path). Off-by-default with the
+  rest of the second opinion; stdlib-only, no new deps.
+- `self_preference_risk` (boolean) and `same_family_guard` (object)
+  optional top-level scorecard fields — additive, backward-compatible
+  in `schemas/scorecard.v1.schema.json`.
+- `llm_second_opinion.alternate_judge_models` config key (default `[]`).
+- `tests/test_same_family_guard.py`: family bucketing, same-family
+  risk + citation, cross-family clear, auto-prefer substitution,
+  `build_scorecard` integration via a mock client, and a regression
+  assertion that `build_prompt` / `SYSTEM_PROMPT` never use
+  first-person framing ("you wrote" / "your work" / "your output").
+
+### Rationale
+
+An LLM judge over-scores its own family. The effect is measured, not
+hypothetical (self-preference: arXiv:2306.05685; role-relabel framing
+swings scores +23–93pp: arXiv:2606.05976), and in Verdict's stock
+configuration the second opinion is Claude-judging-Claude — so the
+guard fires on every enabled run, which is the honest signal. The
+existing third-party "second-opinion judge" framing is preserved.
+
 ## [2.0.4] - 2026-05-29
 
 Patch release. Adds a stdlib-only verifier-collapse detector to the
