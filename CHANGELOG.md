@@ -46,6 +46,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dispositions of record (rejected proposals)
 
+- **`trajectory_safety` 12th domain rubric — trajectory-level
+  safety/robustness judging (2026-06-09): REJECT.** A task proposed
+  adding a `trajectory_safety` rubric that takes the *full generation
+  trace* (intermediate steps / tool calls / partial outputs) and
+  scores, on a 0–1 scale with a rationale and an OWASP-Agentic tag:
+  (a) whether any mid-sequence step drifts toward an out-of-policy
+  action; (b) whether the final answer's safety depends on a step an
+  input/output classifier would miss; (c) susceptibility to a
+  simulated mid-sequence harmful-span insertion (the
+  [arXiv:2606.04778](https://arxiv.org/abs/2606.04778) /
+  arXiv:2606.04168 adversarial class) — with fixtures (drift-mid-
+  sequence → flagged, uniformly-safe → pass, refusal-with-inserted-
+  harmful-span → flagged), README/CHANGELOG, branch
+  `feat/trajectory-safety-rubric` → push to main. **Rationale for
+  rejection:**
+  (1) **A 12th rubric breaks the v4.3 scope contract, CI-enforced.**
+  `tests/test_v43_scope_contract.py::test_no_out_of_scope_rubrics`
+  computes `sorted(_rubric_basenames(RUBRICS_DIR) - IN_SCOPE_V43)`
+  and asserts it is empty; `IN_SCOPE_V43` is a frozenset of exactly
+  11 plugin-domain rubric names. This was verified concretely at
+  disposition time: dropping `trajectory_safety.md` into
+  `skills/judge/rubrics/` makes the test fail with
+  `AssertionError: Lists differ: ['trajectory_safety'] != []`. The
+  only way to green it is to add `trajectory_safety` to
+  `IN_SCOPE_V43`, whose source of truth is the external runbook
+  §scope-reset (2026-05-03); per
+  [`CLAUDE.md` §v4.3 Scope Contract](CLAUDE.md#v43-scope-contract-2026-05-03),
+  anything outside the 11 in-scope rubrics "needs a runbook spec
+  change first." Editing the allowlist to wave a new rubric through
+  defeats the forcing function. Same blocker as the `reward-hack`
+  (2026-06-04) and `metis_safety` (2026-05-18) 12th-rubric REJECTs.
+  (2) **Out-of-scope domain — squarely the frozen family.**
+  Trajectory-level safety/robustness judging, OWASP-Agentic tagging,
+  and simulated harmful-span-insertion robustness (the 2606.04778 /
+  2606.04168 adversarial class) are agent-safety eval-bench territory
+  — the exact family of the v2.0.0-trimmed `function-hijacking-
+  robustness`, `owasp-mcp-top-10-beta`, and "MCP attack benches, etc."
+  rubrics the v4.3 reset explicitly froze out. The 11 in-scope rubrics
+  each score *quality of work in a domain*; a trajectory-safety
+  benchmark scores an agent's adversarial robustness — scoring the
+  trajectory, not a skill execution's quality (the task itself asks to
+  "make clear this judges the trajectory, not just the output"), which
+  is precisely the frontier-lab eval-bench framing the scope reset
+  removed.
+  (3) **Repo-shape tells.** The task's suggested registration
+  mechanism (`rg "rubric|SYSTEM_PROMPT|judge|register|score"`) does
+  not match how rubrics work: there is no `register()` and rubrics are
+  not defined by a `SYSTEM_PROMPT` — they are plain markdown files
+  resolved by *file presence* in `score.load_rubric()` (exact →
+  category prefix → `default.md`). The step-5 runner probe
+  (`rg "test|lint" package.json pyproject.toml Makefile`) names three
+  files that do not exist in this repo (runner is
+  `python3 -m unittest discover tests/`), and "push to main" ignores
+  the branch-+-PR convention every change here follows. Same
+  templated-from-a-different-repo signature as the `metis_safety`
+  (2026-05-18), `held_out_consistency` (2026-05-22),
+  `ProcessScorerJudge` (2026-05-29), and `reward-hack` (2026-06-04)
+  REJECTs.
+  (4) **Door left open.** Verdict already has a `safety` scoring
+  dimension and a `security` rubric, and `score.detect_red_flags`
+  already scans the transcript for destructive/unsafe patterns. A
+  *narrow*, in-scope version of the intent — flag a transcript whose
+  mid-sequence steps drift unsafe — would be better shaped as an
+  additional signal in `detect_red_flags` (alongside the existing
+  destructive-command / hallucination flags) than as a 12th
+  OWASP-Agentic benchmark rubric, and would still need a deliberate
+  runbook §scope-reset amendment before it could ship. Until that
+  runbook change lands, the CI scope contract is the gate. **Verified
+  excerpt — Existing API (rubric resolution), `score.load_rubric`:**
+  `1. {rubric_dir}/{skill_name}.md  2. {rubric_dir}/{category}.md
+  (derived from the skill name)  3. {rubric_dir}/default.md`.
+
 - **`reward-hack` 12th domain rubric + RHB grader-gaming detector
   (2026-06-04): REJECT.** A task proposed adding a `reward-hack`
   rubric that scores an agent trajectory on four deterministic
