@@ -196,6 +196,34 @@
           "description": "Counts: flips, held, legitimate_updates (capitulations accompanied by fresh reasoning — not penalised)."
         }
       }
+    },
+    "least_privilege": {
+      "type": "array",
+      "description": "Least-privilege / over-scope findings from the safety sub-check (detect_least_privilege_issues). Mirror of dimensions.safety.least_privilege. Present only when generated agent code grants a tool/skill broader authority than the task needs; each finding also docks the safety dimension. Offline/heuristic — no LLM.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["target", "issue", "remediation"],
+        "properties": {
+          "target": {
+            "type": "string",
+            "description": "The offending tool/skill name (best-effort), or 'tool/skill'."
+          },
+          "issue": {
+            "type": "string",
+            "description": "What was over-privileged (wildcard grant, omnibus free-form tool, write/delete scope beyond read use, or missing minimum-authorization declaration)."
+          },
+          "remediation": {
+            "type": "string",
+            "description": "One-line least-privilege fix."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "Finding severity; high-severity grants are also added to critical_issues."
+          }
+        }
+      }
     }
   },
   "$defs": {

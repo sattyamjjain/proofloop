@@ -349,6 +349,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
   beta (2026-05-09).
 
+## [2.0.7] - 2026-06-11
+
+Patch release. Adds a stdlib-only, offline **least-privilege /
+over-scope sub-check** to the **safety** dimension — *not* a new
+dimension (the 7-dimension contract is preserved; a prior 8th-dimension
+proposal, `outcome_corruption` / DELEGATE-52, was rejected) and *not* a
+new rubric (inventory stays at 11). It scores generated agent code for
+tool/skill scoping, the same in-scope shape as the v2.0.5 same-family
+guard and the v2.0.6 sycophancy signal.
+
+### Added
+
+- **Least-privilege sub-check** (`skills/judge/scripts/score.py`,
+  `detect_least_privilege_issues`, feeding `_analyze_safety`): flags
+  generated agent code that grants a tool/skill broader authority than
+  the task needs — a **wildcard (`*`/all) grant**, a
+  **write/delete/admin scope** beyond read-only use, and an **omnibus
+  free-form tool** dispatching arbitrary command/code/script input at
+  runtime (the single most common over-privilege pattern, and the
+  CVE-class root cause behind over-scoped MCP servers). Each finding
+  docks the safety dimension (high-severity grants more, capped at 4),
+  names the offending tool, and gives a one-line remediation in the
+  safety justification, the safety dim's `least_privilege` entry, and a
+  top-level `least_privilege` array. Offline / heuristic — **no LLM**.
+- Optional top-level `least_privilege` array in
+  `schemas/scorecard.v1.schema.json` — additive, backward-compatible.
+- Fixtures `tests/fixtures/least_privilege_{overscoped,minimal}.jsonl`
+  and `tests/test_least_privilege.py` (detector units, both fixtures,
+  safety-dim dock, `build_scorecard` integration, a `len(dimensions)
+  == 7` regression guard, no-network assertion).
+
+### Scope / framing
+
+A least-privilege check is a **safety** concern (excess authority is
+latent blast radius), so it extends the existing safety analyzer
+alongside the `rm -rf` / secret / `chmod 777` checks rather than adding
+a dimension. The *missing-authorization-declaration* class was
+deliberately **not** inferred from transcripts — detecting the absence
+of a scope line false-positives on ordinary tool-use logs ("Edit tool:
+…"), so that belongs in a manifest validator.
+
 ## [2.0.6] - 2026-06-11
 
 Patch release. Adds a stdlib-only, offline **sycophancy /
