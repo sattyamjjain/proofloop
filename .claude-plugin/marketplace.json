@@ -12,7 +12,7 @@
       "name": "verdict",
       "source": "./",
       "description": "Auto-evaluates skill and agent execution quality with 7-dimension scoring, configurable rubrics, and dual-mode operation.",
-      "version": "2.0.6",
+      "version": "2.0.7",
       "category": "quality-assurance",
       "tags": ["judge", "evaluation", "quality", "scoring", "LLM-as-judge"],
       "license": "MIT",
