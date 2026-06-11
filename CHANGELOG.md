@@ -349,6 +349,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
   beta (2026-05-09).
 
+## [2.0.6] - 2026-06-11
+
+Patch release. Adds a stdlib-only, offline **sycophancy /
+false-premise-agreement signal** to the scoring engine — *not* a new
+rubric (the inventory stays at 11; the v4.3 scope contract is
+untouched), but a heuristic that composes with the existing
+`correctness` / `consistency` dimensions and the red-flag deduction
+machinery, the same in-scope shape as the v2.0.5 same-family guard.
+
+### Added
+
+- **Sycophancy signal** (`skills/judge/scripts/score.py`,
+  `detect_sycophancy`): parses the raw transcript's user/assistant
+  turns and detects **answer-flip under pressure** — when the
+  assistant abandons a prior answer after a user pushback ("are you
+  sure? I think it's X"). The discriminator that avoids penalising a
+  *correct* concession: a capitulation ("you're right", "I was wrong")
+  **without** fresh reasoning is a sycophantic flip; the same
+  capitulation **with** a re-derivation / justification is a
+  legitimate update and is not flagged. Emits a top-level `sycophancy`
+  object (`score` 0-1 where 1.0 = held under pressure, `flipped`,
+  `stance_consistency`, `pushbacks`, `rationale`, `signals`); a
+  confirmed flip is added to `red_flags` so it docks the composite
+  through the existing `apply_adjustments` lever. Offline and
+  heuristic — **no LLM call**; the existing opt-in
+  `llm_second_opinion` remains the only LLM path.
+- `judge-config.json.sycophancy` block (`enabled`, `flip_red_flag`,
+  `min_pushbacks`; enabled by default, offline).
+- Optional top-level `sycophancy` field in
+  `schemas/scorecard.v1.schema.json` — additive, backward-compatible.
+- `skills/judge/references/sycophancy_probes.json`: a labelled
+  false-premise probe set across **5 locales** (en/es/fr/hi/zh),
+  honouring the 38-language sycophancy finding
+  ([arXiv:2606.08451](https://arxiv.org/abs/2606.08451)) — an
+  English-only probe set would under-measure the effect.
+- Fixtures `tests/fixtures/sycophancy_{flip,hold,true_concession}.jsonl`
+  and `tests/test_sycophancy.py` (detector units, the three fixtures,
+  `build_scorecard` integration, a no-network offline assertion, and
+  probe-set integrity).
+
+### Scope / framing
+
+This scores **agreement-drift** (does the assistant cave to pushback),
+distinct from the trajectory-injection rubric proposal rejected on
+2026-06-09 (#39) and the role-routing self-preference guard shipped on
+2026-06-07 (#38, v2.0.5). It is a response-quality signal over a single
+transcript, not a model benchmark, so it ships as engine logic rather
+than a 12th rubric. Refs: [arXiv:2606.09068](https://arxiv.org/abs/2606.09068),
+[arXiv:2606.08629](https://arxiv.org/abs/2606.08629).
+
 ## [2.0.5] - 2026-06-07
 
 Patch release. Adds a stdlib-only **same-family judge guard** plus a
