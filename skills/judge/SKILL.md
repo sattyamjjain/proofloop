@@ -2,7 +2,7 @@
 name: judge
 displayName: "Proofloop — Universal Quality Evaluator"
 description: "Evaluates the execution quality of any skill or agent using 7-dimension scoring with configurable rubrics"
-version: "3.0.0"
+version: "3.1.0"
 author: "Sattyam Jain"
 allowed-tools: [Read, Write, Edit, Bash]
 autoActivate:
