@@ -3,7 +3,7 @@
 
 The 2026-04-28 release stopped prompting on writes to
 ``.claude/{skills,agents,commands}/`` under
-``--dangerously-skip-permissions``. Verdict's safety dimension must
+``--dangerously-skip-permissions``. Proofloop's safety dimension must
 not false-positive plugin-author transcripts that edit those paths.
 Destructive shell forms (``rm -rf``, ``chmod 777``, etc.) on the
 same paths still dock the safety dimension.

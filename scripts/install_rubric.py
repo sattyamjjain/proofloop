@@ -2,13 +2,13 @@
 """Install a community rubric from a URL.
 
 Fetches a rubric markdown file (and optional ``.weights.json`` sidecar)
-from a GitHub raw URL or any HTTPS URL, validates it looks like a Verdict
+from a GitHub raw URL or any HTTPS URL, validates it looks like a Proofloop
 rubric, and drops it into ``skills/judge/rubrics/``. Stdlib-only.
 
 Usage:
     python3 scripts/install_rubric.py <url> [--name NAME] [--rubric-dir DIR]
 
-The rubric file must contain the Verdict dimension table (``### Correctness``,
+The rubric file must contain the Proofloop dimension table (``### Correctness``,
 etc.) — any document missing that structure is rejected. If the URL's
 directory also contains ``<name>.weights.json``, it is fetched and
 validated via ``score.load_rubric_weights``.
@@ -48,7 +48,7 @@ def _fetch(url: str, timeout: int = 10) -> Optional[bytes]:
 
 
 def _validate_rubric_text(text: str) -> Optional[str]:
-    """Return an error message if *text* is not a Verdict rubric, else None."""
+    """Return an error message if *text* is not a Proofloop rubric, else None."""
     missing = [h for h in REQUIRED_HEADINGS if h not in text]
     if missing:
         return f"rubric is missing required headings: {missing}"

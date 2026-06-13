@@ -1,17 +1,17 @@
 name: Feature request
-description: Propose a change to Verdict's plugin behavior
+description: Propose a change to Proofloop's plugin behavior
 title: "[feat] "
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Before filing: read CLAUDE.md §v4.3 Scope Contract. Verdict
+        Before filing: read CLAUDE.md §v4.3 Scope Contract. Proofloop
         is a Claude Code / Cowork plugin only. New rubrics targeting
         frontier-lab eval benches (SWE-bench, Terminal-Bench, GAIA,
         OSWorld, MCP attack benches, EU AI Act, etc.) are
         out-of-scope and should be filed in
-        [Discussions](https://github.com/sattyamjjain/verdict/discussions)
+        [Discussions](https://github.com/sattyamjjain/proofloop/discussions)
         instead.
 
   - type: dropdown

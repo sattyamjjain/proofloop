@@ -14,7 +14,7 @@ was either a hosted observability platform I'd have to wire traces
 into, or a Python eval library I'd have to script. None of them plugged
 into Claude Code, and all of them needed a second LLM to do the grading.
 
-So I built Verdict.
+So I built Proofloop.
 
 It's a Claude Code plugin. You install it from the marketplace, and
 from that point on every `Stop` hook (skill finishes) and
@@ -27,7 +27,7 @@ Persists the scorecard to JSON so `/scorecard` can render trends.
 Install:
 
 ```
-/plugin marketplace add sattyamjjain/verdict
+/plugin marketplace add sattyamjjain/proofloop
 /plugin install verdict@verdict
 ```
 

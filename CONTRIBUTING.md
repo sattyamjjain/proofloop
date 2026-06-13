@@ -1,6 +1,6 @@
-# Contributing to Verdict
+# Contributing to Proofloop
 
-Verdict welcomes contributions. The most impactful kinds, in order:
+Proofloop welcomes contributions. The most impactful kinds, in order:
 
 1. **Rubrics** for domains we don't cover (`security-scan-v2`,
    `kubernetes-review`, `sql-review`, `pentest`, …).
@@ -33,8 +33,8 @@ hard constraint — see the bottom of this file.
 No dependencies beyond stdlib:
 
 ```shell
-git clone https://github.com/sattyamjjain/verdict
-cd verdict
+git clone https://github.com/sattyamjjain/proofloop
+cd proofloop
 python3 -m unittest discover tests/ -v       # full suite
 python3 scripts/validate_marketplace.py      # schema check
 python3 scripts/benchmark_pack.py            # regression gate
@@ -124,7 +124,7 @@ notifications sometimes slip through.
 
 ## The stdlib-only rule
 
-Verdict's install story is "zero ongoing cost, no supply-chain risk,
+Proofloop's install story is "zero ongoing cost, no supply-chain risk,
 `pip install` is instant." Every third-party dep weakens that pitch.
 If you think you need one, open an issue instead of a PR — we'll
 discuss whether the feature can be reshaped to stay stdlib-only, or

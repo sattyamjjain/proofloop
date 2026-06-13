@@ -143,7 +143,7 @@ class TestRenderJson(unittest.TestCase):
 class TestRenderMarkdown(unittest.TestCase):
     def test_starts_with_h1(self) -> None:
         text = explain.render_markdown(_sample_card())
-        self.assertTrue(text.startswith("# Verdict Scorecard"))
+        self.assertTrue(text.startswith("# Proofloop Scorecard"))
 
     def test_has_dimension_table_header(self) -> None:
         text = explain.render_markdown(_sample_card())
@@ -203,7 +203,7 @@ class TestCli(unittest.TestCase):
                 ])
                 self.assertEqual(rc, 0)
                 self.assertTrue(out_path.is_file())
-                self.assertIn("# Verdict Scorecard", out_path.read_text())
+                self.assertIn("# Proofloop Scorecard", out_path.read_text())
             finally:
                 card_path.unlink()
 
@@ -364,7 +364,7 @@ class TestRenderHtmlPrintable(unittest.TestCase):
 
     def test_default_cover_title(self) -> None:
         html = explain.render_html_printable(_sample_card(skill="my-skill"))
-        self.assertIn("my-skill — Verdict Scorecard", html)
+        self.assertIn("my-skill — Proofloop Scorecard", html)
 
     def test_explicit_cover_title(self) -> None:
         html = explain.render_html_printable(
@@ -448,7 +448,7 @@ class TestRoundTripFromBuildScorecard(unittest.TestCase):
             )
             saved_path = Path(card["_saved_to"])
             md = explain.render_markdown(explain.load_scorecard(saved_path))
-            self.assertIn("# Verdict Scorecard", md)
+            self.assertIn("# Proofloop Scorecard", md)
             self.assertIn("code-review", md)
 
 

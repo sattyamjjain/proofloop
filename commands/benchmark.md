@@ -21,7 +21,7 @@ Compare a skill's historical performance against defined benchmark standards.
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│  VERDICT BENCHMARK — {skill-name}                          │
+│  PROOFLOOP BENCHMARK — {skill-name}                          │
 ├────────────────┬──────────┬───────────┬───────────────────────┤
 │ Dimension      │ Your Avg │ Benchmark │ Delta                 │
 ├────────────────┼──────────┼───────────┼───────────────────────┤

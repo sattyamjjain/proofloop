@@ -2,14 +2,14 @@
 
 Ten creators, each DM personalised with a demo run against one of their
 recent public transcripts. The pattern is the same: open with a
-concrete observation from their work, attach a specific Verdict output,
+concrete observation from their work, attach a specific Proofloop output,
 end with a single ask (try it / boost it / give feedback).
 
 ## Template
 
 > Hey {name} —
 >
-> loved your recent {specific thing they shipped}. I ran Verdict
+> loved your recent {specific thing they shipped}. I ran Proofloop
 > against {public transcript or PR}, and the scorecard flagged
 > {specific dimension} at {score}/10 with the note {justification}.
 >
@@ -17,23 +17,23 @@ end with a single ask (try it / boost it / give feedback).
 >
 > I'd love a 90-second reaction if you have time. No ask beyond that.
 >
-> install: /plugin marketplace add sattyamjjain/verdict
-> source: github.com/sattyamjjain/verdict
+> install: /plugin marketplace add sattyamjjain/proofloop
+> source: github.com/sattyamjjain/proofloop
 >
 > — sattyam
 
 ## Targets (in order of leverage)
 
 1. **swyx (@swyx)** — Latent Space / dev tooling authority. He has
-   explicit Claude Code and skills content; Verdict is exactly his beat.
+   explicit Claude Code and skills content; Proofloop is exactly his beat.
 2. **Theo (@theo)** — T3 Stack / dev-tool takes. Audience overlap with
    Claude Code is high.
 3. **simonw (@simonw)** — Django lineage, ships CLI tools, writes
-   about eval pipelines. Verdict's CLI surface is aligned to his taste.
+   about eval pipelines. Proofloop's CLI surface is aligned to his taste.
 4. **karpathy (@karpathy)** — reach > any nominal fit. Only DM if the
    demo scorecard is airtight (run on one of his public repos first).
 5. **matthewberman** — YouTube Claude / AI content; 300k subs.
-6. **hwchase17** — LangChain author. Verdict competes with LangSmith;
+6. **hwchase17** — LangChain author. Proofloop competes with LangSmith;
    position this carefully as "different category, not a competitor."
 7. **ggerganov** — llama.cpp author. Offline-first heuristics will
    resonate; expect tough questions on the heuristic accuracy floor.

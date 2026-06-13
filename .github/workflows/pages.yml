@@ -41,7 +41,7 @@ jobs:
           <html lang="en">
           <head>
             <meta charset="utf-8" />
-            <title>Verdict schema registry</title>
+            <title>Proofloop schema registry</title>
             <style>
               body { font-family: -apple-system, system-ui, sans-serif; max-width: 42rem; margin: 3rem auto; padding: 0 1.25rem; color: #1a1a1a; }
               h1 { margin: 0 0 0.25rem; font-size: 1.25rem; }
@@ -54,8 +54,8 @@ jobs:
             </style>
           </head>
           <body>
-            <h1>Verdict schema registry</h1>
-            <p class="tagline">Canonical JSON schemas for scorecards emitted by <a href="https://github.com/sattyamjjain/verdict">sattyamjjain/verdict</a>. See <a href="https://github.com/sattyamjjain/verdict/blob/main/docs/schema-registry.md">docs/schema-registry.md</a> for the stability contract.</p>
+            <h1>Proofloop schema registry</h1>
+            <p class="tagline">Canonical JSON schemas for scorecards emitted by <a href="https://github.com/sattyamjjain/proofloop">sattyamjjain/proofloop</a>. See <a href="https://github.com/sattyamjjain/proofloop/blob/main/docs/schema-registry.md">docs/schema-registry.md</a> for the stability contract.</p>
             <table>
               <thead><tr><th>Schema</th><th>Version</th><th>URL</th></tr></thead>
               <tbody>

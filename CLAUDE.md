@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 <!-- MANUAL: project-description -->
 ## Overview
 
-**Verdict** is a Claude Code plugin that auto-evaluates skill and agent execution quality. It provides 7-dimension scoring (correctness, completeness, adherence, actionability, efficiency, safety, consistency), configurable rubrics, persistent scorecards, and dual-mode operation (auto via hooks + manual via `/judge` command). Works on both Claude Code and Claude Cowork.
+**Proofloop** is a Claude Code plugin that auto-evaluates skill and agent execution quality. It provides 7-dimension scoring (correctness, completeness, adherence, actionability, efficiency, safety, consistency), configurable rubrics, persistent scorecards, and dual-mode operation (auto via hooks + manual via `/judge` command). Works on both Claude Code and Claude Cowork.
 
 - Author: Sattyam Jain
 - License: MIT
@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 <!-- MANUAL: v43-scope-contract -->
 ## v4.3 Scope Contract (2026-05-03)
 
-Verdict is a **Claude Code / Cowork plugin only.** Per the 2026-05-03 v4.3 scope reset (runbook §scope-reset), the rubric and adapter inventory is pinned to plugin-domain quality scoring. Frontier-lab eval-bench scope (SWE-bench, Terminal-Bench, GAIA, OSWorld, MCP attack benches, etc.) is explicitly out of scope and will not be re-added without a runbook spec change.
+Proofloop is a **Claude Code / Cowork plugin only.** Per the 2026-05-03 v4.3 scope reset (runbook §scope-reset), the rubric and adapter inventory is pinned to plugin-domain quality scoring. Frontier-lab eval-bench scope (SWE-bench, Terminal-Bench, GAIA, OSWorld, MCP attack benches, etc.) is explicitly out of scope and will not be re-added without a runbook spec change.
 
 **In-scope rubrics (11):** `code-review`, `security`, `devops`, `data-analysis`, `frontend-design`, `testing`, `documentation`, `content-writing`, `research`, `default`, `custom-template`.
 
@@ -70,7 +70,7 @@ This project has no build step or package manager. Python scripts use stdlib onl
 ## Architecture
 
 ```
-Verdict/  (v2.0.2)
+Proofloop/  (v2.0.2)
 ├── .claude-plugin/
 │   ├── plugin.json              # Plugin manifest (skills, agents, commands, hooks)
 │   └── marketplace.json         # Marketplace listing metadata

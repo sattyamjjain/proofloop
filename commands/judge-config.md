@@ -1,12 +1,12 @@
 ---
 name: judge-config
-description: "View and manage Verdict auto-judge configuration"
+description: "View and manage Proofloop auto-judge configuration"
 usage: "/judge-config [subcommand] [args]"
 ---
 
 # /judge-config — Manage Auto-Judge Settings
 
-View and modify the Verdict configuration.
+View and modify the Proofloop configuration.
 
 ## Subcommands
 
@@ -24,7 +24,7 @@ View and modify the Verdict configuration.
 2. If no subcommand: display the full config in a readable format:
 
 ```
-Verdict Configuration
+Proofloop Configuration
 ========================
 Auto-Judge: ENABLED
 Threshold: 5.0 (skills scoring below this are BLOCKED)
@@ -75,7 +75,7 @@ Tokenizer Baselines (efficiency length-threshold multipliers):
 
 ## Weight validation
 
-When the user edits `scoring.dimensions` directly, Verdict enforces the
+When the user edits `scoring.dimensions` directly, Proofloop enforces the
 weight-sum-to-1.0 invariant at load time. Non-conforming configs are
 rejected with a stderr warning and the scorer falls back to default
 weights instead of silently producing inflated composites. Run

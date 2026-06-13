@@ -21,18 +21,18 @@ sampled form: `adlc`, `asana`, `zoom-plugin`).
 
 | Form field        | Value                                                                                                                  |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| **Name**          | `verdict`                                                                                                              |
+| **Name**          | `proofloop`                                                                                                              |
 | **Description**   | *See below — two variants depending on character limit.*                                                               |
 | **Category**      | `development` (matches the category of 144 existing entries; fallback: `quality-assurance` if a dropdown offers it)    |
 | **Source type**   | `url` (a.k.a. "Git URL" — same pattern used by all URL-sourced community entries)                                      |
-| **Source URL**    | `https://github.com/sattyamjjain/verdict.git`                                                                          |
-| **Homepage**      | `https://github.com/sattyamjjain/verdict`                                                                               |
+| **Source URL**    | `https://github.com/sattyamjjain/proofloop.git`                                                                          |
+| **Homepage**      | `https://github.com/sattyamjjain/proofloop`                                                                               |
 | **Author**        | `Sattyam Jain`                                                                                                         |
 | **Author email**  | `sattyamjain96@gmail.com`                                                                                              |
 | **License**       | `MIT`                                                                                                                  |
 | **Version**       | `1.1.0`                                                                                                                |
 | **Keywords/tags** | `judge, evaluation, quality, scoring, skills, agents, rubrics`                                                         |
-| **Repository**    | `https://github.com/sattyamjjain/verdict`                                                                              |
+| **Repository**    | `https://github.com/sattyamjjain/proofloop`                                                                              |
 
 ### Description — short (< 100 chars)
 
@@ -45,7 +45,7 @@ sampled form: `adlc`, `asana`, `zoom-plugin`).
 ### Description — long / features list (for any field that allows markdown)
 
 ```markdown
-Verdict auto-evaluates skill and sub-agent execution quality from
+Proofloop auto-evaluates skill and sub-agent execution quality from
 Claude Code's `Stop`, `SubagentStop`, and `StopFailure` hooks.
 
 Key differentiators vs Braintrust / Langfuse / Phoenix / Promptfoo /
@@ -71,14 +71,14 @@ paste this — it matches the shape of existing entries verbatim:
 
 ```json
 {
-  "name": "verdict",
+  "name": "proofloop",
   "description": "Auto-grade every Claude Code and Cowork skill execution on seven dimensions (correctness, completeness, adherence, actionability, efficiency, safety, consistency). Hooks-based auto-scoring + persistent scorecards. Offline heuristics — no LLM call required.",
   "category": "development",
   "source": {
     "source": "url",
-    "url": "https://github.com/sattyamjjain/verdict.git"
+    "url": "https://github.com/sattyamjjain/proofloop.git"
   },
-  "homepage": "https://github.com/sattyamjjain/verdict"
+  "homepage": "https://github.com/sattyamjjain/proofloop"
 }
 ```
 
@@ -95,10 +95,10 @@ review team catches every one of them:
 - [x] `CHANGELOG.md` includes a v1.1.0 entry — ✓
 - [x] `.claude-plugin/marketplace.json` passes `scripts/validate_marketplace.py` — ✓
 - [x] CI workflow runs on PRs and is currently green — ✓ (two consecutive green runs)
-- [x] Repository is **public** — verify at <https://github.com/sattyamjjain/verdict>
+- [x] Repository is **public** — verify at <https://github.com/sattyamjjain/proofloop>
 - [x] No secrets, tokens, or credentials in git history — safe (no `.env`, `credentials.*`, etc.)
 - [x] Version tag `v1.1.0` exists and is signed / annotated — ✓
-- [x] Release notes published — ✓ <https://github.com/sattyamjjain/verdict/releases/tag/v1.1.0>
+- [x] Release notes published — ✓ <https://github.com/sattyamjjain/proofloop/releases/tag/v1.1.0>
 
 ## Assets to attach (if the form accepts files)
 
@@ -116,13 +116,13 @@ Common rejection reasons and fixes:
 
 1. **"Name conflicts with existing plugin"** — our `name: "verdict"`
    is unique in the 144-entry snapshot, but the team may reserve the
-   name internally. Fallback: resubmit as `verdict-judge` and update
+   name internally. Fallback: resubmit as `proofloop-judge` and update
    `plugin.json` + `marketplace.json` accordingly.
 2. **"Description exceeds N characters"** — use the short variant above.
 3. **"README missing required section (installation / usage / license)"**
    — our README has all three.
 4. **"Version string doesn't match a published tag"** — reply with
-   a link to <https://github.com/sattyamjjain/verdict/releases/tag/v1.1.0>.
+   a link to <https://github.com/sattyamjjain/proofloop/releases/tag/v1.1.0>.
 
 ## Post-submission followup
 

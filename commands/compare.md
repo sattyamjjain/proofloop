@@ -1,6 +1,6 @@
 ---
 name: compare
-description: "Compare two Verdict scorecards of the same skill with a narrative overlay"
+description: "Compare two Proofloop scorecards of the same skill with a narrative overlay"
 usage: "/compare --run-a <path> --run-b <path> [--format text|json]"
 ---
 

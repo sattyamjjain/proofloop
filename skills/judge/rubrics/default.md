@@ -97,7 +97,7 @@ existing low-variance branch from rewarding a collapsed verifier (it
 would otherwise grant a `+1` "highly consistent" bonus to the same
 data that triggers the dock). Pure stdlib statistics; no LLM call.
 Configurable via `judge-config.json.verifier_collapse` (set
-`enabled: false` to disable). Derived from Verdict's own consistency
+`enabled: false` to disable). Derived from Proofloop's own consistency
 dimension plus the Soft-SVeRL project anchor — distinct from
 variance-based consistency, not a sibling analogy.
 

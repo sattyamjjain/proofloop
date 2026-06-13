@@ -556,14 +556,14 @@ class TestHookGateMode(unittest.TestCase):
             plugin, transcript = self._stage(Path(tmp), gate_mode="warn")
             result = self._run_hook(plugin, transcript)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("Verdict WARNING: verifier collapse", result.stderr)
+            self.assertIn("Proofloop WARNING: verifier collapse", result.stderr)
 
     def test_gate_mode_fail_exits_2_with_stderr_blocked(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             plugin, transcript = self._stage(Path(tmp), gate_mode="fail")
             result = self._run_hook(plugin, transcript)
             self.assertEqual(result.returncode, 2, result.stderr)
-            self.assertIn("Verdict BLOCKED: verifier collapse", result.stderr)
+            self.assertIn("Proofloop BLOCKED: verifier collapse", result.stderr)
 
     def test_gate_mode_off_silent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

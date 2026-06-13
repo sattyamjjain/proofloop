@@ -27,7 +27,7 @@ HTML_TEMPLATE = """<!doctype html>
 <html lang=\"en\">
 <head>
 <meta charset=\"utf-8\" />
-<title>Verdict Studio</title>
+<title>Proofloop Studio</title>
 <style>
   :root {{
     --bg: #0b0d12; --panel: #141820; --ink: #e9edf5;
@@ -69,13 +69,13 @@ HTML_TEMPLATE = """<!doctype html>
 </style>
 </head>
 <body>
-<h1>Verdict Studio</h1>
+<h1>Proofloop Studio</h1>
 <p class=\"tagline\">Auto-generated from {score_count} scorecard(s) across {skill_count} skill(s). Generated {generated_at}.</p>
 <div class=\"grid\">{panels}</div>
 <script>
   // No-op. The HTML is static; this is a placeholder hook for future
   // interactivity (filtering, date-range scrubber, rubric overlay).
-  console.log(\"Verdict Studio loaded with {score_count} scorecards.\");
+  console.log(\"Proofloop Studio loaded with {score_count} scorecards.\");
 </script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 name: Self-score
 
 # Dogfooding gate. Treat the PR title + body + changed-files list as a
-# synthetic transcript and run Verdict's own heuristic pass on it. Fail
+# synthetic transcript and run Proofloop's own heuristic pass on it. Fail
 # when the composite drops below the threshold (default 7.0). The
 # scorecard is posted as a PR comment so reviewers see the signal
 # alongside test + marketplace validator output.
@@ -41,7 +41,7 @@ jobs:
 
       - name: Declare sandbox capabilities
         # Claude Code v2.1.117 (Apr 2026) hardened its runtime sandbox.
-        # CI workflows that run Verdict under that sandbox declare the
+        # CI workflows that run Proofloop under that sandbox declare the
         # caps they intend to use via CLAUDE_SANDBOX_CAPS so the
         # workflow stays in sync with the runtime's expectations. The
         # check below is a declaration-only verification — actual
@@ -85,7 +85,7 @@ jobs:
           echo "Generated transcript (${TRANSCRIPT}):"
           head -40 "${TRANSCRIPT}"
 
-      - name: Run Verdict self-score
+      - name: Run Proofloop self-score
         id: score
         run: |
           set -euo pipefail

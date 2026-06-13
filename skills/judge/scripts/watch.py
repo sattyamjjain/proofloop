@@ -6,7 +6,7 @@ seconds via ``os.stat``. When a scorecard's mtime changes:
 
 1. Re-read the scorecard JSON.
 2. Compare each dimension against the previous snapshot.
-3. Emit a single-line diff header + re-render Verdict Studio to
+3. Emit a single-line diff header + re-render Proofloop Studio to
    ``--output``.
 
 Stdlib-only. No file-system watcher dep, no server loop, no threads
@@ -34,7 +34,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 import studio  # noqa: E402
 
-# Seven dimensions Verdict actually tracks.
+# Seven dimensions Proofloop actually tracks.
 DIMENSIONS: List[str] = [
     "correctness", "completeness", "adherence", "actionability",
     "efficiency", "safety", "consistency",

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate every persisted scorecard fixture against scorecard.v1.schema.json.
 
-This is the compatibility gate for the Verdict scorecard JSON shape.
+This is the compatibility gate for the Proofloop scorecard JSON shape.
 When you intentionally evolve the schema, bump ``schemaVersion``, add
 the new fields under ``$defs`` or at the top level, and regenerate the
 fixtures. See DEEP_ANALYSIS.md §Schema stability contract.
@@ -34,7 +34,7 @@ class TestSchemaFileWellFormed(unittest.TestCase):
         schema = _load_schema()
         self.assertEqual(
             schema.get("$id"),
-            "https://verdict.dev/schemas/scorecard.v1.json",
+            "https://proofloop.dev/schemas/scorecard.v1.json",
         )
         self.assertEqual(
             schema.get("$schema"),
@@ -80,7 +80,7 @@ class TestPersistedFixtures(unittest.TestCase):
             document = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(
                 document.get("$schema"),
-                "https://verdict.dev/schemas/scorecard.v1.json",
+                "https://proofloop.dev/schemas/scorecard.v1.json",
                 f"{path.name}: missing or wrong $schema",
             )
             self.assertEqual(

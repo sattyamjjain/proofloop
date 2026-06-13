@@ -1,4 +1,4 @@
-# `verdict hook lint` CLI
+# `proofloop hook lint` CLI
 
 Static analyzer for Claude Code PostToolUse hook scripts. Flags
 safety-relevant patterns in the hook **source** so adopters can

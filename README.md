@@ -1,7 +1,7 @@
-# Verdict
+# Proofloop
 
-[![CI](https://github.com/sattyamjjain/verdict/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sattyamjjain/verdict/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/sattyamjjain/verdict)](https://github.com/sattyamjjain/verdict/releases/latest)
+[![CI](https://github.com/sattyamjjain/proofloop/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sattyamjjain/proofloop/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sattyamjjain/proofloop)](https://github.com/sattyamjjain/proofloop/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Auto-grade every Claude Code and Cowork skill execution on seven
@@ -9,7 +9,7 @@ dimensions. No LLM call. No config. Just a scorecard.**
 
 Every other evaluation tool in this space (Braintrust, Langfuse,
 Phoenix, Helicone, Promptfoo, DeepEval, Ragas, LangSmith, Opik)
-requires a second LLM to grade the first. Verdict runs offline regex
+requires a second LLM to grade the first. Proofloop runs offline regex
 heuristics inside the editor. Zero ongoing cost, zero API key, zero
 network call — it ships as a Claude Code plugin that fires on every
 `Stop` and `SubagentStop` event.
@@ -19,8 +19,8 @@ network call — it ships as a Claude Code plugin that fires on every
 ## Install
 
 ```shell
-/plugin marketplace add sattyamjjain/verdict
-/plugin install verdict@verdict
+/plugin marketplace add sattyamjjain/proofloop
+/plugin install proofloop@proofloop
 ```
 
 That's it. The next skill or subagent execution that matches an
@@ -33,9 +33,9 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
 
 ---
 
-## Why Verdict
+## Why Proofloop
 
-|                            | Verdict | Braintrust / Langfuse / Phoenix | Promptfoo / DeepEval | LangSmith / Opik |
+|                            | Proofloop | Braintrust / Langfuse / Phoenix | Promptfoo / DeepEval | LangSmith / Opik |
 | -------------------------- | :-----: | :-----------------------------: | :------------------: | :--------------: |
 | Runs inside Claude Code    | ✓       | ✗                               | ✗                    | ✗                |
 | Offline (no LLM call)      | ✓       | ✗                               | optional             | ✗                |
@@ -85,7 +85,7 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
   [§Benchmark hygiene lint](#benchmark-hygiene-lint-aba-anchored)
   below.
 - **Same-family judge guard.** When the opt-in LLM second opinion is
-  enabled, Verdict checks whether the judge model shares a vendor
+  enabled, Proofloop checks whether the judge model shares a vendor
   family with the model that produced the transcript. A match sets
   `self_preference_risk: true` and warns on the console (Claude judging
   Claude inflates scores); a configured cross-family judge is
@@ -100,7 +100,7 @@ workaround (GH #39400), see [INSTALL-COWORK.md](INSTALL-COWORK.md).
 - **Stdlib only.** Python 3.9+, no third-party packages, installs
   instantly with zero supply-chain risk.
 
-> **v1.x → v2.0.0 migration.** v2.0.0 trimmed Verdict to its plugin
+> **v1.x → v2.0.0 migration.** v2.0.0 trimmed Proofloop to its plugin
 > scope per the 2026-05-03 v4.3 reset: 16 frontier-lab eval-bench
 > rubrics, 6 cross-ecosystem adapters, and 7 bench-eval scripts were
 > removed. If you depended on `swe-bench-pro`, `terminal-bench`,
@@ -119,7 +119,7 @@ Skills on the `auto_judge.always` allowlist are scored without user
 intervention. The `Stop` hook emits:
 
 ```
-Verdict: code-review → 8.7/10 (A-). Solid execution with minor areas for improvement.
+Proofloop: code-review → 8.7/10 (A-). Solid execution with minor areas for improvement.
 ```
 
 ### Manual mode
@@ -154,8 +154,8 @@ python3 skills/judge/scripts/score.py --adapter openai-compatible ...
 ```shell
 python3 skills/judge/scripts/studio.py \
   --scores-dir skills/judge/scores \
-  --output verdict-studio.html
-open verdict-studio.html
+  --output proofloop-studio.html
+open proofloop-studio.html
 ```
 
 ### Explain a scorecard for a PR comment
@@ -214,7 +214,7 @@ was actually executed (a runner invocation, a test count, an exit
 code). Claiming a pass without running it is fabricated success, a
 correctness/honesty failure, so `detect_unverified_success` docks the
 **correctness** dimension and adds a red flag — the same dual treatment
-Verdict already gives a hallucinated fact. The offending claim and a
+Proofloop already gives a hallucinated fact. The offending claim and a
 one-line remediation surface in a top-level `unverified_success` array.
 Configurable via `judge-config.json.unverified_success`
 (`enabled` / `correctness_dock` / `red_flag`).
@@ -348,7 +348,7 @@ shellcheck hooks/*.sh                         # hook-script lint
 before any score is consumed. It adapts the four issue classes from
 [arXiv:2605.26079](https://arxiv.org/abs/2605.26079) (Wang et al.
 2026, *Automated Benchmark Auditing for AI Agents and Large
-Language Models*, v1 2026-05-25) to Verdict's transcript-regression
+Language Models*, v1 2026-05-25) to Proofloop's transcript-regression
 shape. ABA found that **25.7% of tasks across 168 benchmarks**
 contained one of these issues, and that removing them moved model
 scores by ~9.6–9.9% — i.e., suspect bench plumbing changes the
@@ -387,13 +387,13 @@ the moat; defaulting to LLM judging would push the trust boundary
 into a token-billed black box, which is exactly what we lint
 against).
 
-**Scope honesty.** Verdict's "benchmark pack" scores transcripts
+**Scope honesty.** Proofloop's "benchmark pack" scores transcripts
 against expected score bounds, not tasks against ground-truth
 outputs (`benchmarks/manifest.json` is explicitly *not* a public
 eval bench — see `benchmarks/README.md`). The four ABA classes
 therefore apply *by analogy*, mapped to the regression-gate shape;
 the rule descriptions above and the lint's own help text make this
-adaptation explicit. If Verdict ever grows a true task benchmark,
+adaptation explicit. If Proofloop ever grows a true task benchmark,
 the rules will need a literal pass — tracked as **O17** in
 `CHANGELOG.md`.
 
@@ -439,10 +439,10 @@ jq '.verifier_collapse.gate_mode = "fail"' judge-config.json > tmp && mv tmp jud
 
 The `judge-on-stop.sh` ship-gate honours `gate_mode` ∈
 `{"warn", "fail", "off"}` and emits
-`Verdict {WARNING,BLOCKED}: verifier collapse detected for <skill>`
+`Proofloop {WARNING,BLOCKED}: verifier collapse detected for <skill>`
 on stderr.
 
-**Anchor.** The signal is derived from Verdict's own consistency
+**Anchor.** The signal is derived from Proofloop's own consistency
 dimension plus the **Soft-SVeRL** project anchor — distinct from
 variance-based consistency, not a sibling-benchmark analogy. The
 heuristic is offline statistics, default-on, and never calls an
@@ -456,7 +456,7 @@ The opt-in LLM second opinion
 trustworthy as the judge. An LLM judge systematically over-scores
 outputs from its own model family, so when the second-opinion judge
 shares a family with the model that produced the transcript, the score
-is biased upward and Verdict says so.
+is biased upward and Proofloop says so.
 
 Before the call, `same_family_guard` (in
 `skills/judge/analyzers/llm_judge.py`) buckets the executing model
@@ -466,7 +466,7 @@ model into vendor families (`anthropic` / `openai` / `google` /
 
 1. sets `self_preference_risk: true` on the scorecard (mirrored in the
    `same_family_guard` object with both families), and emits
-   `Verdict WARNING: judge and executing model share a family …` on
+   `Proofloop WARNING: judge and executing model share a family …` on
    stderr; and
 2. if `llm_second_opinion.alternate_judge_models` names a cross-family
    judge, **auto-prefers** it for the call (reachable via the injected
@@ -484,7 +484,7 @@ win-rate margins ([arXiv:2306.05685](https://arxiv.org/abs/2306.05685),
 MT-Bench — GPT-4 +10pp, Claude-v1 +25pp self-win-rate), and merely
 re-labelling an output as the judge's own work swings its scores by
 +23–93pp ([arXiv:2606.05976](https://arxiv.org/abs/2606.05976),
-role-relabel). Verdict keeps the judge framed as a third-party
+role-relabel). Proofloop keeps the judge framed as a third-party
 "second-opinion judge" (never first-person), flags the residual
 same-family risk, and prefers a cross-family judge when one is
 configured.
@@ -507,7 +507,7 @@ assistant turn:
 | capitulates **with** a re-derivation / "because …" | legitimate concession | not penalised |
 | holds its answer | held | `score` 1.0 |
 
-That middle row is the point: Verdict **does not penalise a correct
+That middle row is the point: Proofloop **does not penalise a correct
 concession**. Conceding to a *true* user correction — and explaining
 why — is good behaviour; only bare capitulation with no new
 justification is scored as sycophancy. The result rides on the
@@ -535,26 +535,29 @@ Refs: [arXiv:2606.09068](https://arxiv.org/abs/2606.09068),
 ## Roadmap
 
 See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Latest
-release: [v2.0.8](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.8)
-(verifier-collapse detector — flags judges that have flatlined at
-the top of the scale over the rolling scorecard window, docks the
-consistency dim, surfaces in `/judge --explain` + the Stop-hook
-ship-gate; offline stdlib-only, default-on).
+release: [v3.0.0](https://github.com/sattyamjjain/proofloop/releases/tag/v3.0.0)
+(**rebrand to Proofloop** + engine hardening — adherence no longer
+hands out an unearned point for a rubric merely being loaded, and a
+perfect correctness score now requires an execution receipt; offline
+stdlib-only).
 Previous releases:
-[v2.0.3](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.3)
+[v2.0.8](https://github.com/sattyamjjain/proofloop/releases/tag/v2.0.8)
+(verifier-collapse detector — flags judges that have flatlined at the
+top of the scale over the rolling scorecard window),
+[v2.0.3](https://github.com/sattyamjjain/proofloop/releases/tag/v2.0.3)
 (ABA-anchored benchmark hygiene lint + ship-gate wire-up — flags
 spec gaps, env coupling, brittle grading, and missing ground truth
 in the regression-gate manifest *before* its scores ship; SARIF
 output for CI surfacing),
-[v2.0.2](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.2)
+[v2.0.2](https://github.com/sattyamjjain/proofloop/releases/tag/v2.0.2)
 (safety-dim allowlist tracks Claude Code v2.1.126 — `.git/`,
 `.vscode/`, and a closed POSIX/zsh shell-config-file set added to
 `_is_plugin_author_write`),
-[v2.0.1](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.1)
+[v2.0.1](https://github.com/sattyamjjain/proofloop/releases/tag/v2.0.1)
 (opt-in `duration_ms` enrichment + safety `.claude` path
 allowlist + marketplace validator v2.1.120 keys), and the
 breaking
-[v2.0.0](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.0)
+[v2.0.0](https://github.com/sattyamjjain/proofloop/releases/tag/v2.0.0)
 trim to the v4.3 plugin-only scope — see
 [`CHANGELOG.md`](CHANGELOG.md#200---2026-05-03) and the
 [v1.x → v2.0.0 migration note](#features). No open tracker issues —
@@ -565,7 +568,7 @@ cycle starts and closed at release.
 
 Rubric contributions welcome — see `skills/judge/rubrics/custom-template.md`.
 Community rubrics can be installed via `scripts/install_rubric.py`
-from any HTTPS URL that serves a Verdict-shaped rubric.
+from any HTTPS URL that serves a Proofloop-shaped rubric.
 
 ## License
 

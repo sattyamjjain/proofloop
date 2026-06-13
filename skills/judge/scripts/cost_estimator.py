@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Local-only per-scorecard cost estimator (R4).
 
-Estimates the USD cost of running Verdict's opt-in LLM second-opinion
+Estimates the USD cost of running Proofloop's opt-in LLM second-opinion
 analyzer for a given scorecard, based on a stdlib-only per-model
 pricing table. **Local-only** — no SaaS coupling, no telemetry leaves
 the host. Pricing is a starting point; adopters override via
@@ -24,7 +24,7 @@ The scorecard path mode reads ``adjustments.brier_calibration`` /
 ``llm_usage`` block; cost is reported per-scorecard.
 
 Stdlib-only. No third-party deps. The pricing table reflects
-April 2026 published rates for the most common models Verdict's
+April 2026 published rates for the most common models Proofloop's
 LLM-judge path uses; figures are USD per 1M tokens.
 """
 from __future__ import annotations
@@ -132,7 +132,7 @@ def estimate_from_scorecard(
     - ``llm_usage.input_tokens`` / ``llm_usage.output_tokens`` when
       the LLM second-opinion analyzer ran and recorded usage. When
       absent, returns a "no LLM usage recorded" rationale and zero
-      cost — Verdict's heuristic-only path is free.
+      cost — Proofloop's heuristic-only path is free.
     """
     target = Path(scorecard_path)
     if not target.is_file():
@@ -151,7 +151,7 @@ def estimate_from_scorecard(
             "skill": card.get("skill"),
             "model_lookup": model,
             "rationale": (
-                "No llm_usage block — Verdict ran heuristics only "
+                "No llm_usage block — Proofloop ran heuristics only "
                 "(zero LLM cost)."
             ),
             "total_usd": 0.0,
@@ -170,7 +170,7 @@ def estimate_from_scorecard(
 
 
 def parse_args(argv: Optional[list] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="verdict-cost-estimator")
+    parser = argparse.ArgumentParser(prog="proofloop-cost-estimator")
     parser.add_argument(
         "--input-tokens", type=int, default=None,
         help="Input token count for direct estimate. Pair with --model.",
@@ -204,18 +204,18 @@ def main(argv: Optional[list] = None) -> int:
     try:
         pricing = load_pricing(args.pricing_file)
     except (FileNotFoundError, ValueError) as exc:
-        print(f"verdict-cost-estimator: {exc}", file=sys.stderr)
+        print(f"proofloop-cost-estimator: {exc}", file=sys.stderr)
         return 2
     if args.scorecard:
         try:
             result = estimate_from_scorecard(args.scorecard, pricing)
         except (FileNotFoundError, ValueError) as exc:
-            print(f"verdict-cost-estimator: {exc}", file=sys.stderr)
+            print(f"proofloop-cost-estimator: {exc}", file=sys.stderr)
             return 2
     elif args.input_tokens is not None or args.output_tokens is not None:
         if args.model is None:
             print(
-                "verdict-cost-estimator: --model required for direct estimate",
+                "proofloop-cost-estimator: --model required for direct estimate",
                 file=sys.stderr,
             )
             return 2
@@ -227,11 +227,11 @@ def main(argv: Optional[list] = None) -> int:
                 pricing,
             )
         except ValueError as exc:
-            print(f"verdict-cost-estimator: {exc}", file=sys.stderr)
+            print(f"proofloop-cost-estimator: {exc}", file=sys.stderr)
             return 2
     else:
         print(
-            "verdict-cost-estimator: provide --scorecard OR "
+            "proofloop-cost-estimator: provide --scorecard OR "
             "(--input-tokens + --output-tokens + --model)",
             file=sys.stderr,
         )

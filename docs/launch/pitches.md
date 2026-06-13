@@ -2,19 +2,19 @@
 
 ## Latent Space (swyx / Alessio)
 
-**Subject:** Verdict — offline heuristic scoring for Claude Code skills (Stop-hook native)
+**Subject:** Proofloop — offline heuristic scoring for Claude Code skills (Stop-hook native)
 
 Hey swyx / Alessio,
 
-Just shipped Verdict, a Claude Code plugin that scores every skill /
+Just shipped Proofloop, a Claude Code plugin that scores every skill /
 subagent execution on seven dimensions from the Stop hook, offline,
 no LLM call. The moat isn't features — it's distribution: every other
-tool in this space asks you to wire traces into a SaaS. Verdict runs
+tool in this space asks you to wire traces into a SaaS. Proofloop runs
 inside the editor.
 
 Would love to do a Latent Space episode on the offline-heuristics
 design decision, why stdlib-only matters for plugin distribution, and
-where Verdict fits relative to Braintrust / Langfuse / Ragas / Opik.
+where Proofloop fits relative to Braintrust / Langfuse / Ragas / Opik.
 
 Happy to bring data from the first 14 days of launch — install counts,
 grade distributions by rubric, drift-detection anecdotes.
@@ -29,7 +29,7 @@ Discord intro if it's easier: {user handle}.
 
 Hi Adam —
 
-Verdict shipped v1.1.0 last week. It's a Claude Code plugin that
+Proofloop shipped v1.1.0 last week. It's a Claude Code plugin that
 auto-scores skill and subagent executions on seven dimensions using
 offline heuristics (no LLM call, no API key, no hosted service). Cross-
 ecosystem from day one: Codex, Cursor, Continue, Gemini CLI, Cowork

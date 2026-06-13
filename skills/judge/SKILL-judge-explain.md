@@ -1,6 +1,6 @@
 ---
 name: judge-explain
-description: "Render a Verdict scorecard JSON as PR-friendly Markdown or stable-schema JSON"
+description: "Render a Proofloop scorecard JSON as PR-friendly Markdown or stable-schema JSON"
 ---
 
 # `/judge --explain` — Scorecard Rationale Exporter
@@ -17,9 +17,9 @@ two formats:
 
 ## Why
 
-Verdict scorecards already carry every signal needed to justify the
+Proofloop scorecards already carry every signal needed to justify the
 composite score. Adopters asked
-([Discussions #43](https://github.com/sattyamjjain/verdict/discussions/43))
+([Discussions #43](https://github.com/sattyamjjain/proofloop/discussions/43))
 for a one-shot way to drop the rationale into PR conversations
 without copy-pasting from the raw JSON. `/judge --explain` is that
 shot.
@@ -39,7 +39,7 @@ scorecard is missing or malformed.
 ## Markdown output shape
 
 ```markdown
-# Verdict Scorecard — `<skill>`
+# Proofloop Scorecard — `<skill>`
 
 **Composite:** <score>/10 — **Grade:** <letter> (<label>)
 **Rubric:** `<rubric>` · **Model:** `<model>` · **Timestamp:** `<ISO-8601>`
@@ -132,7 +132,7 @@ introduction.
   recorded. The `evidence` block surfaces the counts so a reviewer
   can gauge signal volume. Storing the matched spans is queued for
   v1.4.0.
-- **No cost telemetry.** Verdict doesn't track API usage today, so
+- **No cost telemetry.** Proofloop doesn't track API usage today, so
   the explain output omits a cost field. When the LLM second-opinion
   path adds usage tracking, an `usage` block joins the schema as
   `explain.v1.1`.

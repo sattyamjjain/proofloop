@@ -100,7 +100,7 @@ class TestGenerate(unittest.TestCase):
             studio.generate(scores_dir, output, "2026-04-18 00:00 UTC")
             content = output.read_text(encoding="utf-8")
             self.assertIn("<!doctype html>", content)
-            self.assertIn("Verdict Studio", content)
+            self.assertIn("Proofloop Studio", content)
             self.assertIn("x", content)
 
 

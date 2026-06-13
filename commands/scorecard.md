@@ -6,7 +6,7 @@ usage: "/scorecard [skill-name] [--last N] [--all]"
 
 # /scorecard — Score History & Trends
 
-Display historical scores for skills that have been evaluated by Verdict.
+Display historical scores for skills that have been evaluated by Proofloop.
 
 ## Arguments
 
@@ -25,7 +25,7 @@ Display historical scores for skills that have been evaluated by Verdict.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  VERDICT SCORE HISTORY                                   │
+│  PROOFLOOP SCORE HISTORY                                   │
 ├──────────────┬───────┬───────┬────────────┬────────────────┤
 │ Skill        │ Score │ Grade │ Date       │ Trend          │
 ├──────────────┼───────┼───────┼────────────┼────────────────┤
@@ -51,5 +51,5 @@ If no scores exist yet, inform the user: "No scores found. Run `/judge` after a 
 
 - `/against` — side-by-side delta between two specific runs of the same skill.
 - `/benchmark` — delta between a skill's historical average and the reference standards in `skills/judge/references/benchmark-standards.md`.
-- `python3 skills/judge/scripts/studio.py --scores-dir skills/judge/scores --output verdict-studio.html` — self-contained HTML dashboard with per-skill radar charts.
+- `python3 skills/judge/scripts/studio.py --scores-dir skills/judge/scores --output proofloop-studio.html` — self-contained HTML dashboard with per-skill radar charts.
 

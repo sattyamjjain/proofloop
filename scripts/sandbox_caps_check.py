@@ -2,7 +2,7 @@
 """Sandbox-capability declaration check for the self-score CI gate.
 
 Claude Code v2.1.117 (Apr 2026) hardened its sandbox: ``bash`` and
-file-write are now namespace-isolated. CI workflows that run Verdict
+file-write are now namespace-isolated. CI workflows that run Proofloop
 under that sandbox declare the caps they intend to use via the
 ``CLAUDE_SANDBOX_CAPS`` env var. This script reads that var, parses
 the cap list, and asserts the declaration is present.

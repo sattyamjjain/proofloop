@@ -1,5 +1,5 @@
 {
-  "name": "verdict",
+  "name": "proofloop",
   "owner": {
     "name": "Sattyam Jain",
     "email": "sattyamjain96@gmail.com"
@@ -9,15 +9,15 @@
   },
   "plugins": [
     {
-      "name": "verdict",
+      "name": "proofloop",
       "source": "./",
       "description": "Auto-evaluates skill and agent execution quality with 7-dimension scoring, configurable rubrics, and dual-mode operation.",
-      "version": "2.0.8",
+      "version": "3.0.0",
       "category": "quality-assurance",
       "tags": ["judge", "evaluation", "quality", "scoring", "LLM-as-judge"],
       "license": "MIT",
-      "homepage": "https://github.com/sattyamjjain/verdict",
-      "repository": "https://github.com/sattyamjjain/verdict"
+      "homepage": "https://github.com/sattyamjjain/proofloop",
+      "repository": "https://github.com/sattyamjjain/proofloop"
     }
   ]
 }

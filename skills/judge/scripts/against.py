@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare two Verdict scorecards and render a delta report.
+"""Compare two Proofloop scorecards and render a delta report.
 
 Powers ``/judge --against HEAD~1`` (and the more general
 ``--against <timestamp>``): picks two scorecards for the same skill and
@@ -59,7 +59,7 @@ def _pad(value: str, width: int) -> str:
 def render(baseline: Dict[str, Any], target: Dict[str, Any]) -> str:
     """Return a Unicode table summarising the delta between two scorecards."""
     lines: List[str] = []
-    header = f"Verdict delta: {target.get('skill', '?')}"
+    header = f"Proofloop delta: {target.get('skill', '?')}"
     lines.append("╭" + "─" * (len(header) + 2) + "╮")
     lines.append(f"│ {header} │")
     lines.append("╰" + "─" * (len(header) + 2) + "╯")
@@ -84,11 +84,11 @@ def render(baseline: Dict[str, Any], target: Dict[str, Any]) -> str:
     lines.append(f"{_pad('composite', 15)} {baseline.get('composite_score', 0):>7.2f}  {target.get('composite_score', 0):>7.2f}  {composite_delta:>+6.2f} {_arrow(composite_delta)}")
     lines.append("")
     if composite_delta > 0.05:
-        lines.append(f"Verdict: IMPROVED (+{composite_delta:.2f})")
+        lines.append(f"Proofloop: IMPROVED (+{composite_delta:.2f})")
     elif composite_delta < -0.05:
-        lines.append(f"Verdict: REGRESSED ({composite_delta:+.2f})")
+        lines.append(f"Proofloop: REGRESSED ({composite_delta:+.2f})")
     else:
-        lines.append("Verdict: FLAT")
+        lines.append("Proofloop: FLAT")
     return "\n".join(lines)
 
 

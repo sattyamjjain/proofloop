@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verdict — StopFailure hook
+# Proofloop — StopFailure hook
 #
 # Claude Code fires StopFailure when a turn ends due to an API error
 # (rate_limit, authentication_failed, billing_error, invalid_request,
@@ -19,5 +19,5 @@ INPUT=$(cat)
 ERROR_TYPE=$(echo "$INPUT" | jq -r '.matcher // "unknown"' 2>/dev/null)
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "unknown"' 2>/dev/null)
 
-echo "Verdict: skipping auto-judge for session $SESSION_ID — StopFailure ($ERROR_TYPE)." >&2
+echo "Proofloop: skipping auto-judge for session $SESSION_ID — StopFailure ($ERROR_TYPE)." >&2
 exit 0

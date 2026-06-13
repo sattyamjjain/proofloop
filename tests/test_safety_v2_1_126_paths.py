@@ -4,7 +4,7 @@
 The 2026-05-01 release widened ``--dangerously-skip-permissions`` to
 also bypass writes to ``.git/``, ``.vscode/``, and shell config files
 (was ``.claude/{skills,agents,commands}/`` only in v2.1.121).
-Verdict's safety-dim helper ``_is_plugin_author_write`` now allowlists
+Proofloop's safety-dim helper ``_is_plugin_author_write`` now allowlists
 the same path classes for non-destructive operations.
 
 Catastrophic removal commands still prompt at the runtime, and verdict

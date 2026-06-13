@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verdict scorecard rationale exporter.
+"""Proofloop scorecard rationale exporter.
 
 Reads an existing scorecard JSON written by ``score.py`` and renders a
 PR-comment-friendly Markdown explanation OR a stable-schema JSON
@@ -29,7 +29,7 @@ Usage:
 Writes to stdout when ``--out`` is omitted.
 
 Source signal: GitHub Discussions #43 — top adopter ask "explain my
-scorecard" (https://github.com/sattyamjjain/verdict/discussions/43).
+scorecard" (https://github.com/sattyamjjain/proofloop/discussions/43).
 """
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ EXPLAIN_FORMAT_VERSION: str = "explain.v1"
 HTML_FORMAT_VERSION: str = "explain.html.v1"
 
 # GitHub PR-comment hard cap is 65,536 chars; the Markdown render must
-# stay below that or the auto-comment step in `actions/verdict-comment-pr`
+# stay below that or the auto-comment step in `actions/proofloop-comment-pr`
 # silently truncates. Default cap leaves headroom for a comment header
 # the action prepends. Override with --max-evidence-chars.
 DEFAULT_MAX_EVIDENCE_CHARS: int = 4000
@@ -259,7 +259,7 @@ def render_html_printable(
     timestamp = card.get("timestamp", "?")
     summary = (card.get("summary") or "").strip()
     one_liner = (card.get("one_liner") or "").strip()
-    title = cover_title or f"{skill} — Verdict Scorecard"
+    title = cover_title or f"{skill} — Proofloop Scorecard"
 
     entries = _ordered_dimension_entries(card)
     strengths = sorted(entries, key=lambda e: -e.get("score", 0))[:3]
@@ -336,7 +336,7 @@ def render_html_printable(
             f'<h2>Signature</h2>'
             f'<p>Signed by: <strong>{_html_escape(signer)}</strong></p>'
             f'<p>Date: <strong>{_html_escape(timestamp)}</strong></p>'
-            f'<p>Verdict format version: '
+            f'<p>Proofloop format version: '
             f'<code>{HTML_FORMAT_VERSION}</code></p>'
             f'</section>'
         )
@@ -444,7 +444,7 @@ td.just {{ font-size: 0.92em; color: #333; }}
 
 <section class="page-break appendix">
     <h2>Methodology appendix</h2>
-    <p>Verdict scores agent transcripts on seven canonical dimensions
+    <p>Proofloop scores agent transcripts on seven canonical dimensions
        (correctness, completeness, adherence, actionability,
        efficiency, safety, consistency). Per-rubric weight overrides
        are applied via a sidecar <code>&lt;rubric&gt;.weights.json</code>.</p>
@@ -453,7 +453,7 @@ td.just {{ font-size: 0.92em; color: #333; }}
         <li>Weights source: <code>{_html_escape(card.get("weights_source", "config"))}</code></li>
         <li>Tokenizer baseline: <code>{_html_escape(card.get("tokenizer_baseline", 1.0))}</code></li>
         <li>Transcript lines analysed: {_html_escape(transcript_lines)}</li>
-        <li>Verdict format version: <code>{HTML_FORMAT_VERSION}</code></li>
+        <li>Proofloop format version: <code>{HTML_FORMAT_VERSION}</code></li>
     </ul>
 </section>
 
@@ -517,7 +517,7 @@ def _md_verifier_collapse_callout(card: Dict[str, Any]) -> Optional[str]:
         "window of recent scorecards for this skill shows the "
         "judge/verifier has flatlined at the top of the scale — a "
         "failure mode distinct from low score variance, derived from "
-        "Verdict's own consistency dimension plus the Soft-SVeRL "
+        "Proofloop's own consistency dimension plus the Soft-SVeRL "
         "signal.",
         "",
         f"- **Reason:** {reason}",
@@ -545,7 +545,7 @@ def render_markdown(card: Dict[str, Any]) -> str:
     summary = card.get("summary", "").strip()
 
     header = (
-        f"# Verdict Scorecard — `{skill}`\n\n"
+        f"# Proofloop Scorecard — `{skill}`\n\n"
         f"**Composite:** {composite}/10 — **Grade:** {grade}"
         f"{(' (' + grade_label + ')') if grade_label else ''}  \n"
         f"**Rubric:** `{rubric}` · **Model:** `{model}` · "
@@ -619,8 +619,8 @@ def render_markdown(card: Dict[str, Any]) -> str:
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        prog="verdict-explain",
-        description="Render a Verdict scorecard JSON as Markdown or JSON.",
+        prog="proofloop-explain",
+        description="Render a Proofloop scorecard JSON as Markdown or JSON.",
     )
     parser.add_argument(
         "--scorecard", required=True,
@@ -638,7 +638,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--cover",
         help="Cover-page title for --format html-printable. Defaults to "
-             "'<skill> — Verdict Scorecard'.",
+             "'<skill> — Proofloop Scorecard'.",
     )
     parser.add_argument(
         "--signer",
@@ -672,7 +672,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         card = load_scorecard(Path(args.scorecard))
     except ValueError as exc:
-        print(f"verdict-explain: {exc}", file=sys.stderr)
+        print(f"proofloop-explain: {exc}", file=sys.stderr)
         return 2
     if args.format == "md":
         rendered = render_markdown(card)

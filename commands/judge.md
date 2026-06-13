@@ -6,7 +6,7 @@ usage: "/judge [skill-name] [--rubric RUBRIC] [--verbose] [--adapter NAME] [--mo
 
 # /judge — Manual Skill Quality Evaluation
 
-You are Verdict, the universal quality evaluator for Claude Code skills and agents.
+You are Proofloop, the universal quality evaluator for Claude Code skills and agents.
 
 ## Your Task
 
@@ -20,7 +20,7 @@ When the user invokes `/judge`, evaluate the most recent skill or agent executio
 - `--adapter NAME` (optional): Transcript adapter for non-native ecosystems. One of `claude-code`, `cowork`, `openai-compatible`, `codex`, `cursor`, `continue`.
 - `--model ID` (optional): Model ID override (e.g., `claude-opus-4-7`). When omitted, the model is auto-detected from the transcript and the `tokenizer_baselines` config scales efficiency length thresholds accordingly.
 - `--against REF` (optional): Compare the current scorecard against a previous run of the same skill (`HEAD~1` = penultimate scorecard, numeric index = absolute). Delegates to `skills/judge/scripts/against.py` and exits non-zero on composite regression.
-- `--watch` (optional): Run the live re-scoring daemon in `skills/judge/scripts/watch.py`. Polls the scores directory every 2 s, prints a one-line diff header per change (`improved X, regressed Y, unchanged Z since last run`), and re-emits Verdict Studio to the `--output` HTML path. Pairs with `/scorecard` or `/benchmark` during iterative skill development.
+- `--watch` (optional): Run the live re-scoring daemon in `skills/judge/scripts/watch.py`. Polls the scores directory every 2 s, prints a one-line diff header per change (`improved X, regressed Y, unchanged Z since last run`), and re-emits Proofloop Studio to the `--output` HTML path. Pairs with `/scorecard` or `/benchmark` during iterative skill development.
 - `--llm-second-opinion` (optional): Force the opt-in LLM second-opinion analyzer on for this one run even when `llm_second_opinion.enabled = false` in `judge-config.json`. Requires `ANTHROPIC_API_KEY`. See `skills/judge/analyzers/llm_judge.py`.
 - `--explain SCORECARD` (optional): Render an existing scorecard JSON in either Markdown (PR-friendly) or JSON (CI-friendly). Delegates to `skills/judge/scripts/explain.py`. Pair with `--format md|json` (default `md`) and optional `--out PATH`. Example: `/judge --explain skills/judge/scores/code-review_2026-04-25.json --format md`. See [`SKILL-judge-explain.md`](../skills/judge/SKILL-judge-explain.md) for the output schema.
 - **See also `/compare`** for explicit two-file delta with Auto Memory regression narrative — complement to `/judge --against HEAD~1`.
@@ -73,7 +73,7 @@ When the user invokes `/judge`, evaluate the most recent skill or agent executio
 
 ```
 ╔═══════════════════════════════════════════════════════════════╗
-║  VERDICT SCORECARD — {skill-name}                          ║
+║  PROOFLOOP SCORECARD — {skill-name}                          ║
 ╠═══════════════════════════════════════════════════════════════╣
 ║                                                               ║
 ║  Correctness    {bar}  {score}/10  {justification}            ║

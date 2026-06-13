@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a defect in Verdict's behavior
+description: Report a defect in Proofloop's behavior
 title: "[bug] "
 labels: ["bug"]
 body:
@@ -14,7 +14,7 @@ body:
     attributes:
       label: Which v4.3 surface does this touch?
       description: |
-        Verdict's plugin scope per CLAUDE.md §v4.3 Scope Contract.
+        Proofloop's plugin scope per CLAUDE.md §v4.3 Scope Contract.
         Anything outside these is out-of-scope and belongs in
         Discussions, not Issues.
       options:
@@ -30,7 +30,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Verdict version
+      label: Proofloop version
       description: |
         Output of `cat .claude-plugin/plugin.json | grep version` in
         an installed copy, or the tag of the release you installed.
