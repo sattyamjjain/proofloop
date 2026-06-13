@@ -349,6 +349,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
   beta (2026-05-09).
 
+## [3.1.0] - 2026-06-13
+
+### Added
+
+- **GitHub Action + CI gate.** A repo-root `action.yml` (composite
+  action) plus `scripts/gha_gate.py` let any project run the offline
+  scorer in CI and fail a job when an agent's composite drops below a
+  threshold — `uses: sattyamjjain/proofloop@v3.1.0` with
+  `transcript`/`skill`/`threshold` inputs; exposes `composite` and
+  `grade` step outputs. No API key. Verified across pass / fail /
+  report-only threshold cases.
+- **Rendered-scorecard demo in the README** — a real `report.py` render
+  (not a mockup) showing how an executed-check receipt earns a perfect
+  correctness score.
+
 ## [3.0.0] - 2026-06-13
 
 ### Changed

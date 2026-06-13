@@ -1,0 +1,67 @@
+name: "Proofloop"
+description: "Score an AI agent/skill execution transcript on 7 dimensions and gate CI on the composite. Offline, stdlib-only — no API key."
+author: "Sattyam Jain"
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  transcript:
+    description: "Path to the transcript (JSONL/JSON) to score."
+    required: true
+  skill:
+    description: "Skill name — selects the rubric (exact match, then prefix, then default)."
+    required: false
+    default: "default"
+  adapter:
+    description: "Transcript adapter: claude_code | codex | openai_compatible | cowork. Empty = native Claude Code format."
+    required: false
+    default: ""
+  threshold:
+    description: "Fail the job when the composite is below this (1-10). Empty = report only."
+    required: false
+    default: ""
+  config:
+    description: "Path to a judge-config.json. Empty = Proofloop's bundled config."
+    required: false
+    default: ""
+  python-version:
+    description: "Python version to run the scorer on."
+    required: false
+    default: "3.11"
+
+outputs:
+  composite:
+    description: "Composite score, 1.0-10.0."
+    value: ${{ steps.proofloop.outputs.composite }}
+  grade:
+    description: "Letter grade (A+, A, ... F)."
+    value: ${{ steps.proofloop.outputs.grade }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Score transcript
+      id: proofloop
+      shell: bash
+      env:
+        PL_TRANSCRIPT: ${{ inputs.transcript }}
+        PL_SKILL: ${{ inputs.skill }}
+        PL_ADAPTER: ${{ inputs.adapter }}
+        PL_THRESHOLD: ${{ inputs.threshold }}
+        PL_CONFIG: ${{ inputs.config }}
+        PL_ROOT: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        scores="$(mktemp -d)"
+        args=( --skill "$PL_SKILL" --transcript "$PL_TRANSCRIPT"
+               --rubric-dir "$PL_ROOT/skills/judge/rubrics"
+               --scores-dir "$scores"
+               --config "${PL_CONFIG:-$PL_ROOT/judge-config.json}" )
+        if [ -n "$PL_ADAPTER" ]; then args+=( --adapter "$PL_ADAPTER" ); fi
+        python3 "$PL_ROOT/skills/judge/scripts/score.py" "${args[@]}"
+        python3 "$PL_ROOT/scripts/gha_gate.py" --scores-dir "$scores" --threshold "$PL_THRESHOLD"

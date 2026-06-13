@@ -16,6 +16,38 @@ network call — it ships as a Claude Code plugin that fires on every
 
 ---
 
+## See it
+
+Every execution gets an evidence-based scorecard — rendered in your
+terminal in milliseconds, with no API call and no account:
+
+```text
+╔════════════════════════════════════════════════════════════════════════════╗
+║ PROOFLOOP SCORECARD -- feature-dev                                         ║
+║ Grade: A- (Very Good)  |  Composite: 8.75/10.0  |  2026-06-13T18:05:22Z    ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║ Correctness    ██████████  10.0/10 (w=0.25) → No errors; verification…     ║
+║ Completeness   █████████░   9.0/10 (w=0.20) → Short transcript — may …     ║
+║ Adherence      ████████░░   8.0/10 (w=0.15) → Rubric available (compl…     ║
+║ Actionability  ████████░░   8.0/10 (w=0.15) → Output appears ready to…     ║
+║ Efficiency     ████████░░   8.0/10 (w=0.10) → Reasonable tool usage (…     ║
+║ Safety         ██████████  10.0/10 (w=0.10) → No safety concerns dete…     ║
+║ Consistency    █████░░░░░   5.0/10 (w=0.05) → No prior history for co…     ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║ Summary: Good Feature Dev (A-) -- strong correctness, consistency could i… ║
+║                                                                            ║
+║ RECOMMENDATIONS:                                                           ║
+║   * Compare with prior executions and maintain quality baselines           ║
+╚════════════════════════════════════════════════════════════════════════════╝
+```
+
+That `pytest` receipt in the run is what earns correctness **10/10**:
+without an executed check *anywhere* in the transcript, the top mark is
+withheld — **no pass without proof.** It is no rubber stamp either —
+consistency is held at `5` until there's a history to compare against.
+
+---
+
 ## Install
 
 ```shell
@@ -170,6 +202,27 @@ python3 skills/judge/scripts/explain.py \
 `--format json` emits the same data under a stable
 `format_version: "explain.v1"` schema. See
 [`SKILL-judge-explain.md`](skills/judge/SKILL-judge-explain.md).
+
+---
+
+## Gate your CI on it
+
+Proofloop ships as a GitHub Action, so the same offline scorer can fail a
+pull request when an agent's work drops below your bar — no API key, no
+account:
+
+```yaml
+- uses: sattyamjjain/proofloop@v3.1.0
+  with:
+    transcript: ./agent-run.jsonl   # the agent/skill transcript to score
+    skill: code-review              # selects the rubric
+    threshold: "7.0"                # fail the job below 7.0; omit to report only
+    # adapter: codex                # claude_code | codex | openai_compatible | cowork
+```
+
+It exposes `composite` and `grade` as step outputs and prints a one-line
+summary to the job log. The repo dogfoods this pattern on its own pull
+requests via [`.github/workflows/self-score.yml`](.github/workflows/self-score.yml).
 
 ---
 
@@ -535,12 +588,13 @@ Refs: [arXiv:2606.09068](https://arxiv.org/abs/2606.09068),
 ## Roadmap
 
 See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Latest
-release: [v3.0.0](https://github.com/sattyamjjain/proofloop/releases/tag/v3.0.0)
-(**rebrand to Proofloop** + engine hardening — adherence no longer
-hands out an unearned point for a rubric merely being loaded, and a
-perfect correctness score now requires an execution receipt; offline
-stdlib-only).
+release: [v3.1.0](https://github.com/sattyamjjain/proofloop/releases/tag/v3.1.0)
+(GitHub Action + CI gate — run the offline scorer in CI and fail a job
+below your threshold; plus a real rendered-scorecard demo in the README).
 Previous releases:
+[v3.0.0](https://github.com/sattyamjjain/proofloop/releases/tag/v3.0.0)
+(rebrand to Proofloop + engine hardening — adherence/correctness no
+longer hand out unearned credit),
 [v2.0.8](https://github.com/sattyamjjain/proofloop/releases/tag/v2.0.8)
 (verifier-collapse detector — flags judges that have flatlined at the
 top of the scale over the rolling scorecard window),

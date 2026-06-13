@@ -1,6 +1,6 @@
 {
   "name": "proofloop",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "displayName": "Proofloop — Universal Skill & Agent Quality Judge",
   "description": "The first universal judge for Claude Code & Cowork. Auto-evaluates skill and agent execution quality with 7-dimension scoring, configurable rubrics, and dual-mode operation (auto hooks + manual /judge command).",
   "author": {
