@@ -349,6 +349,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
   beta (2026-05-09).
 
+## [2.0.8] - 2026-06-13
+
+Patch release. Adds a stdlib-only, offline **unverified-success
+(cheap-tier reward-hacking) signal** to the **correctness** dimension —
+*not* a new `reward_hacking` dimension (the 7-dimension contract is
+preserved; a prior 8th-dimension proposal, `outcome_corruption` /
+DELEGATE-52, was rejected) and *not* a rubric. It is the in-scope
+kernel of the rejected `reward-hack` benchmark (#37): the one
+deterministic, offline tell — a claimed pass with no executed check.
+
+### Added
+
+- **Unverified-success heuristic** (`skills/judge/scripts/score.py`,
+  `detect_unverified_success`, feeding `_analyze_correctness`): flags a
+  trajectory that *claims* a check passed ("all tests pass", "build
+  succeeded", "verified working") with no **receipt** — no execution
+  artefact (a runner invocation, a test count, an exit code) anywhere
+  in the trajectory. User instructions ("make sure tests pass") and
+  genuine successes backed by an executed `Ran N tests … OK` are not
+  flagged. Each finding docks correctness (`correctness_dock`, default
+  2), adds a red flag (dual-surfaced like a hallucinated fact), and
+  emits the offending claim + a one-line remediation in a top-level
+  `unverified_success` array. Offline / heuristic — **no embedding
+  probe, no LLM/frontier tier**.
+- `judge-config.json.unverified_success` block (`enabled` /
+  `correctness_dock` / `red_flag`; the cheap tier runs on every
+  trajectory by default).
+- Optional top-level `unverified_success` array in
+  `schemas/scorecard.v1.schema.json` — additive, backward-compatible.
+- Fixtures `tests/fixtures/unverified_success_{faked,genuine}.jsonl`
+  and `tests/test_unverified_success.py` (detector units, both
+  fixtures, correctness dock + configurable depth, `build_scorecard`
+  integration, a `len(dimensions) == 7` regression guard, no-network
+  assertion).
+
+### Changed
+
+- `tests/test_score.py::test_clean_transcript_scores_high` fixture now
+  includes an executed-check receipt (`Ran 150 tests … OK`). The prior
+  fixture asserted a transcript of bare "All tests passed" ×100 (no
+  receipt) scores high on correctness — which the new signal correctly
+  flags as unverified. The test's intent (a *genuinely* clean
+  transcript scores high) is preserved by giving it the receipt a real
+  verified run would show. This is the only intended behaviour change.
+
+### Scope / framing
+
+Tiering note (`feat(rubric): reward_hacking dimension with cheap
+heuristic+probe tier (Cheap Reward Hacking Detection 2606.08893)`): the
+**cheap heuristic tier runs on every trajectory**; the embedding-probe
+and frontier-judge tiers from that proposal are *not* shipped — an
+embedding probe is not deliverable stdlib-only/offline, and a default
+frontier-judge tier conflicts with LLM-judging staying opt-in. The
+existing sampled `llm_second_opinion` remains the only model-judge
+tier. The reward-hacking *dimension/benchmark* form stays blocked
+(8th dimension + the #37-frozen domain); this ships the deterministic
+receipt-check kernel as a correctness signal. Anchor:
+[arXiv:2606.08893](https://arxiv.org/abs/2606.08893).
+
 ## [2.0.7] - 2026-06-11
 
 Patch release. Adds a stdlib-only, offline **least-privilege /

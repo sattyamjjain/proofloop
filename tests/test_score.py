@@ -264,8 +264,13 @@ class TestCorrectnessHeuristic(unittest.TestCase):
     """Correctness dimension: error and hallucination signals."""
 
     def test_clean_transcript_scores_high(self) -> None:
+        # v2.0.8: correctness now docks a "tests passed" claim that has no
+        # executed-check receipt (the cheap-tier reward-hacking signal).
+        # A genuinely clean transcript shows its receipt, so include the
+        # runner output ("Ran N tests ... OK") that backs the claim.
         lines = _make_lines(
-            "All tests passed.\n" * 100
+            "$ python -m unittest\nRan 150 tests in 1.2s\nOK\n"
+            + "All tests passed.\n" * 100
             + "Deployment successful.\n" * 50
         )
         result = score.analyze_dimension("correctness", lines, {}, [])
