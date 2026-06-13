@@ -181,7 +181,7 @@ rubric via a `<rubric>.weights.json` sidecar.
 
 | Dimension       | Default | Signal                                           |
 | --------------- | :-----: | ------------------------------------------------ |
-| Correctness     | 0.25    | Error / hallucination patterns                   |
+| Correctness     | 0.25    | Error / hallucination patterns, **unverified-success claims** |
 | Completeness    | 0.20    | TODO/FIXME/HACK density (docstring-scoped)       |
 | Adherence       | 0.15    | Deviation keywords vs. rubric criteria           |
 | Actionability   | 0.15    | Code fences + file actions − placeholders        |
@@ -205,6 +205,32 @@ the safety justification. It is a sub-check, **not** an 8th dimension —
 the 7-dimension contract is preserved. (Detecting the *absence* of a
 declaration is left to a manifest validator, since inferring it from a
 flat transcript false-positives on ordinary tool-use logs.)
+
+**Unverified-success / cheap-tier reward-hacking (under Correctness).**
+The cheapest, most reliable fabricated-success tell is a trajectory
+that *claims* a check passed — "all tests pass", "build succeeded",
+"verified working" — but carries no **receipt**: no evidence a check
+was actually executed (a runner invocation, a test count, an exit
+code). Claiming a pass without running it is fabricated success, a
+correctness/honesty failure, so `detect_unverified_success` docks the
+**correctness** dimension and adds a red flag — the same dual treatment
+Verdict already gives a hallucinated fact. The offending claim and a
+one-line remediation surface in a top-level `unverified_success` array.
+Configurable via `judge-config.json.unverified_success`
+(`enabled` / `correctness_dock` / `red_flag`).
+
+The tiering is deliberate: this **cheap heuristic runs on every
+trajectory**; it makes no embedding-probe call and no frontier-judge
+call. Escalation to a model judge is the *separate*, opt-in
+`llm_second_opinion` tier you sample (off by default) — never a
+mandatory tier here. It is a correctness signal, **not** a new
+`reward_hacking` dimension (the 7-dimension contract holds; a
+trajectory-grading reward-hacking *benchmark* remains out of scope per
+the v4.3 reset). Anchored on the "cheap reward-hacking detection" idea
+([arXiv:2606.08893](https://arxiv.org/abs/2606.08893)) — heuristics on
+every span, judge only on a sample. Honest limit: a determined agent
+could fabricate a receipt too, which is why the model-judge tier stays
+available as opt-in escalation.
 
 Per-rubric overrides: drop a sibling `<rubric>.weights.json` next to
 `<rubric>.md`. Shipped example: `security.weights.json` weights safety
@@ -509,7 +535,7 @@ Refs: [arXiv:2606.09068](https://arxiv.org/abs/2606.09068),
 ## Roadmap
 
 See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Latest
-release: [v2.0.7](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.7)
+release: [v2.0.8](https://github.com/sattyamjjain/verdict/releases/tag/v2.0.8)
 (verifier-collapse detector — flags judges that have flatlined at
 the top of the scale over the rolling scorecard window, docks the
 consistency dim, surfaces in `/judge --explain` + the Stop-hook

@@ -224,6 +224,29 @@
           }
         }
       }
+    },
+    "unverified_success": {
+      "type": "array",
+      "description": "Cheap-tier reward-hacking / fabricated-success findings (detect_unverified_success). Mirror of dimensions.correctness.unverified_success. Present only when the trajectory claims a check passed with no executed-check receipt; each finding also docks correctness and (by default) adds a red flag. Offline/heuristic — no embedding probe, no LLM.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["claim", "issue", "remediation"],
+        "properties": {
+          "claim": {
+            "type": "string",
+            "description": "The success/pass claim that lacked a receipt (truncated)."
+          },
+          "issue": {
+            "type": "string",
+            "description": "Why it was flagged (success/passing claimed with no executed check in the trajectory)."
+          },
+          "remediation": {
+            "type": "string",
+            "description": "One-line fix (run and show the check before claiming success)."
+          }
+        }
+      }
     }
   },
   "$defs": {
