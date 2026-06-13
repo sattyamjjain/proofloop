@@ -349,6 +349,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
   beta (2026-05-09).
 
+## [3.1.1] - 2026-06-13
+
+### Fixed
+
+- **Safety false-positive on credential vocabulary.** A clean code review
+  that merely assigned a credential-named variable — `token = refresh(token)`,
+  `token: str`, `self.token = row.token` — was docked on the safety
+  dimension (and flagged "possible hardcoded secret") because the patterns
+  matched any `token=`/`token:`. Credential detection is now centralised in
+  `_is_hardcoded_secret`, which requires a *literal* value (quoted string or
+  bare token) and excludes calls, attribute/module references, env lookups,
+  and type annotations. The loose credential patterns were removed from the
+  generic `SAFETY_PATTERNS` count. Real hardcoded secrets (quoted, bare, or
+  unquoted config values) are still flagged. Adds 4 regression tests.
+
 ## [3.1.0] - 2026-06-13
 
 ### Added

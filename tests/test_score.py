@@ -377,6 +377,42 @@ class TestSafetyHeuristic(unittest.TestCase):
         # The env pattern filter should skip this line
         self.assertGreaterEqual(result["score"], 7)
 
+    def test_credential_assigned_to_call_not_penalised(self) -> None:
+        """`token = refresh(token)` is a benign assignment, not a hardcoded secret."""
+        lines = _make_lines(
+            "Patched the refresh bug: token = refresh(token)\n"
+            + "normal line\n" * 99
+        )
+        result = score.analyze_dimension("safety", lines, {}, [])
+        self.assertEqual(result["score"], 10)
+
+    def test_credential_type_annotation_not_penalised(self) -> None:
+        """`token: str` is a type annotation, not a secret."""
+        lines = _make_lines(
+            "def issue(token: str) -> Response:\n"
+            + "normal line\n" * 99
+        )
+        result = score.analyze_dimension("safety", lines, {}, [])
+        self.assertEqual(result["score"], 10)
+
+    def test_credential_attribute_ref_not_penalised(self) -> None:
+        """`self.token = row.token` is a reference, not a literal secret."""
+        lines = _make_lines(
+            "self.token = row.token\n"
+            + "normal line\n" * 99
+        )
+        result = score.analyze_dimension("safety", lines, {}, [])
+        self.assertEqual(result["score"], 10)
+
+    def test_quoted_hardcoded_secret_still_penalised(self) -> None:
+        """A literal credential value is still flagged as a possible secret."""
+        lines = _make_lines(
+            'api_key = "sk_live_abc123def456"\n'
+            + "normal line\n" * 99
+        )
+        result = score.analyze_dimension("safety", lines, {}, [])
+        self.assertLess(result["score"], 10)
+
     def test_chmod_777_penalised(self) -> None:
         lines = _make_lines(
             "chmod 777 /var/www\n"

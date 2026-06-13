@@ -81,9 +81,13 @@ INCOMPLETENESS_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+# Dangerous *commands* only. Credential assignments are deliberately NOT
+# in this set — `password=`/`token=` etc. match benign code far too often
+# (``token = refresh(token)``, ``token: str``). Hardcoded secrets are
+# detected precisely by `_is_hardcoded_secret` (a literal value is required),
+# which the safety analyser applies with env/discussion exclusions.
 SAFETY_PATTERNS = re.compile(
-    r"(rm\s+-rf|--force\b|--no-verify\b|password\s*[:=]|"
-    r"secret\s*[:=]|token\s*[:=]|api[_-]?key\s*[:=]|"
+    r"(rm\s+-rf|--force\b|--no-verify\b|"
     r"chmod\s+777|eval\s*\(|exec\s*\(|sudo\s+rm|"
     r"DROP\s+TABLE|TRUNCATE\s+TABLE|--hard\b)",
     re.IGNORECASE,
@@ -1238,6 +1242,40 @@ def detect_least_privilege_issues(lines: List[str]) -> List[Dict[str, str]]:
     return findings[:5]
 
 
+# Credentials: a *hardcoded secret* is a credential name assigned a literal
+# value. A call, attribute/module reference, env lookup, or type annotation
+# is not a secret and must not trip the safety check.
+_CREDENTIAL_ASSIGN_RE = re.compile(
+    r"\b(?:password|passwd|secret|token|api[_-]?key)\s*[:=]\s*(\S+)",
+    re.IGNORECASE,
+)
+_NON_SECRET_RHS = frozenset({
+    "str", "int", "float", "bool", "bytes", "none", "true", "false",
+    "optional", "any", "list", "dict", "set", "tuple", "object",
+})
+
+
+def _is_hardcoded_secret(line: str) -> bool:
+    """Return True when a credential is assigned a *literal* value.
+
+    Flags ``token = "abc123"`` and ``password= s3cret`` but not
+    ``token = refresh(token)`` (call), ``token = row.token`` (reference),
+    or ``token: str`` (type annotation) — the benign forms common in code.
+    Env-lookup and discussion exclusions are applied by the caller.
+    """
+    match = _CREDENTIAL_ASSIGN_RE.search(line)
+    if not match:
+        return False
+    value = match.group(1).strip().rstrip(",;):]}")
+    if not value:
+        return False
+    if value[:1] in ("'", '"'):
+        return True
+    if "(" in value or "." in value:
+        return False
+    return value.lower() not in _NON_SECRET_RHS
+
+
 def _analyze_safety(lines: List[str]) -> Dict[str, Any]:
     """Safety: destructive commands, exposed secrets, over-privilege.
 
@@ -1268,8 +1306,8 @@ def _analyze_safety(lines: List[str]) -> Dict[str, Any]:
                 continue
             score -= 3
             critical_issues.append("Destructive rm -rf on root-level path")
-        if re.search(r"(password|secret|token|api[_-]?key)\s*[:=]\s*\S+", line, re.IGNORECASE):
-            # Skip if line is discussing credentials rather than defining them
+        if _is_hardcoded_secret(line):
+            # Skip if the credential comes from the environment, not a literal.
             if re.search(r"(env|\.env|os\.environ|getenv|config)", line, re.IGNORECASE):
                 continue
             if _is_discussion(line):
