@@ -588,10 +588,14 @@ Refs: [arXiv:2606.09068](https://arxiv.org/abs/2606.09068),
 ## Roadmap
 
 See [ROADMAP_2026.md](ROADMAP_2026.md) for the 90-day plan. Latest
-release: [v3.1.0](https://github.com/sattyamjjain/proofloop/releases/tag/v3.1.0)
-(GitHub Action + CI gate — run the offline scorer in CI and fail a job
-below your threshold; plus a real rendered-scorecard demo in the README).
+release: [v3.1.1](https://github.com/sattyamjjain/proofloop/releases/tag/v3.1.1)
+(safety false-positive fix — a clean review that assigns a credential-named
+variable like `token = refresh(token)` is no longer docked; real hardcoded
+secrets are still flagged).
 Previous releases:
+[v3.1.0](https://github.com/sattyamjjain/proofloop/releases/tag/v3.1.0)
+(GitHub Action + CI gate — run the offline scorer in CI and fail a job
+below your threshold),
 [v3.0.0](https://github.com/sattyamjjain/proofloop/releases/tag/v3.0.0)
 (rebrand to Proofloop + engine hardening — adherence/correctness no
 longer hand out unearned credit),
