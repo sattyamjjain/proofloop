@@ -1,6 +1,6 @@
-# Installing Verdict on Claude Cowork
+# Installing Proofloop on Claude Cowork
 
-Verdict ships as a dual-platform plugin (`claude-code` + `claude-cowork`).
+Proofloop ships as a dual-platform plugin (`claude-code` + `claude-cowork`).
 The standard marketplace install flow works on both platforms, but Cowork
 currently has an open plugin-loading issue that affects some
 organizations. This guide covers the canonical path and the workaround.
@@ -8,8 +8,8 @@ organizations. This guide covers the canonical path and the workaround.
 ## Recommended: marketplace install
 
 ```shell
-/plugin marketplace add sattyamjjain/verdict
-/plugin install verdict@verdict
+/plugin marketplace add sattyamjjain/proofloop
+/plugin install proofloop@proofloop
 ```
 
 This clones the repo into Cowork's plugin cache, wires up the Stop /
@@ -35,8 +35,8 @@ Until it lands, use the zip-upload path:
 
    ```shell
    gh release download v1.1.0 \
-     --repo sattyamjjain/verdict \
-     --pattern 'verdict-*.zip'
+     --repo sattyamjjain/proofloop \
+     --pattern 'proofloop-*.zip'
    ```
 
 2. In Cowork → **Settings** → **Plugins** → **Upload**, select the
@@ -49,11 +49,11 @@ Until it lands, use the zip-upload path:
 ## Verifying installation
 
 After install, run any skill that is on the `always` list (e.g.
-`/code-review`). When the turn ends, Verdict posts a single-line
+`/code-review`). When the turn ends, Proofloop posts a single-line
 scorecard via the Stop hook:
 
 ```
-Verdict: code-review → 8.7/10 (A-). Solid execution with minor areas
+Proofloop: code-review → 8.7/10 (A-). Solid execution with minor areas
 for improvement.
 ```
 
@@ -72,8 +72,8 @@ If no line appears:
 ## Uninstalling
 
 ```shell
-/plugin uninstall verdict@verdict
-/plugin marketplace remove verdict
+/plugin uninstall proofloop@proofloop
+/plugin marketplace remove proofloop
 ```
 
 Score history in `skills/judge/scores/` is not deleted automatically —
@@ -84,7 +84,7 @@ to render trends after reinstalling.
 
 Routines-driven scoring is supported on all Cowork plans that include
 Claude Code on the web. Each Routine run is a normal Claude Code
-session: the routine prompt is the user turn, and Verdict's Stop hook
+session: the routine prompt is the user turn, and Proofloop's Stop hook
 fires at the end exactly as it would in an interactive session. No
 `--mode routine` flag is required — the routine prompt is visible to
-Verdict through the normal transcript.
+Proofloop through the normal transcript.

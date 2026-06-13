@@ -26,7 +26,7 @@ Cross-family second-opinion pattern note (2026-05-09): GitHub
 Copilot CLI's Rubber Duck (cross-family critic, expanded model
 pairings shipped 2026-05-07) is the same pattern this analyzer
 implements: an opt-in second model from a different family reviews
-the first model's output. Verdict runs this off-by-default and
+the first model's output. Proofloop runs this off-by-default and
 stdlib-only; the critic is one signal among many, NOT a leaderboard
 verdict. Source:
 https://github.blog/changelog/2026-05-07-rubber-duck-in-github-copilot-cli-now-supports-more-models/
@@ -81,12 +81,12 @@ TASK_BUDGETS_BETA_LEGACY = "task-budgets-2026-03-13"
 # Minimum total tokens the task_budgets header accepts (per docs).
 TASK_BUDGET_MIN_TOKENS: int = 20_000
 # Hard ceiling multiplier: task_budget is a soft suggestion; the
-# ``max_tokens`` request parameter is the hard cap. Verdict sets both
+# ``max_tokens`` request parameter is the hard cap. Proofloop sets both
 # so the judge finishes gracefully without over-spend.
 TASK_BUDGET_HARD_CEILING_RATIO: float = 1.25
 
 # Prompt-caching (Apr 2026). Claude Code's changelog enables caching by
-# default; Verdict mirrors that. TTLs: "5m" is stock; "1h" requires the
+# default; Proofloop mirrors that. TTLs: "5m" is stock; "1h" requires the
 # extended-cache-ttl-2025-04-11 beta header. Env vars flip the knob
 # without touching judge-config.json so CI can set them on a hot path.
 EXTENDED_CACHE_TTL_BETA: str = "extended-cache-ttl-2025-04-11"
@@ -96,7 +96,7 @@ ENV_FORCE_CACHE_5M: str = "FORCE_PROMPT_CACHING_5M"
 
 
 def resolve_cache_ttl_from_env(env: Optional[Dict[str, str]] = None) -> str:
-    """Pick a prompt-cache TTL from Verdict's env-var convention.
+    """Pick a prompt-cache TTL from Proofloop's env-var convention.
 
     Precedence: ``FORCE_PROMPT_CACHING_5M`` (explicit lock-down) >
     ``ENABLE_PROMPT_CACHING_1H`` (extended beta) > default ``"5m"``.
@@ -154,7 +154,7 @@ class LLMClient(Protocol):
 class AnthropicClient:
     """Minimal stdlib-only Anthropic API client.
 
-    Only implements the single ``messages_create`` call Verdict needs.
+    Only implements the single ``messages_create`` call Proofloop needs.
     Adds the ``task-budgets-2026-03-13`` beta header when a budget is
     configured so Claude self-caps runaway evaluations.
     """
@@ -196,7 +196,7 @@ class AnthropicClient:
         # task_budget is a hint that lets Claude finish mid-sentence
         # when it's close to done; max_tokens is the model-side cap.
         # Per Anthropic docs (2026-04-20): total is soft, max_tokens
-        # is hard. Verdict sets both so the judge finishes gracefully
+        # is hard. Proofloop sets both so the judge finishes gracefully
         # without over-spend.
         body: Dict[str, Any] = {
             "model": model,
@@ -271,7 +271,7 @@ def _log_cache_usage(response: Dict[str, Any], model: str) -> None:
     Reads ``usage.cache_read_input_tokens`` (hit) and
     ``usage.cache_creation_input_tokens`` (miss) from the Messages API
     response. Silent when neither field is present — pre-caching hosts
-    won't return them and Verdict shouldn't log noise.
+    won't return them and Proofloop shouldn't log noise.
     """
     usage = response.get("usage")
     if not isinstance(usage, dict):
@@ -351,12 +351,12 @@ def _rubric_criteria_summary(rubric: Dict[str, Any]) -> str:
 #     +25pp vs. human-aligned baselines.
 #   * Role-relabel attacks (arXiv:2606.05976): framing the same output
 #     as the judge's own work swings scores +23-93pp.
-# So when Verdict's second-opinion judge shares a model family with the
+# So when Proofloop's second-opinion judge shares a model family with the
 # model that produced the transcript, the second opinion is structurally
 # biased *upward* and should be flagged (and, where a cross-family judge
 # is configured, swapped out).
 #
-# Verdict's executing-model detector (`score.detect_model_from_transcript`)
+# Proofloop's executing-model detector (`score.detect_model_from_transcript`)
 # only recognises `claude-*` today, and the default judge is Claude — so
 # in the stock configuration this guard fires on every enabled run, which
 # is the honest signal: Claude-judging-Claude is self-preference-prone.
@@ -455,7 +455,7 @@ def same_family_guard(
 
 
 SYSTEM_PROMPT = (
-    "You are Verdict's second-opinion judge. Score the transcript on the "
+    "You are Proofloop's second-opinion judge. Score the transcript on the "
     "seven dimensions below, each on a 1-10 integer scale. Reply with a "
     "single JSON object mapping each dimension name to "
     '{"score": <int 1-10>, "justification": "<one sentence>"}. '

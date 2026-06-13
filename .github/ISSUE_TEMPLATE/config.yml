@@ -1,14 +1,14 @@
 blank_issues_enabled: false
 contact_links:
   - name: Out-of-scope idea / new rubric proposal
-    url: https://github.com/sattyamjjain/verdict/discussions
+    url: https://github.com/sattyamjjain/proofloop/discussions
     about: |
-      Verdict is a Claude Code / Cowork plugin only. New rubrics that
+      Proofloop is a Claude Code / Cowork plugin only. New rubrics that
       target frontier-lab eval benches (SWE-bench, Terminal-Bench,
       GAIA, OSWorld, MCP attack benches, EU AI Act, etc.) are
       out-of-scope per the v4.3 Scope Contract (see CLAUDE.md).
       File those in Discussions instead — that's where they get
       community-aired without polluting the issue tracker.
   - name: Question / how do I use this?
-    url: https://github.com/sattyamjjain/verdict/discussions/categories/q-a
+    url: https://github.com/sattyamjjain/proofloop/discussions/categories/q-a
     about: Open-ended usage questions belong in Discussions Q&A.

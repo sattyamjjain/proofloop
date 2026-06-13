@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Benchmark task-hygiene lint for the Verdict regression-gate corpus.
+"""Benchmark task-hygiene lint for the Proofloop regression-gate corpus.
 
 Adapts the Auto Benchmark Audit (ABA) framework (Wang et al. 2026,
 arXiv:2605.26079, "Automated Benchmark Auditing for AI Agents and
-Large Language Models", v1 2026-05-25) to Verdict's transcript-
+Large Language Models", v1 2026-05-25) to Proofloop's transcript-
 regression manifest. ABA was designed for *task* benchmarks with
-ground-truth outputs; Verdict's benchmark pack scores transcripts
+ground-truth outputs; Proofloop's benchmark pack scores transcripts
 against expected score bounds rather than tasks against expected
 answers. The four ABA issue classes map by analogy:
 
@@ -44,7 +44,7 @@ DEFAULT_MANIFEST = PROJECT_ROOT / "benchmarks" / "manifest.json"
 DEFAULT_THRESHOLD = 0.85
 TOOL_NAME = "verdict-bench-lint"
 TOOL_VERSION = "2.0.3"
-TOOL_URI = "https://github.com/sattyamjjain/verdict"
+TOOL_URI = "https://github.com/sattyamjjain/proofloop"
 
 # Adapter -> set of allowed file suffixes. Used by VBL002 to flag
 # obvious mismatches such as adapter "openai-compatible" pointing at a
@@ -320,7 +320,7 @@ def render_text(report: Dict[str, Any], threshold: float) -> str:
     flagged = report["flagged_cases"]
     verdict = "PASS" if score >= threshold else "FAIL"
     lines.append("┌" + "─" * width + "┐")
-    lines.append(row("  VERDICT BENCH-LINT (ABA-anchored, arXiv:2605.26079)"))
+    lines.append(row("  PROOFLOOP BENCH-LINT (ABA-anchored, arXiv:2605.26079)"))
     lines.append("├" + "─" * width + "┤")
     lines.append(row(f"  Manifest: {Path(report['manifest']).name}"))
     lines.append(row(f"  Cases:    {total} total, {flagged} flagged"))
@@ -423,7 +423,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="bench_lint",
         description=(
-            "ABA-anchored task-hygiene lint for Verdict's benchmark pack. "
+            "ABA-anchored task-hygiene lint for Proofloop's benchmark pack. "
             "Offline, stdlib-only, no LLM call."
         ),
     )

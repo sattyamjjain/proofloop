@@ -1,12 +1,12 @@
 #!/bin/bash
-# Verdict — Common hook utilities
+# Proofloop — Common hook utilities
 
 # Check required dependencies
 _check_dependency() {
   local cmd="$1"
   local install_hint="$2"
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "Verdict: requires '$cmd' but it is not installed. $install_hint" >&2
+    echo "Proofloop: requires '$cmd' but it is not installed. $install_hint" >&2
     return 1
   fi
   return 0

@@ -1,20 +1,20 @@
 ---
-name: Verdict weekly team digest
+name: Proofloop weekly team digest
 schedule: weekly
-description: Post a weekly quality digest to Slack summarising Verdict scorecards.
+description: Post a weekly quality digest to Slack summarising Proofloop scorecards.
 ---
 
-# Weekly Verdict team digest
+# Weekly Proofloop team digest
 
 This routine is configured via Anthropic Routines
 (<https://code.claude.com/docs/en/routines>, research preview) and runs
 as a normal Claude Code cloud session. The routine prompt below is the
-user turn; Verdict's `Stop` hook fires normally when the session ends.
+user turn; Proofloop's `Stop` hook fires normally when the session ends.
 
 ## Setup
 
 1. Open <https://claude.ai/code/routines> (or run `/schedule weekly
-   Verdict team digest` from any Claude Code session).
+   Proofloop team digest` from any Claude Code session).
 2. Attach the repository or repositories whose `skills/judge/scores/`
    directory you want summarised.
 3. Select the Slack connector so the routine can post the digest.
@@ -24,7 +24,7 @@ user turn; Verdict's `Stop` hook fires normally when the session ends.
 ## Routine prompt
 
 ```
-You are the Verdict weekly digest bot.
+You are the Proofloop weekly digest bot.
 
 1. List every JSON file in skills/judge/scores/ whose timestamp falls
    in the last 7 calendar days. For each file, load the JSON and note
@@ -60,7 +60,7 @@ Stop the session once the digest is posted. No code changes.
   channel membership and repo permissions accordingly.
 - Pro users get 5 routine runs/day, Max 15, Team/Enterprise 25 — the
   weekly schedule is well within all plans.
-- Verdict's `Stop` hook fires in the routine's session just as it would
+- Proofloop's `Stop` hook fires in the routine's session just as it would
   in an interactive one, and the scorecard JSON is committed on branches
   prefixed with `claude/` by default (toggle **Allow unrestricted branch
   pushes** if you prefer direct pushes to `main`).

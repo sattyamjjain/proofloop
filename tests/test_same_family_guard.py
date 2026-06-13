@@ -207,7 +207,7 @@ class TestGuardIntegration(unittest.TestCase):
         self.assertEqual(sc["same_family_guard"]["executing_family"], "anthropic")
         self.assertEqual(sc["same_family_guard"]["judge_family"], "anthropic")
         self.assertFalse(sc["same_family_guard"]["auto_preferred"])
-        self.assertIn("Verdict WARNING", buf.getvalue())
+        self.assertIn("Proofloop WARNING", buf.getvalue())
         # No alternate → judge model unchanged.
         self.assertEqual(client.last_model, "claude-haiku-4-5")
 

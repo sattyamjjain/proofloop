@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verdict Scoring Engine.
+"""Proofloop Scoring Engine.
 
 Evaluates Claude Code / Cowork skill and agent executions across 7 weighted
 dimensions, producing a composite score and letter grade.  Designed to run
@@ -392,7 +392,7 @@ def load_rubric_weights(
 ) -> Optional[Dict[str, float]]:
     """Return per-rubric weight overrides from ``<rubric>.weights.json`` or None.
 
-    The sidecar must contain a JSON object mapping each of Verdict's seven
+    The sidecar must contain a JSON object mapping each of Proofloop's seven
     dimensions to a float; the sum must equal 1.0 within
     ``WEIGHT_SUM_TOLERANCE``. Any other shape emits a stderr warning and
     returns None so the caller falls back to the global config.
@@ -1020,7 +1020,7 @@ DISCUSSION_CONTEXT = re.compile(
 #
 # Plugin-author transcripts that legitimately edit these paths should
 # not accumulate safety-dimension hits for non-destructive operations.
-# Catastrophic removal commands still prompt at the runtime, and verdict
+# Catastrophic removal commands still prompt at the runtime, and Proofloop
 # mirrors that: destructive shell forms (``rm -rf``, ``chmod 777``,
 # ``sudo rm``, raw ``DROP TABLE`` / ``TRUNCATE TABLE``, ``eval(``,
 # ``exec(``) on these paths STILL dock the safety dimension.
@@ -1028,7 +1028,7 @@ DISCUSSION_CONTEXT = re.compile(
 # The shell-config-file set is intentionally closed to the standard
 # POSIX / zsh login files. We do NOT glob ``.*rc`` — that would
 # tolerate writes to ``.npmrc`` (npm credentials) or ``.dockerrc``
-# (registry creds), which is a real exfil-risk class verdict should
+# (registry creds), which is a real exfil-risk class Proofloop should
 # NOT excuse. Source: <https://code.claude.com/docs/en/changelog> §v2.1.126.
 _CLAUDE_PLUGIN_PATH_RE = re.compile(
     # .claude/ subtree (any depth), .git/ subtree, .vscode/ subtree.
@@ -1342,7 +1342,7 @@ def _detect_verifier_collapse(
     scored by :func:`_analyze_consistency`, which would otherwise
     *reward* the failure mode with a low-std_dev bonus. The detector
     here composes with that logic by adding an explicit dock when both
-    criteria hit, derived from Verdict's own consistency dimension plus
+    criteria hit, derived from Proofloop's own consistency dimension plus
     the project-anchor "Soft-SVeRL" signal.
 
     Returns a dict with::
@@ -1652,7 +1652,7 @@ def detect_bonuses(transcript_lines: List[str]) -> List[str]:
 # Scores agreement-drift across turns: does the assistant abandon a prior
 # answer under user pressure ("are you sure? I think it's X") purely to
 # agree, rather than because it was actually wrong. This is response-
-# quality (truthfulness under pressure), overlapping Verdict's existing
+# quality (truthfulness under pressure), overlapping Proofloop's existing
 # correctness/consistency dimensions — NOT a new rubric and NOT the
 # trajectory-injection (2606.04778) or role-routing (self-preference)
 # signals. Heuristic and offline by default; the existing opt-in LLM
@@ -1990,7 +1990,7 @@ def _generate_recommendations(dimensions: Dict[str, Dict[str, Any]]) -> List[str
 # Score persistence
 # ---------------------------------------------------------------------------
 
-SCORECARD_SCHEMA_URL: str = "https://verdict.dev/schemas/scorecard.v1.json"
+SCORECARD_SCHEMA_URL: str = "https://proofloop.dev/schemas/scorecard.v1.json"
 SCORECARD_SCHEMA_VERSION: str = "1.0.0"
 
 
@@ -2000,7 +2000,7 @@ def _llm_second_opinion_config(config: Dict[str, Any]) -> Dict[str, Any]:
     Defaults: disabled, Haiku 4.5, no explicit budget. Callers should
     treat a missing or malformed block as "disabled" without warning.
     ``task_budget_tokens`` (2026-04-20+) is the ``task_budgets-2026-03-13``
-    beta-header soft cap — passed through when the caller lets Verdict
+    beta-header soft cap — passed through when the caller lets Proofloop
     construct the default AnthropicClient.
     """
     block = config.get("llm_second_opinion") if isinstance(config, dict) else None
@@ -2036,7 +2036,7 @@ def _maybe_llm_second_opinion(
 
     No-op (returns ``None``) when the config block has ``enabled=false``
     (the default). Failures (missing API key, HTTP error, unparseable
-    response) are logged to stderr and swallowed — Verdict must stay
+    response) are logged to stderr and swallowed — Proofloop must stay
     offline-first, so a busted LLM path can never fail the whole
     scorecard.
 
@@ -2076,7 +2076,7 @@ def _maybe_llm_second_opinion(
     judge_model = cfg["model"]
     if guard["self_preference_risk"]:
         print(
-            f"Verdict WARNING: {guard['reason']} "
+            f"Proofloop WARNING: {guard['reason']} "
             f"(executing={guard['executing_family']}, "
             f"judge={guard['judge_family']}:{cfg['model']})",
             file=sys.stderr,
@@ -2084,7 +2084,7 @@ def _maybe_llm_second_opinion(
         if guard["auto_preferred"] and guard["preferred_model"]:
             judge_model = guard["preferred_model"]
             print(
-                f"Verdict: auto-preferring cross-family second-opinion "
+                f"Proofloop: auto-preferring cross-family second-opinion "
                 f"judge {judge_model} ({guard['judge_family']} → "
                 f"{model_family(judge_model)}).",
                 file=sys.stderr,
@@ -2423,7 +2423,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         prog="score",
-        description="Verdict Scoring Engine -- evaluate skill/agent executions across 7 dimensions.",
+        description="Proofloop Scoring Engine -- evaluate skill/agent executions across 7 dimensions.",
     )
     parser.add_argument(
         "--skill",
@@ -2474,7 +2474,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         choices=["openai-evals"],
         default=None,
         help=(
-            "Emit a portable scorecard alongside the native Verdict output. "
+            "Emit a portable scorecard alongside the native Proofloop output. "
             "Currently supports 'openai-evals' (OpenAI Model Spec Evals JSON). "
             "Requires --out to specify the destination file."
         ),
@@ -2488,9 +2488,9 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--export-rescale",
         action="store_true",
         help=(
-            "When used with --export openai-evals, rescale the 1-10 Verdict "
+            "When used with --export openai-evals, rescale the 1-10 Proofloop "
             "scores into the 1-7 Model Spec bucket. Off by default so the "
-            "numeric score matches downstream Verdict consumers."
+            "numeric score matches downstream Proofloop consumers."
         ),
     )
     return parser.parse_args(argv)

@@ -1,4 +1,4 @@
-# Verdict metrics
+# Proofloop metrics
 
 Updated weekly. Tracks the launch-to-1000-stars goal and surfaces
 regressions in the quality / distribution funnel. See ROADMAP_2026 §10
@@ -12,8 +12,8 @@ without bloating the header.
 
 ```shell
 # Numbers that can be read mechanically
-gh api repos/sattyamjjain/verdict --jq '.stargazers_count'
-gh api repos/sattyamjjain/verdict/traffic/views
+gh api repos/sattyamjjain/proofloop --jq '.stargazers_count'
+gh api repos/sattyamjjain/proofloop/traffic/views
 git log --since='1 week ago' --oneline | wc -l
 python3 -m unittest discover tests/ 2>&1 | grep -E 'Ran [0-9]+'
 python3 scripts/benchmark_pack.py 2>&1 | tail -5

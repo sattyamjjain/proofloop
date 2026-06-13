@@ -3,7 +3,7 @@
 
 Every hook reads JSON from stdin and emits either JSON on stdout or
 nothing (graceful exit 0). These tests invoke the scripts via
-subprocess with synthetic payloads to pin the contract that Verdict's
+subprocess with synthetic payloads to pin the contract that Proofloop's
 auto-mode relies on.
 
 We deliberately choose skills that are in neither the `always` nor the

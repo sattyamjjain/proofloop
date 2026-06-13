@@ -1,5 +1,5 @@
 #!/bin/bash
-# Verdict — Detect which skill was used from a transcript
+# Proofloop — Detect which skill was used from a transcript
 # Delegates to the shared detect_skill_from_transcript() in common.sh
 set -euo pipefail
 

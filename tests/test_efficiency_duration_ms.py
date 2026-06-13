@@ -3,7 +3,7 @@
 
 Claude Code v2.1.119 (2026-04-23) added ``duration_ms`` to
 ``PostToolUse`` and ``PostToolUseFailure`` hook inputs (tool execution
-time, excluding permission prompts and PreToolUse hooks). Verdict's
+time, excluding permission prompts and PreToolUse hooks). Proofloop's
 ``claude_code`` adapter emits ``[tool_duration_ms: <int>]`` per
 record; the efficiency analyzer reports the durations on every
 scorecard and optionally docks 0.5 when ≥3 calls exceed the

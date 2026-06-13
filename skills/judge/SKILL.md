@@ -1,8 +1,8 @@
 ---
 name: judge
-displayName: "Verdict — Universal Quality Evaluator"
+displayName: "Proofloop — Universal Quality Evaluator"
 description: "Evaluates the execution quality of any skill or agent using 7-dimension scoring with configurable rubrics"
-version: "2.0.8"
+version: "3.0.0"
 author: "Sattyam Jain"
 allowed-tools: [Read, Write, Edit, Bash]
 autoActivate:
@@ -11,13 +11,13 @@ autoActivate:
   - "when referenced by /judge command"
 ---
 
-# Verdict — Universal Quality Evaluator
+# Proofloop — Universal Quality Evaluator
 
 ## Overview
 
-Verdict is a universal quality evaluator for Claude Code skills and agents. It measures execution quality across 7 weighted dimensions, producing an evidence-based scorecard with letter grades, justifications, and actionable recommendations.
+Proofloop is a universal quality evaluator for Claude Code skills and agents. It measures execution quality across 7 weighted dimensions, producing an evidence-based scorecard with letter grades, justifications, and actionable recommendations.
 
-Verdict operates in two modes:
+Proofloop operates in two modes:
 
 - **Auto Mode**: Hooks into skill/agent lifecycle events (e.g. `Stop`) and automatically evaluates every execution. No user intervention required. Scores are persisted to `skills/judge/scores/` for trend analysis.
 - **Manual Mode**: Triggered explicitly via the `/judge` command. The user specifies a skill name and optionally a transcript path. Useful for on-demand evaluation, re-scoring, or benchmarking.
@@ -28,7 +28,7 @@ Both modes produce the same structured scorecard output.
 
 ## Scoring Dimensions
 
-Verdict evaluates across 7 dimensions. Each dimension receives a score from 1.0 to 10.0. The weighted composite determines the final grade.
+Proofloop evaluates across 7 dimensions. Each dimension receives a score from 1.0 to 10.0. The weighted composite determines the final grade.
 
 | #  | Dimension        | Weight | What It Measures                                                                 |
 |----|------------------|--------|----------------------------------------------------------------------------------|
@@ -136,7 +136,7 @@ Every evaluation produces a visual scorecard rendered in the terminal:
 
 ```
 ╔═══════════════════════════════════════════════════════════╗
-║  VERDICT SCORECARD — {skill-name}                      ║
+║  PROOFLOOP SCORECARD — {skill-name}                      ║
 ╠═══════════════════════════════════════════════════════════╣
 ║  Correctness    ████████░░  8.0/10  {justification}       ║
 ║  Completeness   ██████░░░░  6.0/10  {justification}       ║
@@ -160,7 +160,7 @@ The progress bars use filled blocks (█) and empty blocks (░) proportional to
 
 ### Auto Mode
 
-When auto mode is enabled, Verdict hooks into the `Stop` lifecycle event. After any skill or agent finishes execution, the hook script:
+When auto mode is enabled, Proofloop hooks into the `Stop` lifecycle event. After any skill or agent finishes execution, the hook script:
 
 1. Captures the session transcript
 2. Invokes the judge-agent as an isolated subagent
@@ -207,7 +207,7 @@ To add a custom rubric, copy `custom-template.md` and rename it to match your sk
 
 ## Instructions for Claude — How to Perform an Evaluation
 
-When you are activated as the Verdict evaluator (either via auto hook or `/judge` command), follow these instructions precisely:
+When you are activated as the Proofloop evaluator (either via auto hook or `/judge` command), follow these instructions precisely:
 
 ### 1. Gather Context
 
@@ -309,7 +309,7 @@ Write the JSON scorecard to `skills/judge/scores/{skill-name}-{YYYYMMDD-HHMMSS}.
 - **Non-Claude transcript** (Codex, Cursor, Continue, OpenAI-compatible):
   Use `score.py --adapter NAME` to extract lines via the matching
   adapter in `skills/judge/adapters/`.
-- **Evaluation of Verdict itself**: This is allowed. Apply the same
+- **Evaluation of Proofloop itself**: This is allowed. Apply the same
   process without bias.
 
 ---

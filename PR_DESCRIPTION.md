@@ -89,12 +89,12 @@ format without touching the network.
 
 - `code-review-aider-polyglot.md` — maps Aider-polyglot benchmark
   axes (syntactic/semantic correctness, multi-file coherence,
-  instruction-follow, diff compaction) onto Verdict's canonical
+  instruction-follow, diff compaction) onto Proofloop's canonical
   seven dimensions.
 - `skill-compliance.md` — MLflow's "skill compliance" dimension
   (did the agent actually load and follow the skill?) ported offline.
 - `model-spec-compliance.md` — OpenAI Model Spec Evals 1-7 scale,
-  with a documented rescaling table to Verdict's native 1-10.
+  with a documented rescaling table to Proofloop's native 1-10.
 
 Each carries a `source_signal:` header citing the article it rides.
 `tests/test_rubric_packs.py` (6 cases) exercises structure + parser +
@@ -102,7 +102,7 @@ end-to-end scoring.
 
 #### N4 — `--export openai-evals` exporter
 
-`skills/judge/exporters/openai_evals.py` converts a Verdict scorecard
+`skills/judge/exporters/openai_evals.py` converts a Proofloop scorecard
 into Model Spec Evals JSON (`{run_id, criteria, summary}`). Threshold
 7/10 default. `--export-rescale` flag emits Model Spec's native 1-7
 bucket. LLM second-opinion fields round-trip into `llm_score` /
@@ -114,7 +114,7 @@ bucket. LLM second-opinion fields round-trip into `llm_score` /
 `skills/judge/integrations/lighteval_shim.py` exposes
 `verdict_metric(predictions, references, rubric)` returning a float in
 `[0, 1]`. `lighteval` is **never** imported at runtime — lazy-import
-protocol preserves Verdict's offline-first pitch.
+protocol preserves Proofloop's offline-first pitch.
 `tests/test_lighteval_shim.py` (7 cases).
 
 #### N6 — MLflow trace ingestion adapter
@@ -130,7 +130,7 @@ Fixture at `tests/fixtures/mlflow-trace.json`.
 
 `docs/schema-registry.md` + `.github/workflows/pages.yml`. Every file
 under `schemas/` mirrors to GitHub Pages on push to `main`; once
-`verdict.dev` is live, a CNAME swap lands the canonical URLs.
+`proofloop.dev` is live, a CNAME swap lands the canonical URLs.
 
 #### N8 — `/judge --compare-runs` (and `/compare` slash command)
 
@@ -152,7 +152,7 @@ can gate. Complement to `/judge --against HEAD~1`.
 
 - Offline-first preserved: LLM judge default **off**, MLflow adapter
   **parse-only** (never imports `mlflow`), LightEval shim **lazy-imports**.
-- No new non-stdlib runtime deps in Verdict core.
+- No new non-stdlib runtime deps in Proofloop core.
 - No secrets in fixtures.
 - 384 / 314 / 237 — test count never dropped below baseline at any
   intermediate commit.

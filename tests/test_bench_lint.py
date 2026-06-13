@@ -2,7 +2,7 @@
 """Tests for scripts/bench_lint.py and the --lint wire into benchmark_pack.
 
 The lint adapts the Auto Benchmark Audit framework (Wang et al. 2026,
-arXiv:2605.26079) to Verdict's transcript-regression manifest. These
+arXiv:2605.26079) to Proofloop's transcript-regression manifest. These
 tests verify that:
 
 1. The shipped benchmarks/manifest.json passes hygiene cleanly

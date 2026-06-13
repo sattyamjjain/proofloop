@@ -8,7 +8,7 @@ tweet self-contained — people quote individual tweets.
 every time i ship a claude code skill i wonder: did it actually get
 better, or am i hallucinating improvement?
 
-so i built Verdict — a plugin that auto-grades every skill and subagent
+so i built Proofloop — a plugin that auto-grades every skill and subagent
 execution on seven dimensions the moment the Stop hook fires.
 
 no LLM call. no config. just a scorecard.
@@ -31,7 +31,7 @@ Promptfoo, DeepEval, Ragas, LangSmith, Opik) needs a second LLM to
 grade the first one. that costs money. adds latency. and has a
 meta-problem: who grades the grader?
 
-Verdict runs offline regex heuristics.
+Proofloop runs offline regex heuristics.
 
 ## 4/
 
@@ -47,7 +47,7 @@ one flag: `--adapter codex`.
 
 the plugin installs like any Claude Code plugin:
 
-`/plugin marketplace add sattyamjjain/verdict`
+`/plugin marketplace add sattyamjjain/proofloop`
 `/plugin install verdict@verdict`
 
 next Stop hook that fires on an allowlisted skill triggers a score in
@@ -67,7 +67,7 @@ Opus 4.7 tokenizer awareness.
 what's next:
 
 — `/judge --against HEAD~1` (shipped)
-— Verdict Studio local HTML dashboard (shipped)
+— Proofloop Studio local HTML dashboard (shipped)
 — opt-in small-judge via Haiku 4.5 for the nuanced cases
 — rubric marketplace seeded with 11 domain rubrics
 — weekly team digest via Anthropic Routines
@@ -77,10 +77,10 @@ issue #2 has the 90-day plan.
 ## 8/ (CTA)
 
 install:
-`/plugin marketplace add sattyamjjain/verdict`
+`/plugin marketplace add sattyamjjain/proofloop`
 
-source + docs: github.com/sattyamjjain/verdict
+source + docs: github.com/sattyamjjain/proofloop
 discord: (invite in the README once created)
 
 if you've been wondering whether your skills are actually getting
-better, stop guessing. let Verdict tell you.
+better, stop guessing. let Proofloop tell you.

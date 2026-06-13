@@ -349,6 +349,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BrowseComp-Plus (2026-05-06), Managed Agents Outcomes rubric
   beta (2026-05-09).
 
+## [3.0.0] - 2026-06-13
+
+### Changed
+
+- **Renamed the project to Proofloop.** The plugin name, schema
+  namespace, and all user-facing surfaces move from "Verdict" to
+  "Proofloop"; the GitHub repository is now `sattyamjjain/proofloop`
+  (old URLs redirect). The rename resolves a hard collision with Haize
+  Labs' open-source `verdict` LLM-judge library (PyPI `verdict`,
+  verdict.haizelabs.com) in the identical category. The scorecard
+  schema `$id` moves to `https://proofloop.dev/schemas/scorecard.v1.json`;
+  the on-disk shape is unchanged (still `scorecard.v1`, additive
+  contract intact). Historical CHANGELOG and release notes keep the
+  "Verdict" name they shipped under.
+
+### Fixed
+
+- **Hardened two gameable scoring heuristics** (originally PR #43):
+  - *Adherence* no longer adds +1 just because a rubric was loaded — it
+    did so on every run, inflating adherence to 9 regardless of
+    behaviour. The heuristic tier now reports deviation only; positive
+    compliance is scored against the rubric by the opt-in LLM tier.
+  - *Correctness* no longer returns a free 10 for a transcript that
+    merely avoids the words "error"/"failed"/"exception". A perfect
+    score now requires an execution receipt (a test run / exit code);
+    without one the top mark is capped at 9. Untestable tasks still
+    reach 9. Adds 4 anti-gaming tests.
+
 ## [2.0.8] - 2026-06-13
 
 Patch release. Adds a stdlib-only, offline **unverified-success
@@ -1428,7 +1456,7 @@ surface.
   `python3 skills/judge/scripts/explain.py --scorecard <PATH>
   [--format md|json] [--out PATH]`. Slash command updated:
   `/judge --explain <SCORECARD>`. Source signal:
-  [Discussions #43](https://github.com/sattyamjjain/verdict/discussions/43).
+  [Discussions #43](https://github.com/sattyamjjain/proofloop/discussions/43).
 - **OWASP MCP Top 10 (beta) coverage rubric**
   (`skills/judge/rubrics/owasp-mcp-top-10-beta.md` +
   `.weights.json`). Maps MCP01–MCP10 risks to Verdict's canonical

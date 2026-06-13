@@ -1,5 +1,5 @@
 {
-  "description": "Verdict — Auto-evaluate skill and agent execution quality",
+  "description": "Proofloop — Auto-evaluate skill and agent execution quality",
   "hooks": {
     "Stop": [
       {

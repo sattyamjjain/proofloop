@@ -1,15 +1,15 @@
 {
-  "name": "verdict",
-  "version": "2.0.8",
-  "displayName": "Verdict — Universal Skill & Agent Quality Judge",
+  "name": "proofloop",
+  "version": "3.0.0",
+  "displayName": "Proofloop — Universal Skill & Agent Quality Judge",
   "description": "The first universal judge for Claude Code & Cowork. Auto-evaluates skill and agent execution quality with 7-dimension scoring, configurable rubrics, and dual-mode operation (auto hooks + manual /judge command).",
   "author": {
     "name": "Sattyam Jain",
     "email": "sattyamjain96@gmail.com"
   },
   "license": "MIT",
-  "homepage": "https://github.com/sattyamjjain/verdict",
-  "repository": "https://github.com/sattyamjjain/verdict",
+  "homepage": "https://github.com/sattyamjjain/proofloop",
+  "repository": "https://github.com/sattyamjjain/proofloop",
   "platforms": ["claude-code", "claude-cowork"],
   "components": {
     "skills": ["./skills/judge/SKILL.md"],

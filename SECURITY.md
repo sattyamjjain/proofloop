@@ -1,6 +1,6 @@
 # Security policy
 
-Verdict ships as a local Claude Code / Cowork plugin. It does not
+Proofloop ships as a local Claude Code / Cowork plugin. It does not
 collect telemetry, does not make network calls, and depends on no
 third-party Python packages. Its threat surface is therefore narrow —
 but report anything that looks wrong.
@@ -10,7 +10,7 @@ but report anything that looks wrong.
 **Do not open a public GitHub issue for security reports.** Instead:
 
 1. Email **<sattyamjain96@gmail.com>** with a subject line of the form
-   `[Verdict security] <one-line summary>`.
+   `[Proofloop security] <one-line summary>`.
 2. Include:
    - Affected version (`git describe --tags`).
    - Reproduction steps or a proof-of-concept — ideally against the
@@ -45,7 +45,7 @@ Out of scope (report to the upstream project instead):
 - Claude Code itself — <https://github.com/anthropics/claude-code>.
 - Claude Cowork / claude.ai infrastructure — <https://support.claude.com>.
 - Third-party rubrics installed via `scripts/install_rubric.py` — the
-  rubric's own maintainer is responsible. Verdict does validate the
+  rubric's own maintainer is responsible. Proofloop does validate the
   rubric structure before install; a validation bypass *is* in scope.
 
 ## Hardening already in place
@@ -59,7 +59,7 @@ analyser itself — so the tool detects the class of risk it could
 otherwise introduce.
 
 The install-rubric utility (`scripts/install_rubric.py`) fetches only
-over HTTPS and validates that downloaded markdown contains the Verdict
+over HTTPS and validates that downloaded markdown contains the Proofloop
 dimension headings before writing it to disk — a malformed or
 intentionally-crafted rubric cannot execute code at install time.
 

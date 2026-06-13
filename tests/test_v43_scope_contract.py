@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """v4.3 scope contract — pins the rubric inventory.
 
-Per the 2026-05-03 runbook §scope-reset block, Verdict is a
+Per the 2026-05-03 runbook §scope-reset block, Proofloop is a
 Claude Code / Cowork plugin only. Frontier-lab eval-bench rubrics
 (SWE-bench, Terminal-Bench, GAIA, OSWorld, MCP attack benches,
 etc.) are explicitly out of scope.

@@ -36,7 +36,7 @@ Renders a Unicode table comparing two scorecards for the same skill
 
    ```
    ╭────────────────────────────╮
-   │ Verdict delta: code-review │
+   │ Proofloop delta: code-review │
    ╰────────────────────────────╯
    baseline: 2026-04-10T12:00:00Z  composite 7.80/B
    target:   2026-04-18T12:00:00Z  composite 8.60/A-
@@ -53,7 +53,7 @@ Renders a Unicode table comparing two scorecards for the same skill
    ─────────────────────────────────────────────
    composite         7.80     8.60   +0.80 ↑
 
-   Verdict: IMPROVED (+0.80)
+   Proofloop: IMPROVED (+0.80)
    ```
 
 3. Exit semantics:

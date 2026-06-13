@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://verdict.dev/schemas/scorecard.v1.json",
-  "title": "Verdict Scorecard",
-  "description": "Canonical shape of a Verdict scorecard JSON document as emitted by skills/judge/scripts/score.py::save_score. See DEEP_ANALYSIS.md §Schema stability contract for evolution rules.",
+  "$id": "https://proofloop.dev/schemas/scorecard.v1.json",
+  "title": "Proofloop Scorecard",
+  "description": "Canonical shape of a Proofloop scorecard JSON document as emitted by skills/judge/scripts/score.py::save_score. See DEEP_ANALYSIS.md §Schema stability contract for evolution rules.",
   "type": "object",
   "required": [
     "$schema",
@@ -27,7 +27,7 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "const": "https://verdict.dev/schemas/scorecard.v1.json"
+      "const": "https://proofloop.dev/schemas/scorecard.v1.json"
     },
     "schemaVersion": {
       "type": "string",

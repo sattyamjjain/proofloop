@@ -3,7 +3,7 @@
 Claude Code and Cowork write transcripts as JSONL, one record per line.
 Records include ``{"role": "...", "content": "..."}`` for user /
 assistant turns and ``{"type": "tool_use", ...}`` or similar for tool
-calls. This is Verdict's reference format — extraction is a lightweight
+calls. This is Proofloop's reference format — extraction is a lightweight
 re-expression of ``score.load_transcript`` that stays adapter-agnostic.
 
 Auto Memory (Opus 4.7, 2026-04-17+)
@@ -13,7 +13,7 @@ plus a memory preamble that Claude Code injects at the top of every
 new session. To handle that, ``extract_lines`` accepts EITHER a file
 path OR a directory:
 
-- **File**: behaviour identical to pre-1.2 Verdict.
+- **File**: behaviour identical to pre-1.2 Proofloop.
 - **Directory**: enumerate ``*.jsonl`` sorted by mtime (oldest first),
   concatenate the extracted lines, and inject a ``--- session break ---``
   marker between files so downstream heuristics can attribute signals
@@ -31,7 +31,7 @@ Parallel sub-agents share state through a server-managed memory
 endpoint. Claude Code streams synthetic records into the JSONL
 transcript whenever a managed sub-agent reads from or writes to the
 shared store. These records carry tokens like ``managed_memory_v1``,
-``agent_memory``, or ``parent_agent_id``. Verdict tags pull events
+``agent_memory``, or ``parent_agent_id``. Proofloop tags pull events
 with ``[managed-memory-pull]`` and push events with
 ``[managed-memory-push]`` so the scoring engine can tell apart first-
 party reasoning from memory stitching.

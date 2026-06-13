@@ -1,14 +1,14 @@
-# Verdict schema registry
+# Proofloop schema registry
 
-Verdict publishes its public JSON schemas at a stable URL so
+Proofloop publishes its public JSON schemas at a stable URL so
 downstream consumers can validate scorecards (and future envelopes)
-without cloning the Verdict repository.
+without cloning the Proofloop repository.
 
 ## Canonical URLs
 
 | Schema                 | Version | URL |
 | ---------------------- | :-----: | --- |
-| Scorecard              | v1      | <https://verdict.dev/schemas/scorecard.v1.json> |
+| Scorecard              | v1      | <https://proofloop.dev/schemas/scorecard.v1.json> |
 
 The `$schema` field in every emitted scorecard points at the
 corresponding URL. Consumers should parse `schemaVersion` first and
@@ -16,7 +16,7 @@ gate on `>= 1.0.0, < 2.0.0` for the v1 line.
 
 ## Transport
 
-Until `verdict.dev` is claimed, the registry is served from **GitHub
+Until `proofloop.dev` is claimed, the registry is served from **GitHub
 Pages** on this repository. The workflow in
 `.github/workflows/pages.yml` mirrors every file under `schemas/` into
 the `gh-pages` branch on every push to `main`, preserving the
@@ -28,7 +28,7 @@ https://sattyamjjain.github.io/verdict/schemas/scorecard.v1.json
 
 Once the domain is live, it will be a simple CNAME over the same
 Pages deployment — no schema bodies change, only the hostname.
-Consumers pinned to `https://verdict.dev/schemas/…` will resolve
+Consumers pinned to `https://proofloop.dev/schemas/…` will resolve
 through the CNAME from day one.
 
 ## Evolution rules
@@ -50,7 +50,7 @@ resolving, every consumer can pin to the in-repo path
 identical content.
 
 No roadmap entry for a paid / hosted schema registry — it would break
-the offline-first pitch Verdict is built on.
+the offline-first pitch Proofloop is built on.
 
 ## Adding a new schema
 

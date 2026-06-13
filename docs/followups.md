@@ -28,7 +28,7 @@ Each upstream marketplace is its own PR; they can't be generated
 automatically because they require your GitHub identity.
 
 - [ ] `anthropics/claude-plugins-official` — add a plugin entry
-      pointing at `github.com/sattyamjjain/verdict`. Use the existing
+      pointing at `github.com/sattyamjjain/proofloop`. Use the existing
       `.claude-plugin/marketplace.json` as the source of truth.
 - [ ] `claudemarketplaces.com` — follow their PR template.
 - [ ] `aitmpl.com` — same.
@@ -42,7 +42,7 @@ valid.
 
 Pick one; tell me which before registering.
 
-- `verdict.dev` — preferred.
+- `proofloop.dev` — preferred.
 - `getverdict.com` — fallback.
 
 Point DNS at Cloudflare Pages once the docs site lands.
@@ -78,8 +78,8 @@ Each of these has a prepared draft under `docs/launch/`:
       anonymised scorecards from opt-in users (requires an opt-in flag
       in `judge-config.json` first; not yet implemented).
 - [ ] Case studies (weeks 8, 10, 12) — three teams showing QoQ skill-
-      quality improvement with Verdict.
-- [ ] `rubrics.verdict.dev` — static Cloudflare Pages index of
+      quality improvement with Proofloop.
+- [ ] `rubrics.proofloop.dev` — static Cloudflare Pages index of
       community rubrics once 10+ community contributions land.
 
 ## Items I deliberately did NOT ship

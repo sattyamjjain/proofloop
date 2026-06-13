@@ -1,4 +1,4 @@
-# Verdict regression-gate corpus
+# Proofloop regression-gate corpus
 
 This directory holds the curated transcript corpus that
 [`scripts/benchmark_pack.py`](../scripts/benchmark_pack.py) replays
@@ -9,10 +9,10 @@ if heuristic drift causes any case to regress.
 ## Scope
 
 Per the [v4.3 scope contract](../CLAUDE.md#v43-scope-contract-2026-05-03),
-this is the **regression-gate fixture set for Verdict's heuristic
+this is the **regression-gate fixture set for Proofloop's heuristic
 engine**. It is **NOT a public eval bench:**
 
-- We do not advertise Verdict's leaderboard standing.
+- We do not advertise Proofloop's leaderboard standing.
 - We do not accept SWE-bench, Terminal-Bench, GAIA, OSWorld, or
   similar agent-bench submissions.
 - The fixtures are not curated for cross-tool benchmarking — they
@@ -20,7 +20,7 @@ engine**. It is **NOT a public eval bench:**
 
 If you are looking for an eval bench, run the upstream tool that
 authored the bench and post results there. If you are looking to
-extend Verdict's plugin-scope heuristics, add a case here that
+extend Proofloop's plugin-scope heuristics, add a case here that
 exercises the dimension you are changing and ensure
 `benchmark_pack.py` stays green.
 

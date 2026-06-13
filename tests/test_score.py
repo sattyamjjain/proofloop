@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comprehensive test suite for the Verdict Scoring Engine (score.py).
+"""Comprehensive test suite for the Proofloop Scoring Engine (score.py).
 
 Tests all public functions across 7 categories:
   1. Grade boundaries

@@ -1,4 +1,4 @@
-# Verdict — Roadmap to Top 1% (April 2026)
+# Proofloop — Roadmap to Top 1% (April 2026)
 
 > ⚠️ **Historical document.** Sections below reference frontier-lab
 > rubrics, cross-ecosystem adapters, and bench-eval scripts that
@@ -20,7 +20,7 @@ Read `ECOSYSTEM_STATE_2026-04.md` first.
 
 This is the project with the shortest path to 1 k stars. Research found **no direct competitor** that ships as a Claude Code / Cowork plugin with hook-based auto-scoring + persistent scorecards + offline heuristics + per-domain rubrics. The community `agent-judge` skill is ~150 stars and lacks persistence, hooks, and rubrics. Anthropic has not shipped a first-party scorer. The plugin marketplace ecosystem (2,500+ marketplaces, 9,000+ plugins) is actively searched by the 747 k-member `/r/ClaudeAI` community that has no answer to "how do I measure my skills' quality over time."
 
-**Verdict is first-mover in a visible category.** This is rare.
+**Proofloop is first-mover in a visible category.** This is rare.
 
 **Recommended tagline:** *"Auto-grade every Claude Code and Cowork skill execution on seven dimensions. No LLM call. No config. Just a scorecard."*
 
@@ -37,8 +37,8 @@ The "no LLM call" detail matters more than you think — every competitor (Brain
    - `claudemarketplaces.com`
    - `aitmpl.com`
    - `buildwithclaude.com`
-2. **Support the new `agent` hook event type** — Claude Code 2.1.x added agent hooks (60 s timeout, 50 turns). Verdict today handles `Stop` and `SubagentStop`; add `agent` so Verdict scores tool-using sub-agent invocations too.
-3. **Routines support** — Routines (Apr 14, research preview) fire scheduled prompts without an interactive session. Verdict's hooks must not crash when the transcript lacks a user turn. Add a `--mode routine` flag.
+2. **Support the new `agent` hook event type** — Claude Code 2.1.x added agent hooks (60 s timeout, 50 turns). Proofloop today handles `Stop` and `SubagentStop`; add `agent` so Proofloop scores tool-using sub-agent invocations too.
+3. **Routines support** — Routines (Apr 14, research preview) fire scheduled prompts without an interactive session. Proofloop's hooks must not crash when the transcript lacks a user turn. Add a `--mode routine` flag.
 4. **Opus 4.7 tokenizer** — the new tokenizer shifts token counts up to 35%. Today's efficiency dimension compares raw token counts; update the efficiency analyzer to use model-aware normalization.
 5. **Cowork plugin-loading bug workaround** — document the GH #39400 workaround (zip upload vs marketplace install) prominently in the README.
 6. **The heuristic brittleness issues** from the earlier `DEEP_ANALYSIS.md`:
@@ -50,24 +50,24 @@ The "no LLM call" detail matters more than you think — every competitor (Brain
 ### 2.2 Features that widen the moat
 
 1. **Small judge-model bootstrap option** — ship an **opt-in** path that calls Claude Haiku 4.5 (cheapest frontier model, $1/$5) or the Atla Selene 8B open judge for a second-opinion score. Default is still heuristic/offline; LLM is the premium mode. This covers the "but LLM-as-judge is more accurate" objection without betraying the offline-first positioning.
-2. **Cross-ecosystem scoring** — today Verdict scores Claude Code transcripts. Extend to:
+2. **Cross-ecosystem scoring** — today Proofloop scores Claude Code transcripts. Extend to:
    - **OpenAI Codex** sessions (`.codex/` transcripts or CLI output capture).
    - **Cursor / Windsurf / Continue** agent sessions (via OpenAI-compatible session logs).
    - **Gemini CLI** sessions (new `gemini-cli` session format, v0.38+).
    - **Claude Cowork** session transcripts.
    A single plugin that scores across platforms is unique.
-3. **Agent-airlock OTel input** — consume the OTel audit stream from agent-airlock and score a running agent live, not just post-mortem. Verdict becomes the real-time quality dashboard for your middleware. Cross-repo wedge.
-4. **Verdict Studio** — a local dashboard (single-binary, no server) showing trends, per-skill radar charts, weekly digests, team rollups in Cowork.
+3. **Agent-airlock OTel input** — consume the OTel audit stream from agent-airlock and score a running agent live, not just post-mortem. Proofloop becomes the real-time quality dashboard for your middleware. Cross-repo wedge.
+4. **Proofloop Studio** — a local dashboard (single-binary, no server) showing trends, per-skill radar charts, weekly digests, team rollups in Cowork.
 5. **Per-rubric weight overrides** — today `judge-config.json` has global weights. Allow per-rubric overrides so e.g. the `security` rubric weights safety 0.4 vs the default 0.1.
 6. **Rubric marketplace** — let users publish and fork rubrics. Seeded with your 11 rubrics; aim for 50 community rubrics in 90 days.
-7. **Benchmark pack** — ship a `verdict benchmark` command that runs a curated transcript corpus through the scorer and asserts regressions. Pairs with CI.
+7. **Benchmark pack** — ship a `proofloop benchmark` command that runs a curated transcript corpus through the scorer and asserts regressions. Pairs with CI.
 8. **Regression-aware scoring** — detect when the same skill is executed on a newer model and the score changes significantly. Model-drift detection is underserved (Galileo Luna-2 does this; nobody else at the plugin level).
 9. **`/judge --against commit HEAD~1`** — compare current skill output to the previous run on the same input. Git-native diff-aware scoring.
 10. **Hook for scheduled weekly team digests** in Cowork (pairs with Anthropic Routines).
 
 ### 2.3 Naming and branding
 
-`Verdict` is a good name. Keep it. Pair it with a mascot — a small stylized gavel icon — and a domain (`verdict.dev` or `getverdict.com`). Consistent branding across the marketplace listing, README, website, and demo GIF is worth ~30% star-conversion uplift based on the case-study research (Opik's rebrand from "CometLLM" is the canonical example).
+`Proofloop` is a good name. Keep it. Pair it with a mascot — a small stylized gavel icon — and a domain (`proofloop.dev` or `getverdict.com`). Consistent branding across the marketplace listing, README, website, and demo GIF is worth ~30% star-conversion uplift based on the case-study research (Opik's rebrand from "CometLLM" is the canonical example).
 
 ---
 
@@ -79,12 +79,12 @@ The "no LLM call" detail matters more than you think — every competitor (Brain
 - Convert to a marketplace plugin with `marketplace.json`.
 - Record a 30-second demo GIF: skill executes, Stop hook fires, Unicode scorecard prints in terminal.
 - Record a 90-second Loom: show the auto-score flow, then the `/scorecard` trend view, then `/benchmark` delta vs standards.
-- Acquire `verdict.dev` or `getverdict.com`.
+- Acquire `proofloop.dev` or `getverdict.com`.
 - Design a gavel logo (Midjourney or a $100 Fiverr commission).
 
 ### Week 1 (launch)
 
-- **Tuesday, 13:00 UTC** — HN submission: *"Verdict: auto-grade every Claude Code skill execution on seven dimensions, no LLM required."* Link the GIF, not the repo.
+- **Tuesday, 13:00 UTC** — HN submission: *"Proofloop: auto-grade every Claude Code skill execution on seven dimensions, no LLM required."* Link the GIF, not the repo.
 - Same day: `/r/ClaudeAI` post (747 k members, highest-leverage subreddit for this project). Format: "I built this plugin because I kept wondering if my skills were actually getting better or if I was just hallucinating improvement." Include screenshots.
 - Submit PRs to `anthropics/claude-plugins-official`, `claudemarketplaces.com`, `aitmpl.com`, `buildwithclaude.com`.
 - X thread: 8 tweets, lead with GIF, one tweet per dimension, final tweet links repo.
@@ -99,16 +99,16 @@ The "no LLM call" detail matters more than you think — every competitor (Brain
 
 ### Weeks 5–8
 
-- Ship Verdict Studio (local dashboard).
+- Ship Proofloop Studio (local dashboard).
 - Small judge-model opt-in (Haiku 4.5 + Atla Selene).
-- agent-airlock OTel integration: "airlock's audit stream + Verdict's scorecards = the agent observability stack."
+- agent-airlock OTel integration: "airlock's audit stream + Proofloop's scorecards = the agent observability stack."
 - Cowork-specific features (team digests via Routines).
 
 ### Weeks 9–12
 
 - Conference submissions: Latent Space Swyx podcast pitch (warm intro via Discord first), Changelog, ThePrimeagen's weekly dev-tool roundup.
-- Verdict v2: rubric versioning, git-diff-aware scoring, regression-aware trends.
-- Partner case studies — 3 teams showing year-over-year skill-quality improvement with Verdict.
+- Proofloop v2: rubric versioning, git-diff-aware scoring, regression-aware trends.
+- Partner case studies — 3 teams showing year-over-year skill-quality improvement with Proofloop.
 
 ### 2026-Q2 Cycle 2 (v1.3.0) — shipped 2026-04-24
 
@@ -117,12 +117,12 @@ signals:
 
 - **Inspect AI log adapter** — UK AISI's `inspect_ai` v0.3 stable
   release (2026-04-20) became the default eval harness for 200+
-  published evaluations. Verdict now ingests its JSON logs directly
+  published evaluations. Proofloop now ingests its JSON logs directly
   (`adapters/inspect_ai_log.py`) so teams that already run Inspect
-  can get Verdict scorecards without re-running their agents.
+  can get Proofloop scorecards without re-running their agents.
 - **`managed-agents-2026-04-01` memory stitch** — Anthropic's
   parallel-agent shared-memory beta emits synthetic records into
-  the JSONL transcript. Verdict tags these with
+  the JSONL transcript. Proofloop tags these with
   `[managed-memory-pull]` / `[managed-memory-push]` so downstream
   analyzers can tell first-party reasoning from memory stitching.
 - **Prompt caching on the LLM judge** — opt-in second-opinion pass
@@ -137,7 +137,7 @@ signals:
   now get a dedicated rubric that weights command-safety + secret-
   leakage at 30%.
 - **OTel GenAI semconv enrichment for MLflow adapter** — MLflow
-  3.11.1 adopted OpenTelemetry GenAI semantic conventions. Verdict
+  3.11.1 adopted OpenTelemetry GenAI semantic conventions. Proofloop
   reads `gen_ai.request.model`, `gen_ai.usage.*`, and
   `gen_ai.response.finish_reasons` so v1.1.0's model-aware
   efficiency thresholds apply to MLflow traces without caller-side
@@ -230,11 +230,11 @@ existing rubric, two new CLI scripts:
   — informational drift between `perception_value` and
   `reality_value` markers. Threshold configurable per deployment
   (Issue O8 — single-data-point anchor, do not over-interpret).
-- **S1** `verdict ship-gate` CLI — pass/fail a scorecard against
+- **S1** `proofloop ship-gate` CLI — pass/fail a scorecard against
   ship_readiness floors, a composite floor, and a regression vs.
   baseline. SARIF v2.1.0 export for the GitHub Actions security tab.
-- **S3** `verdict judge-replay` CLI — re-scores a transcript with
-  the current Verdict and asserts per-dimension stability vs. a
+- **S3** `proofloop judge-replay` CLI — re-scores a transcript with
+  the current Proofloop and asserts per-dimension stability vs. a
   frozen baseline scorecard. Used to validate that a release doesn't
   silently move scores on previously-judged transcripts.
 
@@ -259,13 +259,13 @@ five new CLI scripts. **926 tests green** (800 → 926, +126).
   Signature library refreshable in v1.4.3 (Issue O14).
 - **CC4** Routines (research preview, NOT GA) trajectory adapter
   + `routine-execution` rubric. Heuristic detection opt-in via
-  `VERDICT_DETECT_ROUTINE_HEURISTIC=1` (Issue O15).
-- **T1** `verdict audit-export` CLI — DPO-ready zip bundler with
+  `PROOFLOOP_DETECT_ROUTINE_HEURISTIC=1` (Issue O15).
+- **T1** `proofloop audit-export` CLI — DPO-ready zip bundler with
   best-effort PII redaction. Refuses clinical transcripts per
   Issue O16.
-- **T2** `verdict bench gaming-check` CLI — wraps CC3's detector
+- **T2** `proofloop bench gaming-check` CLI — wraps CC3's detector
   for benchmark publishers / paper authors.
-- **T3** `verdict hook lint` CLI — static analyzer for
+- **T3** `proofloop hook lint` CLI — static analyzer for
   PostToolUse hook scripts. F1–F4 rule set + 2 example hooks.
 
 Open issues filed: O12 (encoding bypass), O13 (counsel review
@@ -313,7 +313,7 @@ pending), O14 (signature drift), O15 (heuristic opt-in), O16
 
 ## 6. Distribution-specific tactic
 
-Verdict's single strongest growth lever is being first in the Anthropic plugin marketplace with this category. The marketplace is searched by every new Claude Code user; being the #1 result for "evaluator" or "quality" nets passive installs forever. Priority actions to secure that:
+Proofloop's single strongest growth lever is being first in the Anthropic plugin marketplace with this category. The marketplace is searched by every new Claude Code user; being the #1 result for "evaluator" or "quality" nets passive installs forever. Priority actions to secure that:
 
 1. Nominate to `anthropics/claude-plugins-official` immediately — it's reviewed by Anthropic's plugin team.
 2. Brand the marketplace listing with a clear hero image, a 20-second looping GIF, and "zero config, zero LLM cost" framing in the first line.
@@ -323,4 +323,4 @@ Verdict's single strongest growth lever is being first in the Anthropic plugin m
 
 ## 7. The CEO-readable one-pager
 
-> *Verdict* is a Claude Code and Cowork plugin that auto-scores every skill and sub-agent execution on seven dimensions — correctness, completeness, adherence, actionability, efficiency, safety, consistency — using fast offline heuristics (no LLM call required). Persistent scorecards track quality over time; per-domain rubrics (code review, design, security, devops, and 7 more) tune the scoring to the work at hand; an opt-in small judge model adds a second-opinion pass when you want it. Verdict is the quality layer for any AI-coding stack — Claude Code, Cowork, Codex, Gemini CLI, Cursor, Continue — and it pairs with agent-airlock's runtime audit stream for end-to-end observability. Zero config, zero third-party dependencies, zero ongoing LLM cost. Install from the Claude plugin marketplace in one command.
+> *Proofloop* is a Claude Code and Cowork plugin that auto-scores every skill and sub-agent execution on seven dimensions — correctness, completeness, adherence, actionability, efficiency, safety, consistency — using fast offline heuristics (no LLM call required). Persistent scorecards track quality over time; per-domain rubrics (code review, design, security, devops, and 7 more) tune the scoring to the work at hand; an opt-in small judge model adds a second-opinion pass when you want it. Proofloop is the quality layer for any AI-coding stack — Claude Code, Cowork, Codex, Gemini CLI, Cursor, Continue — and it pairs with agent-airlock's runtime audit stream for end-to-end observability. Zero config, zero third-party dependencies, zero ongoing LLM cost. Install from the Claude plugin marketplace in one command.

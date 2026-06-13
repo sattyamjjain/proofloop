@@ -1,6 +1,6 @@
-# Verdict — Deep Codebase Analysis
+# Proofloop — Deep Codebase Analysis
 
-**Plugin:** Verdict — Universal Skill & Agent Quality Judge
+**Plugin:** Proofloop — Universal Skill & Agent Quality Judge
 **Version:** 1.0.0 (released 2026-02-13)
 **Stack:** Python 3.9+ stdlib-only · bash (hooks) · markdown rubrics · `unittest`
 **Platforms:** `claude-code`, `claude-cowork`
@@ -10,7 +10,7 @@
 
 ## 1. Executive summary
 
-Verdict is a Claude Code / Cowork plugin that scores skill or subagent execution transcripts along seven weighted dimensions — correctness, completeness, adherence, actionability, efficiency, safety, consistency — then renders a scorecard, persists it as JSON, and optionally blocks the workflow (hook exit code 2) when the composite falls below a configurable threshold.
+Proofloop is a Claude Code / Cowork plugin that scores skill or subagent execution transcripts along seven weighted dimensions — correctness, completeness, adherence, actionability, efficiency, safety, consistency — then renders a scorecard, persists it as JSON, and optionally blocks the workflow (hook exit code 2) when the composite falls below a configurable threshold.
 
 The codebase is **unusually disciplined for a plugin**: ~2,400 lines of Python across three scripts, 132 unit tests (all passing), 10 domain-specific rubrics plus a documented `custom-template.md`, and bash hooks with proper dependency checks. The scoring engine is deterministic, stdlib-only (no `pip` dependencies), and the output JSON schema is well-specified.
 
@@ -21,16 +21,16 @@ The product risk sits almost entirely in the **analyzer heuristics themselves**.
 - Legitimate use of `os.getenv('PASSWORD')` sometimes trips the "safety" credential detector.
 - Short, correct answers to short questions are penalized by a length-as-proxy-for-completeness rule.
 
-These are tuning problems, not structural ones — but they cap the tool's accuracy well below LLM-based judges. The natural next step is to make Verdict the *structure* (rubric resolution, persistence, hooks, rendering) and plug a model-based analyzer behind the heuristics.
+These are tuning problems, not structural ones — but they cap the tool's accuracy well below LLM-based judges. The natural next step is to make Proofloop the *structure* (rubric resolution, persistence, hooks, rendering) and plug a model-based analyzer behind the heuristics.
 
 ---
 
 ## 2. Repository layout
 
 ```
-Verdict/
+Proofloop/
 ├── .claude-plugin/
-│   ├── plugin.json                Manifest (name=verdict, v1.0.0, 2 platforms)
+│   ├── plugin.json                Manifest (name=proofloop, v1.0.0, 2 platforms)
 │   └── marketplace.json           Marketplace listing
 ├── judge-config.json              Root config (auto-judge, weights, threshold)
 ├── README.md, CHANGELOG.md, CLAUDE.md, LICENSE (MIT)
@@ -67,7 +67,7 @@ Verdict/
 ## 3. Plugin manifest
 
 `.claude-plugin/plugin.json`:
-- `name: "verdict"`, `version: "1.0.0"`, `license: "MIT"`
+- `name: "proofloop"`, `version: "1.0.0"`, `license: "MIT"`
 - `platforms: ["claude-code", "claude-cowork"]` — dual-platform
 - Components registered: 1 skill (`skills/judge/SKILL.md`), 1 agent (`agents/judge-agent.md`), 4 slash commands, hooks JSON, and the root `judge-config.json`.
 
@@ -167,7 +167,7 @@ Four patterns tried in order, first match wins:
 3. JSON field `"skill": "<name>"`
 4. Leading slash-command invocation `/<name>` on first line
 
-Caveats: Pattern 4 will incorrectly fire on `/judge` itself (i.e. Verdict can detect its own command as the "skill" being judged). Pattern 1 takes whatever appears last in the transcript if multiple skills are referenced. Skill names with dots (`skill.name`) aren't matched by the `[a-zA-Z0-9_-]+` class.
+Caveats: Pattern 4 will incorrectly fire on `/judge` itself (i.e. Proofloop can detect its own command as the "skill" being judged). Pattern 1 takes whatever appears last in the transcript if multiple skills are referenced. Skill names with dots (`skill.name`) aren't matched by the `[a-zA-Z0-9_-]+` class.
 
 ---
 
@@ -223,7 +223,7 @@ Rubric parsing uses `### DimensionName` headings; non-standard heading formats (
 6. Read back composite, grade, one-liner.
 7. **If composite < threshold: exit 2** (signals "block") — otherwise emit a success payload on stdout and exit 0.
 
-Exit-code semantics match Verdict's claim ("exit 2 is blocking"), but effective blocking depends on whether the host (Claude Code / Cowork) honors exit 2 from Stop-event hooks, which varies by host version. Worth documenting in the README.
+Exit-code semantics match Proofloop's claim ("exit 2 is blocking"), but effective blocking depends on whether the host (Claude Code / Cowork) honors exit 2 from Stop-event hooks, which varies by host version. Worth documenting in the README.
 
 ---
 
@@ -290,14 +290,14 @@ Coverage by category:
 4. **Credential context fragile.** `os.getenv('PASSWORD')` often correctly avoids the penalty, but the regex skip-list (`env|os.environ|getenv|config`) misses `settings.get('PASSWORD')` and similar. Fix: AST-parse Python blocks when possible; for other languages, require a literal on the right-hand side (`= '…'`) before docking points.
 5. **Rubric weight override isn't supported.** `judge-config.json` holds one set of weights globally; a testing skill that should weight "completeness" higher (edge cases) or a security skill that should weight "safety" higher can't. Fix: allow per-rubric weight overrides in YAML frontmatter or a sibling `.weights.json`.
 6. **Config weight-sum not enforced.** See §10.
-7. **`/judge` skill-detection self-match.** Pattern 4 will score Verdict's own commands as the "skill" being judged. Fix: exclude a known allow-list of Verdict commands from that pattern.
+7. **`/judge` skill-detection self-match.** Pattern 4 will score Proofloop's own commands as the "skill" being judged. Fix: exclude a known allow-list of Proofloop commands from that pattern.
 8. **Rubric drift.** Rubrics are static markdown; no versioning, no expiry. Consider adding a `rubric_version` field so `score.py` can record which rubric version produced each score.
 
 ---
 
 ## 13. Bottom line
 
-Verdict is a **tight, principled starting point** for plugin-based quality evaluation on Claude Code and Cowork. Its strengths — zero-dependency Python, a strong test suite, well-structured domain rubrics, dual-mode (auto + manual), and persistent JSON scorecards — are exactly right for a v1.0 release. The next release should treat the regex analyzers as a *fallback* behind an optional LLM judge and address the length-as-proxy and neutral-baseline biases. Once those are fixed, Verdict can credibly claim the "universal" in its tagline.
+Proofloop is a **tight, principled starting point** for plugin-based quality evaluation on Claude Code and Cowork. Its strengths — zero-dependency Python, a strong test suite, well-structured domain rubrics, dual-mode (auto + manual), and persistent JSON scorecards — are exactly right for a v1.0 release. The next release should treat the regex analyzers as a *fallback* behind an optional LLM judge and address the length-as-proxy and neutral-baseline biases. Once those are fixed, Proofloop can credibly claim the "universal" in its tagline.
 
 ---
 
@@ -312,9 +312,9 @@ in `tests/fixtures/scorecards/` via `tests/test_schema.py`.
 
 ### Identifiers
 
-- `$schema`: `https://verdict.dev/schemas/scorecard.v1.json` — stable
+- `$schema`: `https://proofloop.dev/schemas/scorecard.v1.json` — stable
   URI that never changes for the v1 line of the schema. The domain will
-  resolve to a static copy of the schema once `verdict.dev` is live; until
+  resolve to a static copy of the schema once `proofloop.dev` is live; until
   then the URI is a logical identifier and the authoritative copy is the
   file in-repo.
 - `schemaVersion`: SemVer string `"MAJOR.MINOR.PATCH"`.
@@ -353,7 +353,7 @@ to the legacy field when parsing older documents.
 
 ### Consumer pinning
 
-Downstream tools (including Verdict Studio, `benchmark_pack.py`, and
+Downstream tools (including Proofloop Studio, `benchmark_pack.py`, and
 external dashboards) should parse `schemaVersion` first. The minimum
 compatible pin is `>= 1.0.0, < 2.0.0`. Any tool that needs a v1.1+
 field should guard on `schemaVersion` and degrade gracefully for

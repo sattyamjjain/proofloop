@@ -22,7 +22,7 @@ def _card(
     dim_scores: Dict[str, int],
 ) -> Dict[str, Any]:
     return {
-        "$schema": "https://verdict.dev/schemas/scorecard.v1.json",
+        "$schema": "https://proofloop.dev/schemas/scorecard.v1.json",
         "schemaVersion": "1.0.0",
         "skill": skill,
         "timestamp": timestamp,
@@ -154,7 +154,7 @@ class TestCliOncePath(unittest.TestCase):
             ])
             self.assertEqual(rc, 0)
             self.assertTrue(output.is_file())
-            self.assertIn("Verdict Studio", output.read_text(encoding="utf-8"))
+            self.assertIn("Proofloop Studio", output.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
