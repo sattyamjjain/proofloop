@@ -715,8 +715,21 @@ def _analyze_correctness(
             f"{us_findings[0]['claim']!r}"
         )
 
+    # Heuristic correctness cannot *confirm* functional correctness — it only
+    # detects negative signals (errors, hallucinations, fabricated success).
+    # A clean transcript that simply avoids the word "error" must therefore
+    # not earn a perfect 10: the top mark requires at least one execution
+    # receipt (a test run, an exit code — the same artefacts
+    # ``detect_unverified_success`` looks for). Without any verification
+    # evidence the score is capped at 9, so "say nothing and avoid 'error'"
+    # no longer scores a clean 10. Legitimately untestable tasks still reach
+    # 9. (Proofloop: no pass without proof.)
+    if score >= 10 and not _US_RECEIPT.search("\n".join(lines)):
+        score = 9
+        reasons.append("No executed-verification evidence — perfect score withheld")
+
     score = max(1, min(10, score))
-    justification = "; ".join(reasons) if reasons else "No error or hallucination signals detected"
+    justification = "; ".join(reasons) if reasons else "No errors; verification receipt present"
     result: Dict[str, Any] = {"score": score, "justification": justification}
     if us_findings:
         result["unverified_success"] = us_findings
@@ -819,15 +832,21 @@ def _analyze_adherence(
         score -= 1
         reasons.append(f"Minor deviation signals ({deviation_count} hits)")
 
-    # If rubric criteria exist, check for structural compliance
+    # A rubric being *available* is not evidence the run complied with it.
+    # The old heuristic added +1 here on every run that loaded a rubric —
+    # i.e. always — inflating adherence to 9 regardless of behaviour, even
+    # for a run that ignored every instruction (as long as it avoided the
+    # deviation keywords above). Heuristic adherence can only detect
+    # *deviation* (a negative signal); positive compliance must be earned and
+    # is scored against the rubric criteria directly by the opt-in LLM tier.
+    # So we record the rubric context but award no unearned credit.
     if rubric_criteria:
-        score = min(score + 1, 10)
-        reasons.append("Rubric criteria available for evaluation context")
+        reasons.append("Rubric available (compliance scored by LLM tier, not assumed)")
     else:
-        reasons.append("No specific rubric criteria — using generic adherence check")
+        reasons.append("No specific rubric criteria — generic deviation check only")
 
     score = max(1, min(10, score))
-    justification = "; ".join(reasons) if reasons else "Instructions appear to be followed"
+    justification = "; ".join(reasons) if reasons else "No deviation signals detected"
     return {"score": score, "justification": justification}
 
 

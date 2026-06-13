@@ -276,6 +276,23 @@ class TestCorrectnessHeuristic(unittest.TestCase):
         result = score.analyze_dimension("correctness", lines, {}, [])
         self.assertGreaterEqual(result["score"], 9)
 
+    def test_no_receipt_caps_correctness_below_perfect(self) -> None:
+        # Anti-gaming: a transcript that merely avoids error words, with no
+        # executed-check receipt anywhere, must NOT earn a perfect 10. Heuristic
+        # correctness cannot confirm functional correctness without evidence.
+        lines = _make_lines("I refactored the helper and it reads cleanly.\n" * 100)
+        result = score.analyze_dimension("correctness", lines, {}, [])
+        self.assertEqual(result["score"], 9)
+
+    def test_receipt_allows_perfect_correctness(self) -> None:
+        # With a real execution receipt and no error/claim signals, 10 is earned.
+        lines = _make_lines(
+            "$ pytest\n5 passed in 0.3s\n"
+            + "Refactored the helper.\n" * 100
+        )
+        result = score.analyze_dimension("correctness", lines, {}, [])
+        self.assertEqual(result["score"], 10)
+
     def test_many_errors_scores_lower(self) -> None:
         lines = _make_lines(
             "error: compilation failed\n" * 20
@@ -468,11 +485,21 @@ class TestAdherenceHeuristic(unittest.TestCase):
     """Adherence dimension: deviation signals and rubric presence."""
 
     def test_clean_transcript_with_rubric(self) -> None:
+        # A rubric being *available* is context, not compliance — it no longer
+        # adds an unearned point. Baseline 8 with no deviation signals.
         lines = _make_lines("Followed all instructions perfectly.\n" * 100)
         rubric_criteria = {"correctness": "must be correct"}
         result = score.analyze_dimension("adherence", lines, rubric_criteria, [])
-        # Base 8, +1 for rubric criteria = 9
-        self.assertGreaterEqual(result["score"], 9)
+        self.assertEqual(result["score"], 8)
+
+    def test_rubric_presence_does_not_inflate_adherence(self) -> None:
+        # Anti-gaming: identical behaviour scores identically whether or not a
+        # rubric is loaded. Adherence credit is earned by behaviour, not granted
+        # by context. (Pre-fix this returned 9 with a rubric vs 8 without.)
+        lines = _make_lines("Did the work as described.\n" * 100)
+        with_rubric = score.analyze_dimension("adherence", lines, {"correctness": "x"}, [])
+        without_rubric = score.analyze_dimension("adherence", lines, {}, [])
+        self.assertEqual(with_rubric["score"], without_rubric["score"])
 
     def test_deviation_signals_reduce_score(self) -> None:
         lines = _make_lines(
