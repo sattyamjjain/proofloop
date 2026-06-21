@@ -46,6 +46,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dispositions of record (rejected proposals)
 
+- **`skill_quality_evolution` 8th scoring dimension — static
+  skill/MCP-artifact production-readiness scoring (2026-06-21):
+  REJECT.** A task proposed an 8th judge dimension that, when the
+  artifact under review is detected as a Claude Code skill (SKILL.md +
+  scripts) or an MCP-tool definition, scores four sub-checks drawn from
+  "arXiv:2606.11435's four evolution paradigms" — production-readiness
+  (declared inputs/outputs/failure-modes/idempotency), provenance/
+  governance (declared least-privilege scope), execution-feedback
+  evolvability (logs/traces/eval hooks), and verifiable safety
+  (no undeclared side effects) — auto-enabled on skill detection with a
+  `--include skill_quality_evolution` opt-in, README "References" note,
+  version bump, branch `feat/skill-quality-evolution-dimension`, PR.
+  **Rationale for rejection:**
+  (1) **An 8th dimension breaks the 7-dimension core surface, and a
+  hard test pins it.** `tests/test_unverified_success.py::
+  test_no_new_dimension_added` asserts `len(sc["dimensions"]) == 7`
+  and `assertNotIn(...)` for non-canonical dimension ids — it exists
+  *because* the `reward_hacking` 8th-dimension proposal (2026-06-04)
+  was rejected on the same ground. Adding `skill_quality_evolution`
+  makes the count 8 and the test goes red. The seven weights in
+  `score.py` (`correctness` .25, `completeness` .20, `adherence` .15,
+  `actionability` .15, `efficiency` .10, `safety` .10, `consistency`
+  .05) sum to 1.0; an 8th breaks that invariant unless every weight is
+  renormalized. "7-dimension scoring" is a named do-not-regress core
+  surface (CLAUDE.md).
+  (2) **It mutates the frozen scorecard schema.**
+  `schemas/scorecard.v1.schema.json` lists exactly those seven as
+  `dimensions.required` and as the only `dimensions.properties`. An
+  8th dimension forces a schema change, which CLAUDE.md's stability
+  rule forbids doing silently ("never silently mutate
+  `scorecard.v1.schema.json`"; bump the schema version) — a deliberate
+  decision, not a feature add.
+  (3) **Domain mismatch — artifact linting, not execution scoring.**
+  Proofloop scores *executions* (a run's transcript/trace) against
+  domain rubrics. This proposal statically grades a *SKILL.md / MCP
+  manifest artifact* for production-readiness, provenance, and
+  evolvability — a skill-linter / governance tool, a different product.
+  Scope-wise the provenance/evolution-paradigm framing (SkillWiki,
+  arXiv:2606.11435) is agent-governance eval-bench territory, the frozen
+  frontier family the v4.3 reset removed; bringing any new scored
+  surface in needs a runbook §scope-reset amendment first — none has
+  landed.
+  (4) **Repo-shape tells.** The task finds the version via
+  `rg "version" package.json plugin.json manifest.json pyproject.toml`
+  and runs "the repo's actual test + lint + typecheck scripts (`cat
+  package.json` scripts block or the Makefile; e.g. `npm test && npm
+  run lint && npx tsc --noEmit`)" with `--type ts --type js` greps —
+  but **no `package.json`, `Makefile`, `pyproject.toml`, `manifest.json`,
+  or `setup.py` exists** here; the repo is Python-stdlib-only, the
+  runner is `python3 -m unittest discover tests/`, no linter/typechecker
+  is configured, and the version lives in
+  `.claude-plugin/{plugin,marketplace}.json` + `SKILL.md`. The anchor
+  papers were not independently verified. 5th instance of the templated
+  12th-rubric / 8th-dimension pattern (reward-hack 2026-06-04 +
+  re-affirm 2026-06-21, trajectory_safety 2026-06-09,
+  orchestration-quality 2026-06-21).
+  (5) **Door left open.** The legitimate kernel — does generated/edited
+  skill code over-grant scope or hide undeclared side effects — is
+  already partly covered: `score.detect_least_privilege_issues` feeds
+  the `safety` dimension and the schema's `least_privilege` findings.
+  A narrow in-scope extension belongs there, not as an 8th dimension or
+  a new artifact-linting mode, and still needs a runbook §scope-reset
+  amendment first.
+
 - **`orchestration-quality` 12th domain rubric — multi-agent
   orchestration trace scoring (2026-06-21): REJECT.** A task proposed
   an `orchestration-quality` rubric preset that, given a multi-agent
