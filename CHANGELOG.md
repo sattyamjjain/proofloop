@@ -46,6 +46,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dispositions of record (rejected proposals)
 
+- **`orchestration-quality` 12th domain rubric — multi-agent
+  orchestration trace scoring (2026-06-21): REJECT.** A task proposed
+  an `orchestration-quality` rubric preset that, given a multi-agent
+  trace (orchestrator decisions + per-agent intermediate artifacts),
+  scores routing correctness, dependency ordering, token economy, and
+  failure recovery/re-planning — each 0–10 with an "OrchRM-style
+  win-lose pair" framing (chosen path vs. a plausible alternative the
+  trace implies) — plus a step-record / OpenTelemetry-span-tree input
+  adapter, README + CHANGELOG, version bump from 3.1.1, branch
+  `feat/orchestration-quality-rubric` → push to main. **Rationale for
+  rejection:**
+  (1) **A 12th rubric breaks the v4.3 scope contract, CI-enforced.**
+  `tests/test_v43_scope_contract.py::test_no_out_of_scope_rubrics`
+  asserts `sorted(_rubric_basenames(RUBRICS_DIR) - IN_SCOPE_V43) == []`;
+  `IN_SCOPE_V43` is a frozenset of exactly 11 plugin-domain rubric
+  names. Verified at disposition time: the rubrics dir holds exactly
+  those 11, so adding `orchestration-quality.md` makes the test fail
+  with `['orchestration-quality'] != []`. Greening it means editing
+  `IN_SCOPE_V43`, whose source of truth is the external runbook
+  §scope-reset (2026-05-03); per
+  [`CLAUDE.md` §v4.3 Scope Contract](CLAUDE.md#v43-scope-contract-2026-05-03)
+  anything outside the 11 in-scope rubrics "needs a runbook spec
+  change first." Same blocker as the `reward-hack` (2026-06-04,
+  re-affirmed 2026-06-21), `trajectory_safety` (2026-06-09), and
+  `metis_safety` (2026-05-18) 12th-rubric REJECTs.
+  (2) **Out-of-scope domain — the frozen frontier family.** Scoring a
+  multi-agent trace on orchestrator routing / ordering / token economy
+  / re-planning, with OrchRM win-lose-pair framing, is multi-agent
+  orchestration eval-bench — the same family as the v2.0.0-trimmed
+  `browser-agent`, `routine-execution`, and `function-hijacking-
+  robustness` rubrics the v4.3 reset froze out. The 11 in-scope rubrics
+  each score *quality of work in a domain*; this scores an
+  orchestrator's *trajectory*, not a skill execution's quality.
+  (3) **Repo-shape tells.** The task locates the version via
+  `rg "version" pyproject.toml package.json` and runs "the repo's real
+  test/lint/typecheck scripts (confirm via `rg scripts package.json` or
+  `[tool.*]` in pyproject)" — but **no `pyproject.toml`, `package.json`,
+  or `setup.py` exists** here; the version lives in
+  `.claude-plugin/{plugin,marketplace}.json` + `SKILL.md`, the runner is
+  `python3 -m unittest discover tests/`, and no linter/typechecker is
+  configured. "Push to main after green" ignores the branch-+-PR
+  convention. Same templated-from-a-different-repo signature as the
+  prior REJECTs.
+  (4) **Door left open.** The legitimate kernel — did the orchestrator
+  waste work or fail to recover — overlaps the existing `efficiency`
+  dimension and `score.detect_red_flags`. A narrow, in-scope version
+  would be a signal in `detect_red_flags`, not a 12th eval-bench
+  rubric, and would still need a deliberate runbook §scope-reset
+  amendment first. Until that lands, the CI scope contract is the gate.
+
 - **`trajectory_safety` 12th domain rubric — trajectory-level
   safety/robustness judging (2026-06-09): REJECT.** A task proposed
   adding a `trajectory_safety` rubric that takes the *full generation
