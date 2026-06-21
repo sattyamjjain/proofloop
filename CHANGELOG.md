@@ -46,6 +46,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dispositions of record (rejected proposals)
 
+- **`--objective-outcome` scoring mode — declared end-state
+  assertion harness (2026-06-21): REJECT.** A task proposed an opt-in
+  `--objective-outcome` mode (and `/judge --objective-outcome` flag):
+  the user declares an `outcome.yaml` sidecar (expected files changed,
+  expected exit code, expected string present/absent, expected
+  test-suite green) and proofloop scores PASS/FAIL per assertion + an
+  aggregate, deterministically, from the transcript + workspace
+  artifacts with no LLM call — "mirroring CEO-Bench / RNG-Bench /
+  NRT-Bench objective state-change scoring." **This one is not a clean
+  mechanical reject** — it is neither a 12th rubric nor an 8th
+  dimension, so `test_v43_scope_contract` and the `len(dimensions)==7`
+  guard do not apply, and it respects every core invariant (offline,
+  stdlib-only, no-LLM, additive). It was rejected on scope, by the
+  maintainer's explicit decision (2026-06-21), for two reasons:
+  (1) **It is the frozen frontier-lab eval-bench scope.** Declaring a
+  gold end-state (`outcome.yaml`) and scoring PASS/FAIL against it is
+  precisely what SWE-bench / Terminal-Bench do, and the task frames it
+  as CEO-Bench / RNG-Bench. Per
+  [`CLAUDE.md` §v4.3 Scope Contract](CLAUDE.md#v43-scope-contract-2026-05-03):
+  "Frontier-lab eval-bench scope (SWE-bench, Terminal-Bench, GAIA,
+  OSWorld, …) is explicitly out of scope and will not be re-added
+  without a runbook spec change." No runbook §scope-reset amendment has
+  landed, so the gate holds; bringing objective-outcome scoring in is a
+  deliberate product decision, not a templated task's call.
+  (2) **The in-scope kernel already shipped.** `detect_unverified_success`
+  + `_US_RECEIPT` (`skills/judge/scripts/score.py`) already score
+  "objective state-change, not an LLM judge": they fire when a run
+  *claims* a pass but has no executed-check *receipt* (test runner,
+  exit code, pass count) anywhere in the trajectory, docking
+  correctness. That is the deliberate, in-scope incarnation of this
+  idea — a correctness signal, not a CEO-Bench-style gold-assertion
+  harness. (Repo-shape tells, as with the rest of the series: the
+  task's verify line claims origin `…/verdict` though it is now
+  `proofloop`; it assumes `python -m pytest` though the runner is
+  `python3 -m unittest discover tests/`; and "push to main" ignores the
+  branch-+-PR convention. The cited `arXiv:2606.18543` / `2606.19338`
+  were not verified.) 6th instance of the templated scope-expansion
+  pattern (reward-hack, trajectory_safety, orchestration-quality,
+  skill_quality_evolution being the prior five with the reward-hack
+  re-affirm).
+
 - **`skill_quality_evolution` 8th scoring dimension — static
   skill/MCP-artifact production-readiness scoring (2026-06-21):
   REJECT.** A task proposed an 8th judge dimension that, when the
