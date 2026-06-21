@@ -179,6 +179,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Managed Agents Outcomes rubric beta (2026-05-09), DELEGATE-52
   (2026-05-10), metis_safety + LangSmith/Cowork (2026-05-18),
   held_out_consistency (2026-05-22), ProcessScorerJudge (2026-05-29).
+  **Re-affirmed 2026-06-21 (REJECT, 3rd instance).** The identical
+  proposal resurfaced — now framed as a "CHEAP tier (heuristic +
+  embedding probe) before any frontier-judge tier," citing
+  `arXiv:2606.08893` (unverified), with the origin precondition still
+  given as `github.com/sattyamjjain/verdict` though the repo is now
+  `proofloop`. Re-rejected for the same reason: whether shaped as a
+  12th rubric or an 8th `reward_hacking` dimension, it is blocked by
+  two guards that are both green at re-affirmation —
+  `test_v43_scope_contract` (`IN_SCOPE_V43` pins 11 names) and
+  `tests/test_unverified_success.py` (`assertNotIn("reward_hacking",
+  sc["dimensions"])`). The in-scope core of the intent — reward-
+  hacking as a *correctness/receipt* signal rather than a new
+  dimension — already shipped as the `_US_RECEIPT` "no pass without
+  proof" check. No runbook §scope-reset amendment has landed, so the
+  CI scope contract remains the gate.
 
 - **`ProcessScorerJudge` PRM-free step-by-step process scorer with
   LGS/CGS modes (2026-05-29): REJECT.** A task proposed adding a
