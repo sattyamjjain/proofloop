@@ -46,6 +46,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Dispositions of record (rejected proposals)
 
+- **`--repeats/--seeds` seed-variance / noise-floor mode
+  (2026-06-21): REJECT.** A task proposed an opt-in mode that runs the
+  same judge N times across seeds/temperature and reports mean, std, a
+  bootstrapped 95% CI ("noise floor band"), and a `significant` boolean
+  (`|delta_vs_baseline| > band`), framed with the "FID-Lottery" line so
+  users can tell a real eval gain from sampling noise. **Rationale for
+  rejection:**
+  (1) **Architectural no-op on the core path — there is nothing to
+  vary.** Proofloop's default scorer is offline heuristics and is
+  *deterministic by design*: `rg "random|seed|temperature|numpy|sample"`
+  over `skills/judge/scripts/score.py` returns zero matches; the same
+  transcript yields the same score every time. Running it N× across
+  seeds reports `std = 0`, `band = 0` — it measures noise that the
+  engine deliberately does not have. A noise floor is only meaningful
+  for a *stochastic* evaluator, which the default path is not.
+  (2) **For the only stochastic path it breaks the budget invariant.**
+  The opt-in LLM second-opinion tier (`analyzers/llm_judge.py`) is the
+  one place sampling variance exists, and it is off-by-default and
+  hard-capped via the `task_budgets` beta header + `max_tokens`. N×
+  re-sampling across seeds to build a CI band multiplies a deliberately
+  capped, opt-in spend N-fold — directly against the offline-first /
+  budget-capped core value.
+  (3) **The in-scope version already exists.** Run-to-run score
+  stability is already handled in-scope by the `consistency` dimension
+  (history-based, weight 0.05) and `_detect_verifier_collapse` (a
+  rolling-window flatline detector). "Is the score stable / is this
+  variance meaningful" is answered deterministically, without a seed
+  sweep.
+  (4) **Frozen eval-bench scope.** Seed-variance, bootstrapped CI, and
+  "is my improvement real vs sampling noise" (FID-Lottery — an
+  image-generation-metric variance result) are frontier-lab eval-rigor
+  methodology, the family the v4.3 §scope-reset froze ("will not be
+  re-added without a runbook spec change"). None has landed.
+  (5) **Repo-shape tells.** The task's verify line claims origin
+  `…/verdict` (now `proofloop`); it greps `src/` and `pyproject.toml`
+  and "find in pyproject.toml/Makefile" and SmokeTests "a published
+  wheel" — but there is no `src/`, `pyproject.toml`, `Makefile`,
+  `setup.py`, or wheel (stdlib-only plugin; runner
+  `python3 -m unittest discover tests/`; version in
+  `.claude-plugin/{plugin,marketplace}.json`). "Push to main" ignores
+  the branch-+-PR convention. 7th instance of the templated
+  scope-expansion pattern.
+
 - **`--objective-outcome` scoring mode — declared end-state
   assertion harness (2026-06-21): REJECT.** A task proposed an opt-in
   `--objective-outcome` mode (and `/judge --objective-outcome` flag):
