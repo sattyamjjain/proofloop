@@ -161,7 +161,7 @@ def format_report(a: Dict[str, Any], b: Dict[str, Any]) -> str:
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="verdict-compare")
+    parser = argparse.ArgumentParser(prog="proofloop-compare")
     parser.add_argument("--run-a", required=True, help="Path to the baseline scorecard JSON.")
     parser.add_argument("--run-b", required=True, help="Path to the target scorecard JSON.")
     parser.add_argument(

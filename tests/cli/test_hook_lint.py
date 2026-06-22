@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for verdict hook lint CLI (T3, v1.4.2)."""
+"""Tests for proofloop hook lint CLI (T3, v1.4.2)."""
 from __future__ import annotations
 
 import io

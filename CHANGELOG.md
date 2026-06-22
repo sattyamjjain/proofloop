@@ -30,6 +30,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Completed the `verdict` → `proofloop` rename for the last residual
+  brand identifiers the v3.0.0 rebrand missed: the CLI `prog=` help-text
+  names in `against.py` / `watch.py` / `studio.py` / `compare.py` /
+  `sandbox_caps_check.py` (`verdict-*` → `proofloop-*`), the
+  `install_rubric.py` `User-Agent`, the `hook_lint.py` module docstring,
+  a `validate_marketplace.py` comment, the `--output verdict-studio.html`
+  usage examples, and the SARIF `tool.driver.name` emitted by
+  `bench_lint.py` (`verdict-bench-lint` → `proofloop-bench-lint`, with
+  its pinning assertion in `tests/test_bench_lint.py` updated). English-
+  noun uses of "verdict" (e.g. "composite verdict", "not a leaderboard
+  verdict"), historical CHANGELOG/release entries, disposition records'
+  old-name references, and internal `/tmp/verdict-*` test-fixture paths
+  were intentionally left unchanged. No scored-surface or schema change;
+  654 tests green.
+
 - Rotated the Claude Code release audit comment block in
   `scripts/validate_marketplace.py` to the most-recent five
   releases (newest first): v2.1.129 / v2.1.128 / v2.1.127 / v2.1.126 /

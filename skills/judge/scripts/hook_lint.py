@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""verdict hook lint — static analyzer for PostToolUse hook scripts.
+"""proofloop hook lint — static analyzer for PostToolUse hook scripts.
 
 Lints a hook script (``.sh`` / ``.py`` / ``.js`` / ``.ts``) that
 targets the Claude Code ``PostToolUse`` lifecycle and may emit

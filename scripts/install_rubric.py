@@ -36,7 +36,7 @@ REQUIRED_HEADINGS = [
 def _fetch(url: str, timeout: int = 10) -> Optional[bytes]:
     """Return the bytes at *url* or None on any failure (logged to stderr)."""
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "verdict-install-rubric/1.1"})
+        req = urllib.request.Request(url, headers={"User-Agent": "proofloop-install-rubric/1.1"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             if resp.status != 200:
                 print(f"Error: {url} returned HTTP {resp.status}", file=sys.stderr)

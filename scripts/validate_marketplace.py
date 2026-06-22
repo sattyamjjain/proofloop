@@ -31,7 +31,7 @@ Schema source: <https://code.claude.com/docs/en/plugin-marketplaces>
 #   Marketplace-schema-irrelevant.
 # v2.1.127 (≤2026-05-03) — bridge release between v2.1.126 and v2.1.128
 #   per claudefa.st digest; no individually documented surface change
-#   that affects verdict's transcript-shape or safety-allowlist surfaces.
+#   that affects proofloop's transcript-shape or safety-allowlist surfaces.
 #   Marketplace-schema-irrelevant.
 # v2.1.126 (2026-05-01) — /model picker reads gateway /v1/models when
 #   ANTHROPIC_BASE_URL is set; claude project purge [path]; the
