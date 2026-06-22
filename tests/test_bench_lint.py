@@ -369,7 +369,7 @@ class TestSarifShape(unittest.TestCase):
             self.assertEqual(len(sarif["runs"]), 1)
             run = sarif["runs"][0]
             self.assertEqual(
-                run["tool"]["driver"]["name"], "verdict-bench-lint"
+                run["tool"]["driver"]["name"], "proofloop-bench-lint"
             )
             rule_ids = [r["id"] for r in run["tool"]["driver"]["rules"]]
             self.assertEqual(

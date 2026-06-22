@@ -98,7 +98,7 @@ def emit_rationale(
 
 
 def parse_args(argv: List[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="verdict-sandbox-caps-check")
+    parser = argparse.ArgumentParser(prog="proofloop-sandbox-caps-check")
     parser.add_argument(
         "--require",
         action="append",

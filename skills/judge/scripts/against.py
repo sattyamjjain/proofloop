@@ -93,7 +93,7 @@ def render(baseline: Dict[str, Any], target: Dict[str, Any]) -> str:
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(prog="verdict-against")
+    p = argparse.ArgumentParser(prog="proofloop-against")
     p.add_argument("--skill", required=True, help="Skill to compare.")
     p.add_argument("--scores-dir", required=True, help="Directory of scorecard JSON files.")
     p.add_argument("--baseline-index", type=int, default=-2,

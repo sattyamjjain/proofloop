@@ -42,7 +42,7 @@ from typing import Any, Dict, List, Optional, Tuple
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_MANIFEST = PROJECT_ROOT / "benchmarks" / "manifest.json"
 DEFAULT_THRESHOLD = 0.85
-TOOL_NAME = "verdict-bench-lint"
+TOOL_NAME = "proofloop-bench-lint"
 TOOL_VERSION = "2.0.3"
 TOOL_URI = "https://github.com/sattyamjjain/proofloop"
 

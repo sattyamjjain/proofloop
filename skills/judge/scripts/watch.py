@@ -15,7 +15,7 @@ beyond the main one. Exits on SIGINT.
 Usage:
     python3 skills/judge/scripts/watch.py \\
       --scores-dir skills/judge/scores \\
-      --output verdict-studio.html \\
+      --output proofloop-studio.html \\
       [--interval 2.0] [--once]
 
 The ``--once`` flag runs a single pass (used by tests); omit it to
@@ -144,7 +144,7 @@ def run_pass(
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog="verdict-watch")
+    parser = argparse.ArgumentParser(prog="proofloop-watch")
     parser.add_argument(
         "--scores-dir", required=True,
         help="Directory of persisted scorecard JSON files to watch.",

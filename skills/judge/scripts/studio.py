@@ -13,7 +13,7 @@ dependencies on either side. Stdlib-only Python generator.
 Usage:
     python3 skills/judge/scripts/studio.py \\
       --scores-dir skills/judge/scores \\
-      --output verdict-studio.html
+      --output proofloop-studio.html
 """
 from __future__ import annotations
 
@@ -216,7 +216,7 @@ def generate(scores_dir: Path, output: Path, now: str) -> None:
 
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(prog="verdict-studio")
+    p = argparse.ArgumentParser(prog="proofloop-studio")
     p.add_argument("--scores-dir", required=True, help="Directory containing score JSON files.")
     p.add_argument("--output", required=True, help="Output HTML file path.")
     return p.parse_args(argv)
